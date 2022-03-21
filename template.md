@@ -48,28 +48,48 @@ template<int N,typename T,typename TT> struct ht//个数，定义域，值域
 #### 珂朵莉树
 
 ```cpp
-struct node
+#define all(x) (x).begin(),(x).end()
+multiset<int> ss;
+namespace chtholly_tree
 {
-	int l,r;
-	mutable int v;
-	node(int L=0,int R=0,int V=0):l(L),r(R),v(V){}
-	bool operator<(const node& x) const {return l<x.l;}
-};
-template<typename T> struct set
-{
-
+	typedef int TT;
+	struct Q
+	{
+		int l;
+		mutable int r;
+		mutable TT v;
+		int len() const {return r-l+1;}
+		bool operator<(const Q &x) const {return l<x.l;}
+	};
+	void add(const Q &a) {ss.insert(a.len());}
+	void del(const Q &a) {ss.erase(ss.find(a.len()));}
+	class odt: public set<Q>
+	{
+	public:
+		typedef odt::iterator iter;
+		iter split(int x)
+		{
+			iter it=lower_bound({x});
+			if (it!=end()&&it->l==x) return it;
+			Q t=*--it,a={t.l,x-1,t.v},b={x,t.r,t.v};
+			del(*it);add(a);add(b);
+			erase(it);insert(a);
+			return insert(b).first;
+		}
+		void modify(int l,int r,TT v)//[l,r]
+		{
+			iter lt,rt,it;
+			rt=split(r+1);lt=split(l);//[lt,rt)
+			while (lt!=begin()&&(it=prev(lt))->v==v) l=(lt=it)->l;
+			while (rt!=end()&&rt->v==v) r=(rt++)->r;
+			for (it=lt;it!=rt;it++) del(*it);
+			add({l,r,v});
+			erase(lt,rt);insert({l,r,v});
+		}
+	};
 }
-set<node> s;
-typedef set<node>::iterator iter;
-iter split(int x)
-{
-	iter it=s.lower_bound(node(x));
-	if (it!=s.end()&&it->l==x) return it;
-	node t=*--it;s.erase(it);
-	s.insert(node(t.l,x-1,t.v));
-	return s.insert(node(x,t.r,t.v)).first;
-}
-rt=split(r+1);lt=split(l);//[lr,rt)
+using chtholly_tree::Q,chtholly_tree::odt;
+typedef odt::iterator iter;
 ```
 
 #### 可持久化数组
