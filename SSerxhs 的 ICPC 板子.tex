@@ -1620,12 +1620,42 @@ int main()
 }
 \end{lstlisting}
 
-
-
-
 \newpage
 
 \section{数学}
+
+\subsection{单情况矩阵 (+)}
+
+\begin{lstlisting}
+
+template<typename T,int n> struct matrix
+{
+	#define all(x) (x).begin(),(x).end()
+	array<pair<int,T>,n> a;
+	matrix(char c='E')
+	{
+		int i;
+		if (c=='E') for (i=0;i<n;i++) a[i]={i,0};
+		else assert(0);
+	}
+	matrix(char c,int x)
+	{
+		
+	}
+	matrix operator+(const matrix &o) const
+	{
+		matrix r;
+		int i,j,k;
+		for (i=0;i<n;i++)
+		{
+			auto [x,y]=a[i];
+			r.a[i]={o.a[x].first,o.a[x].second+y};
+		}
+		return r;
+	}
+};
+
+\end{lstlisting}
 
 \subsection{矩阵求逆（要求质数）}
 
@@ -8126,6 +8156,87 @@ int main()
 }
 \end{lstlisting}
 
+\subsection{轻重链剖分}
+
+\begin{lstlisting}
+
+namespace HLD
+{
+	const int N=5e5+2;
+	vector<int> e[N];
+	int dfn[N],dep[N],f[N],siz[N],hc[N],top[N];
+	int id;
+	void dfs1(int u)
+	{
+		siz[u]=1;
+		for (int v:e[u]) if (v!=f[u])
+		{
+			dep[v]=dep[f[v]=u]+1;
+			dfs1(v);
+			siz[u]+=siz[v];
+			if (siz[v]>siz[hc[u]]) hc[u]=v;
+		}
+	}
+	void dfs2(int u)
+	{
+		dfn[u]=++id;
+		if (hc[u])
+		{
+			top[hc[u]]=top[u];
+			dfs2(hc[u]);
+			for (int v:e[u]) if (v!=hc[u]&&v!=f[u]) dfs2(top[v]=v);
+		}
+	}
+	int lca(int u,int v)
+	{
+		while (top[u]!=top[v])
+		{
+			if (dep[top[u]]<dep[top[v]]) swap(u,v);
+			u=f[top[u]];
+		}
+		if (dep[u]>dep[v]) swap(u,v);
+		return u;
+	}
+	int dis(int u,int v)
+	{
+		return dep[u]+dep[v]-(dep[lca(u,v)]<<1);
+	}
+	void init(int n)
+	{
+		for (int i=1;i<=n;i++)
+		{
+			e[i].clear();
+			f[i]=hc[i]=0;
+		}
+		id=0;
+	}
+	void fun(int root)
+	{
+		dep[root]=1;dfs1(root);dfs2(top[root]=root);
+	}
+	vector<pair<int,int>> get_path(int u,int v)//u->v，注意可能出现 [r>l]（表示反过来走）
+	{
+		//cerr<<"path from "<<u<<" to "<<v<<": ";
+		vector<pair<int,int>> v1,v2;
+		while (top[u]!=top[v])
+		{
+			if (dep[top[u]]>dep[top[v]]) v1.push_back({dfn[u],dfn[top[u]]}),u=f[top[u]];
+			else v2.push_back({dfn[top[v]],dfn[v]}),v=f[top[v]];
+		}
+		v1.reserve(v1.size()+v2.size()+1);
+		v1.push_back({dfn[u],dfn[v]});
+		reverse(v2.begin(),v2.end());
+		for (auto v:v2) v1.push_back(v);
+		//for (auto [x,y]:v1) cerr<<"["<<x<<','<<y<<"] ";cerr<<endl;
+		return v1;
+	}
+}
+using HLD::e,HLD::lca,HLD::dis,HLD::dfn,HLD::dep,HLD::f,HLD::siz,HLD::get_path;
+using HLD::fun;//5e5
+
+
+\end{lstlisting}
+
 \subsection{换根树剖}
 
 $O(n+q\log n)$，$O(n)$。
@@ -9304,72 +9415,54 @@ int main()
 $O(n+m)$，$O(n+m)$。
 
 \begin{lstlisting}
-#define R int
-const int N=2e6+2;
-int lj[N],fir[N],bs,nxt[N],low[N],dfn[N],num[N],ds,fs,st[N],tp;
-bool ed[N];
-void dfs(int x)
+struct sat
 {
-	low[x]=dfn[x]=++ds;
-	ed[st[++tp]=x]=1;
-	int i;
-	for (i=fir[x];i;i=nxt[i]) if (dfn[lj[i]])
+	vector<vector<int>> e;
+	vector<int> dfn,low,st,f,ed;
+	int fs,tp,id,n;
+	sat(int n):n(n),e(n*2),dfn(n*2,-1),low(n*2),st(n*2),f(n*2,-1),ed(n*2),fs(0),tp(-1),id(0){}
+	void dfs(int u)
 	{
-		if (ed[lj[i]]) low[x]=min(low[x],dfn[lj[i]]);
-	}
-	else
-	{
-		dfs(lj[i]);
-		low[x]=min(low[x],low[lj[i]]);
-	}
-	if (dfn[x]==low[x])
-	{
-		++fs;
-		while (st[tp+1]!=x)
+		dfn[u]=low[u]=id++;
+		ed[u]=1;st[++tp]=u;
+		for (int v:e[u]) if (dfn[v]!=-1)
 		{
-			ed[st[tp]]=false;
-			num[st[tp--]]=fs;
+			if (ed[v]) low[u]=min(low[u],dfn[v]);
+		} else dfs(v),low[u]=min(low[u],low[v]);
+		if (dfn[u]==low[u])
+		{
+			do
+			{
+				f[st[tp]]=fs;
+				ed[st[tp]]=0;
+			} while (st[tp--]!=u);
+			++fs;
 		}
 	}
-}
-void add(int x,int y)
-{
-	lj[++bs]=y;
-	nxt[bs]=fir[x];
-	fir[x]=bs;
-}
-void read(int &x)
-{
-	int c=getchar();
-	while (c<48||c>57) c=getchar();
-	x=c^48;c=getchar();
-	while (c>=48&&c<=57) x=x*10+(c^48),c=getchar();
-}
-int main()
-{
-	R n,m,i,j,a,b;
-	read(n);read(m);
-	while (m--)
+	void add(int u,bool x,int v,bool y)//d:dif
 	{
-		read(i);read(a);read(j);read(b);//i 为 a 或 j 为 b
-		add(i+(a^1)*n,j+b*n);
-		add(j+(b^1)*n,i+a*n);
+		assert(u>=0&&u<n&&v>=0&&v<n);
+		e[u+x*n].push_back(v+y*n);
+		e[v+(y^1)*n].push_back(u+(x^1)*n);
 	}
-	n<<=1;
-	for (i=1;i<=n;i++) if (!dfn[i]) dfs(i);
-	n>>=1;
-	for (i=1;i<=n;i++) if (num[i]==num[i+n])
+	void set(int u,bool x)
 	{
-		puts("IMPOSSIBLE");
-		return 0;
+		assert(u>=0&&u<n);
+		e[u+(x^1)*n].push_back(u+x*n);
 	}
-	puts("POSSIBLE");
-	for (i=1;i<=n;i++)
+	vector<int> getans()
 	{
-		putchar(48|(num[i]>num[i+n]));
-		putchar(32);
+		int i;
+		for (i=0;i<n*2;i++) if (dfn[i]==-1) dfs(i);
+		vector<int> r(n);
+		for (i=0;i<n;i++)
+		{
+			if (f[i]==f[i+n]) return {};
+			r[i]=f[i]>f[i+n];
+		}
+		return r;
 	}
-}
+};
 \end{lstlisting}
 
 \subsection{Kosaraju 强连通分量（bitset 优化）}
