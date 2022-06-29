@@ -30,7 +30,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.0.0}
+\centerline{ver:3.0.2}
 
 \tableofcontents
 
@@ -1348,11 +1348,14 @@ sort(a+1,a+m+1);r[l[1]=1]=(m=unique(a+1,a+m+1)-a-1)-1;build(1);
 
 $O((n+q)\log n)\sim O(n+q\log^2 n)$，$O(n)$。
 
-- `1 l r k`：对于所有的 $i\in[l,r]$，将 $A_i$ 加上 $k$（$k$ 可以为负数）。
-- `2 l r v`：对于所有的 $i\in[l,r]$，将 $A_i$ 变成 $\min(A_i,v)$。
-- `3 l r`：求 $\sum_{i=l}^{r}A_i$。
-- `4 l r`：对于所有的 $i\in[l,r]$，求 $A_i$ 的最大值。
-- `5 l r`：对于所有的 $i\in[l,r]$，求 $B_i$ 的最大值。
+\begin{itemize}
+
+\item $\texttt{1 l r k}$：对于所有的 $i\in[l,r]$，将 $A_i$ 加上 $k$（$k$ 可以为负数）。
+\item $\texttt{2 l r v}$：对于所有的 $i\in[l,r]$，将 $A_i$ 变成 $\min(A_i,v)$。
+\item $\texttt{3 l r}$：求 $\sum_{i=l}^{r}A_i$。
+\item $\texttt{4 l r}$：对于所有的 $i\in[l,r]$，求 $A_i$ 的最大值。
+\item $\texttt{5 l r}$：对于所有的 $i\in[l,r]$，求 $B_i$ 的最大值。
+\end{itemize}
 
 \begin{lstlisting}
 typedef long long ll;d
@@ -4444,12 +4447,12 @@ namespace NTT//禁止混用三模与普通 NTT
 		ui k=a.size(),n=cal(k+1),lim=n*2,x;
 		int i;
 		Q g(n),h(n);
-		vector<ui> res(k);
 		for (i=1;i<=k;i++) if (f[i]) h.a[i]=p-f[i];
 		h.a[0]=1;
 		for (i=0;i<k;i++) g.a[i]=a[i];
 		g*=h;fill(g.a.data()+k,g.a.data()+n,0);
 		++k;g.a.resize(lim);h.a.resize(lim);
+		vector<ui> res(k);
 		while (m)
 		{
 			if (m&1)
