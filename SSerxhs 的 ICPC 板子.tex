@@ -30,7 +30,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.0.2}
+\centerline{ver:3.0.4}
 
 \tableofcontents
 
@@ -3635,8 +3635,8 @@ namespace NTT//禁止混用三模与普通 NTT
 	mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
 	#define all(x) (x).begin(),(x).end()
 	const int N=1<<22;//务必修改
-	//#define MTT
-	//#define CRT
+	#define MTT
+	#define CRT
 	typedef unsigned int ui;
 	typedef unsigned long long ll;
 	const ui g=3,f=1u<<31,I=86'583'718;//g^((p-1)/4)
@@ -3647,7 +3647,6 @@ namespace NTT//禁止混用三模与普通 NTT
 	const ui p=1e9+7;
 	const ui p1=469'762'049,p2=998'244'353,p3=1'004'535'809;//三模，原根都是 3，非常好
 	const ui inv_p1=554'580'198,inv_p12=395'249'030;//三模，1 关于 2 逆，1*2 关于 3 逆，1*2 mod 3
-	ui w1[N],w2[N],w3[N];//三模
 #endif
 	ui r[N];
 	ui inv[N],fac[N],ifac[N],W;//W for mosqrt
@@ -3662,43 +3661,6 @@ namespace NTT//禁止混用三模与普通 NTT
 		}
 		return r;
 	}
-#ifdef MTT
-	#ifdef CRT
-		ui ksm1(ui x,ui y)
-		{
-			ui r=1;
-			while (y)
-			{
-				if (y&1) r=(ll)r*x%p1;
-				x=(ll)x*x%p1;
-				y>>=1;
-			}
-			return r;
-		}
-		ui ksm2(ui x,ui y)
-		{
-			ui r=1;
-			while (y)
-			{
-				if (y&1) r=(ll)r*x%p2;
-				x=(ll)x*x%p2;
-				y>>=1;
-			}
-			return r;
-		}
-		ui ksm3(ui x,ui y)
-		{
-			ui r=1;
-			while (y)
-			{
-				if (y&1) r=(ll)r*x%p3;
-				x=(ll)x*x%p3;
-				y>>=1;
-			}
-			return r;
-		}
-	#endif
-#endif
 	vector<ui> getinvs(vector<ui> a)
 	{
 		static ui l[N],r[N];
@@ -3716,6 +3678,7 @@ namespace NTT//禁止混用三模与普通 NTT
 		for (i=1;i<n-1;i++) a[i]=(ll)x*l[i-1]%p*r[i+1]%p;
 		return a;
 	}
+//以下为开方
 	struct P
 	{
 		ui x,y;
@@ -3744,37 +3707,77 @@ namespace NTT//禁止混用三模与普通 NTT
 		y=ksm(P(y,1),p+1>>1);
 		return y*2<p?y:p-y;
 	}
+//以上为开方
 #ifdef MTT
 	#ifdef CRT
+		void init(ui);
+		template<const ui p> struct M
+		{
+			ui w[N];
+			ui ksm(ui x,ui y)
+			{
+				ui r=1;
+				while (y)
+				{
+					if (y&1) r=(ll)r*x%p;
+					x=(ll)x*x%p;
+					y>>=1;
+				}
+				return r;
+			}
+			void init(ui n)
+			{
+				static ui pre=0;
+				ui i,j,k,l,wn;
+				for (j=k=1;j<n;j=l,k++)
+				{
+					l=j<<1;
+					wn=ksm(g,p-1>>k);
+					w[j]=1;
+					for (i=j+1;i<l;i++) w[i]=(ll)w[i-1]*wn%p;
+				}
+			}
+			void dft(vector<ui> &a,int o=0)
+			{
+				ui n=a.size(),i,j,k,x,y,*f,*g,*wn,*A=a.data();
+				NTT::init(n);
+				for (i=1;i<n;i++) if (i<r[i]) swap(A[i],A[r[i]]);
+				for (k=1;k<n;k<<=1)
+				{
+					wn=w+k;
+					for (i=0;i<n;i+=k<<1) 
+					{
+						f=A+i;g=A+i+k;
+						for (j=0;j<k;j++)
+						{
+							x=f[j];y=(ll)g[j]*wn[j]%p;
+							if (x+y>=p) f[j]=x+y-p; else f[j]=x+y;
+							if (x<y) g[j]=x-y+p; else g[j]=x-y;
+						}
+					}
+				}
+				if (o)
+				{
+					x=ksm(n,p-2);
+					for (i=0;i<n;i++) A[i]=(ll)A[i]*x%p;
+					reverse(A+1,A+n);
+				}
+			}
+		};
+		M<p1> s1;
+		M<p2> s2;
+		M<p3> s3;
 		void init(ui n)
 		{
 			static int pre=0;
 			if (pre==n) return;
-			ui b=__builtin_ctz(n)-1,i,j,k,l,wn;
+			ui b=__builtin_ctz(n)-1,i;
 			for (i=1;i<n;i++) r[i]=r[i>>1]>>1|(i&1)<<b;++b;
 			if (pre<n)
 			{
-				for (j=k=1;j<n;j=l,k++)
-				{
-					l=j<<1;
-					wn=ksm1(g,p1-1>>k);
-					w1[j]=1;
-					for (i=j+1;i<l;i++) w1[i]=(ll)w1[i-1]*wn%p1;
-				}
-				for (j=k=1;j<n;j=l,k++)
-				{
-					l=j<<1;
-					wn=ksm2(g,p2-1>>k);
-					w2[j]=1;
-					for (i=j+1;i<l;i++) w2[i]=(ll)w2[i-1]*wn%p2;
-				}
-				for (j=k=1;j<n;j=l,k++)
-				{
-					l=j<<1;
-					wn=ksm3(g,p3-1>>k);
-					w3[j]=1;
-					for (i=j+1;i<l;i++) w3[i]=(ll)w3[i-1]*wn%p3;
-				}
+				s1.init(n);
+				s2.init(n);
+				s3.init(n);
 			}
 			pre=n;
 		}
@@ -3782,11 +3785,11 @@ namespace NTT//禁止混用三模与普通 NTT
 #else
 	void init(ui n)
 	{
-		static int pre=0;
-		if (pre==n) return;
+		static int pr=0,pw=0;
+		if (pr==n) return;
 		ui b=__builtin_ctz(n)-1,i,j,k,l,wn;
-		for (i=1;i<n;i++) r[i]=r[i>>1]>>1|(i&1)<<b;++b;
-		if (pre<n)
+		for (i=1;i<n;i++) r[i]=r[i>>1]>>1|(i&1)<<b;
+		if (pw<n)
 		{
 			for (j=k=1;j<n;j=l,k++)
 			{
@@ -3795,8 +3798,9 @@ namespace NTT//禁止混用三模与普通 NTT
 				w[j]=1;
 				for (i=j+1;i<l;i++) w[i]=(ll)w[i-1]*wn%p;
 			}
+			pw=n;
 		}
-		pre=n;
+		pr=n;
 	}
 #endif
 	ui cal(ui x) {return 1u<<__lg(max(x,1u)*2-1);}
@@ -3835,88 +3839,7 @@ namespace NTT//禁止混用三模与普通 NTT
 			for (;i>=0;i--) r=((ll)r*x+a[i])%p;
 			return r;
 		}
-	#ifdef MTT
-		#ifdef CRT
-			void dft1(int o=0)
-			{
-				ui n=a.size(),i,j,k,x,y,*f,*g,*wn,*A=a.data();
-				init(n);
-				for (i=1;i<n;i++) if (i<r[i]) swap(A[i],A[r[i]]);
-				for (k=1;k<n;k<<=1)
-				{
-					wn=w1+k;
-					for (i=0;i<n;i+=k<<1) 
-					{
-						f=A+i;g=A+i+k;
-						for (j=0;j<k;j++)
-						{
-							x=f[j];y=(ll)g[j]*wn[j]%p1;
-							if (x+y>=p1) f[j]=x+y-p1; else f[j]=x+y;
-							if (x<y) g[j]=x-y+p1; else g[j]=x-y;
-						}
-					}
-				}
-				if (o)
-				{
-					x=ksm1(n,p1-2);
-					for (i=0;i<n;i++) A[i]=(ll)A[i]*x%p1;
-					reverse(A+1,A+n);
-				}
-			}
-			void dft2(int o=0)
-			{
-				ui n=a.size(),i,j,k,x,y,*f,*g,*wn,*A=a.data();
-				init(n);
-				for (i=1;i<n;i++) if (i<r[i]) swap(A[i],A[r[i]]);
-				for (k=1;k<n;k<<=1)
-				{
-					wn=w2+k;
-					for (i=0;i<n;i+=k<<1) 
-					{
-						f=A+i;g=A+i+k;
-						for (j=0;j<k;j++)
-						{
-							x=f[j];y=(ll)g[j]*wn[j]%p2;
-							if (x+y>=p2) f[j]=x+y-p2; else f[j]=x+y;
-							if (x<y) g[j]=x-y+p2; else g[j]=x-y;
-						}
-					}
-				}
-				if (o)
-				{
-					x=ksm2(n,p2-2);
-					for (i=0;i<n;i++) A[i]=(ll)A[i]*x%p2;
-					reverse(A+1,A+n);
-				}
-			}
-			void dft3(int o=0)
-			{
-				ui n=a.size(),i,j,k,x,y,*f,*g,*wn,*A=a.data();
-				init(n);
-				for (i=1;i<n;i++) if (i<r[i]) swap(A[i],A[r[i]]);
-				for (k=1;k<n;k<<=1)
-				{
-					wn=w3+k;
-					for (i=0;i<n;i+=k<<1) 
-					{
-						f=A+i;g=A+i+k;
-						for (j=0;j<k;j++)
-						{
-							x=f[j];y=(ll)g[j]*wn[j]%p3;
-							if (x+y>=p3) f[j]=x+y-p3; else f[j]=x+y;
-							if (x<y) g[j]=x-y+p3; else g[j]=x-y;
-						}
-					}
-				}
-				if (o)
-				{
-					x=ksm3(n,p3-2);
-					for (i=0;i<n;i++) A[i]=(ll)A[i]*x%p3;
-					reverse(A+1,A+n);
-				}
-			}
-		#endif
-	#else
+	#ifndef MTT
 		void dft(int o=0)
 		{
 			ui n=a.size(),i,j,k,x,y,*f,*g,*wn,*A=pt();
@@ -3999,19 +3922,26 @@ namespace NTT//禁止混用三模与普通 NTT
 		Q operator*(Q f) const {f*=*this;return f;}
 	#ifdef MTT
 		#ifdef CRT
+			template<const ui p> void fun(M<p> &s,Q &g)
+			{
+				Q f=*this;
+				ui n=g.a.size(),i;
+				s.dft(f.a);s.dft(g.a);
+				for (i=0;i<n;i++) g.a[i]=(ll)g.a[i]*f.a[i]%p;
+				s.dft(g.a,1);
+			}
 			void operator*=(Q g3)
 			{
-				Q f,g1,g2;
-				g1=g2=g3;
 				assert(a.size()==g3.a.size());
 				ui n=a.size()<<1,i;
 				ll x;
-				a.resize(n);g1.a.resize(n);g2.a.resize(n);g3.a.resize(n);
-				g1.dft1();g2.dft2();g3.dft3();
-				f=*this;f.dft1();for (i=0;i<n;i++) g1.a[i]=(ll)g1.a[i]*f.a[i]%p1;g1.dft1(1);
-				f=*this;f.dft2();for (i=0;i<n;i++) g2.a[i]=(ll)g2.a[i]*f.a[i]%p2;g2.dft2(1);
-				f=*this;f.dft3();for (i=0;i<n;i++) g3.a[i]=(ll)g3.a[i]*f.a[i]%p3;g3.dft3(1);
-				a.resize(n>>=1);ui _p12=(ll)p1*p2%p;
+				a.resize(n);g3.a.resize(n);
+				Q g1=g3,g2=g3;
+				fun(s1,g1);
+				fun(s2,g2);
+				fun(s3,g3);
+				a.resize(n>>=1);
+				ui _p12=(ll)p1*p2%p;
 				for (i=0;i<n;i++)
 				{
 					x=(ll)(g2.a[i]+p2-g1.a[i])*inv_p1%p2*p1+g1.a[i];
@@ -4146,22 +4076,6 @@ namespace NTT//禁止混用三模与普通 NTT
 		Q operator/(Q f) const {return (*this)*~f;}
 		void operator/=(Q f) {f=~f;(*this)*=f;}
 	};
-	Q read(int n)
-	{
-		Q r(n);
-		int P=p;
-		int x;
-		for (int i=0;i<n;i++) cin>>x,r.a[i]=(x%P+P)%P;
-		//for (int i=0;i<n;i++) cin>>r.a[i];
-		return r;
-	}
-	void write(Q &r,int n=-1)
-	{
-		if (n==0) return;
-		if (n==-1) n=r.a.size();
-		for (int i=0;i<n-1;i++) cout<<r.a[i]<<" ";
-		cout<<r.a[n-1]<<endl;
-	}
 #ifndef MTT
 	Q sqr(Q b)
 	{
@@ -4994,7 +4908,7 @@ namespace NTT//禁止混用三模与普通 NTT
 	}
 #endif
 }
-using NTT::ui;using NTT::read;using NTT::p;
+using NTT::ui;using NTT::p;
 #define poly NTT::Q
 \end{lstlisting}
 
@@ -6303,7 +6217,7 @@ namespace KM
 	}
 	template<typename TT> ll max_weighted_match(int N,const vector<tuple<int,int,TT>> &edges)//lk[[1,n]]->[1,n]
 	{
-		int i,j;n=N;
+		int i;n=N;
 		memset(lk+1,0,n*sizeof lk[0]);
 		memset(kl+1,0,n*sizeof kl[0]);
 		memset(ly+1,0,n*sizeof ly[0]);
@@ -7159,6 +7073,58 @@ int main()
 	for (auto &v:ans) cout<<v.size()<<' '<<v<<'\n';
 }
 
+\end{lstlisting}
+
+ans 存放每个点双包含的点。可以自环。
+
+\begin{lstlisting}
+const int N=5e5+5;
+struct Q
+{
+	int v,w;
+};
+vector<vector<int>> ans;
+vector<int> cur;
+vector<int> e[N];
+int dfn[N],low[N],st[N];
+int id,tp;
+void dfs(int u)
+{
+	dfn[u]=low[u]=++id;
+	st[++tp]=u;
+	for (int v:e[u]) if (dfn[v]) low[u]=min(low[u],dfn[v]); else
+	{
+		dfs(v);
+		low[u]=min(low[u],low[v]);
+		if (dfn[u]<=low[v])
+		{
+			vector cur={u};
+			do
+			{
+				cur.push_back(st[tp]);
+			} while (st[tp--]!=v);
+			ans.push_back(cur);
+		}
+	}
+}
+int main()
+{
+	ios::sync_with_stdio(0);cin.tie(0);
+	cout<<setiosflags(ios::fixed)<<setprecision(15);
+	int n,m,i;
+	cin>>n>>m;
+	for (i=0;i<m;i++)
+	{
+		int u,v;
+		cin>>u>>v;
+		e[u].push_back(v);
+		e[v].push_back(u);
+	}
+	for (i=0;i<n;i++) if (!dfn[i]) dfs(i);
+	for (i=0;i<n;i++) if (count(all(e[i]),i)==e[i].size()) ans.push_back({i});
+	cout<<ans.size()<<'\n';
+	for (auto &v:ans) cout<<v.size()<<' '<<v<<'\n';
+}
 \end{lstlisting}
 
 \subsection{边双}
@@ -9053,24 +9019,22 @@ int main()
 $O(n+m)$，$O(n+m)$。
 
 \begin{lstlisting}
-void dfs(int x)
+void dfs(int u)
 {
-	int i;
-	dfn[x]=low[x]=++sx;
-	val[st[++top]=x]=-1;
-	for (i=fir[x];i;i=next[i]) if (dfn[lj[i]]) low[x]=min(low[x],dfn[lj[i]]); else
+	dfn[u]=low[u]=++id;
+	st[++tp]=u;
+	for (int v:e[u]) if (dfn[v]) low[u]=min(low[u],dfn[v]); else
 	{
-		dfs(lj[i]);
-		low[x]=min(low[x],low[lj[i]]);
-		if (dfn[x]<=low[lj[i]])
+		dfs(v);
+		low[u]=min(low[u],low[v]);
+		if (dfn[u]<=low[v])
 		{
-			val[++fs]=1;
-			while (st[top+1]!=lj[i])
+			vector cur={u};
+			do
 			{
-				++val[fs];
-				fadd(fs,st[top--]);
-			}
-			fadd(fs,x);
+				cur.push_back(st[tp]);
+			} while (st[tp--]!=v);
+			ans.push_back(cur);
 		}
 	}
 }
