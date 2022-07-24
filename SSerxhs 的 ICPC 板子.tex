@@ -1,10 +1,15 @@
-\documentclass{ctexart}
+\documentclass[12pt]{ctexart}
 \usepackage{amsfonts,amssymb}
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{listings}
+\usepackage{geometry}
 \usepackage[usenames,dvipsnames]{xcolor}
-
+\usepackage{setspace}
+\setstretch{1.1} 
+\geometry{a4paper}
+\geometry{top=2cm} 
+\geometry{bottom=0cm} 
 \definecolor{mygreen}{rgb}{0,0.6,0}
 \definecolor{mygray}{rgb}{0.5,0.5,0.5}
 \definecolor{mymauve}{rgb}{0.58,0,0.82}
@@ -30,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.0.5}
+\centerline{ver:3.0.6}
 
 \tableofcontents
 
@@ -1118,6 +1123,206 @@ void ins(int x,int p)//在p插入x
 
 ans=0;//[z,y]
 for (i=M-1;~i;i--) if ((1^ans>>i&1)&&(v[y][i][1]>=z)) ans^=v[y][i][0];
+\end{lstlisting}
+
+\subsection{splay 重构}
+
+$O(n)$，$O((n+q)\log n)$。
+
+\begin{lstlisting}
+
+const ui p=998244353;
+template<typename inf,typename tag> struct splay
+{
+	#define _rev
+	struct node
+	{
+		node *c[2],*f;
+		int siz;
+		inf s,v;
+		tag t;
+		node():c{},f(0),siz(1),s(),v(),t(){}
+		node(inf x):c{},f(0),siz(1),s(x),v(x),t(){}
+		void operator+=(const tag &o)
+		{
+			s+=o;v+=o;t+=o;
+		#ifdef _rev
+			if (o.rev) swap(c[0],c[1]);
+		#endif
+		}
+		void pushup()
+		{
+			if (c[0]) s=c[0]->s+v,siz=c[0]->siz+1; else s=v,siz=1;
+			if (c[1]) s=s+c[1]->s,siz+=c[1]->siz;
+		}
+		void pushdown()
+		{
+			for (auto x:c) if (x) *x+=t;
+			t={};
+		}
+		void zigzag()
+		{
+			node *y=f,*z=y->f;
+			int typ=y->c[0]==this;
+			if (z) z->c[z->c[1]==y]=this;
+			f=z; y->f=this;
+			y->c[typ^1]=c[typ];
+			if (c[typ]) c[typ]->f=y;
+			c[typ]=y;
+			y->pushup();
+		}
+		void splay(node *tar)//不要在 find 以外调用
+		{
+			for (node *y=f;y!=tar;zigzag(),y=f) if (node *z=y->f;z!=tar) (z->c[1]==y^y->c[1]==this?this:y)->zigzag();
+			pushup();
+		}
+		void clear()
+		{
+			for (node *x:c) if (x) x->clear();
+			delete this;
+		}
+	};
+	node *rt;
+	void debug()
+	{
+		map<node*,int> id;
+		id[0]=0;id[rt]=1;
+		int cnt=1;
+		function<void(node*)> out=[&](node *x)
+		{
+			if (!x) return;
+			for (auto y:x->c) if (!id.count(y)) id[y]=++cnt;
+			cerr<<id[x]<<' '<<id[x->c[0]]<<' '<<id[x->c[1]]<<' '<<id[x->f]<<' '<<x->siz<<'\n';
+			for (auto y:x->c) out(y);
+		};
+		out(rt);
+	}
+	node *build(inf *a,int n)
+	{
+		if (n==0) return 0;
+		int m=n-1>>1;
+		node *x=new node(a[m]);
+		x->c[0]=build(a,m);
+		x->c[1]=build(a+m+1,n-1-m);
+		for (node *y:x->c) if (y) y->f=x;
+		x->pushup();
+		return x;
+	}
+	splay()
+	{
+		rt=new node;
+		rt->c[1]=new node;
+		rt->c[1]->f=rt;
+		rt->siz=2;
+	}
+	splay(inf *a,int n)//[1,n]
+	{
+		rt=new node;
+		rt->c[1]=new node;
+		rt->c[1]->f=rt;
+		rt->c[1]->c[0]=build(a+1,n);
+		rt->c[1]->c[0]->f=rt->c[1];
+		rt->c[1]->pushup();
+		rt->pushup();
+	}
+	void findnth(int k,node *tar)
+	{
+		node *x=rt;
+		while (1)
+		{
+			x->pushdown();
+			int v=x->c[0]?x->c[0]->siz:0;
+			if (v+1==k) {x->splay(tar);if (!tar) rt=x;return;}
+			if (v>=k) x=x->c[0]; else x=x->c[1],k-=v+1;
+		}
+	}
+	void split(int l,int r)
+	{
+		assert(1<=l&&r<=rt->siz-2&&l-1<=r);
+		findnth(l,0);
+		findnth(r+2,rt);
+	}
+	void insert(int pos,inf x)//insert before pos
+	{
+		assert(1<=pos&&pos<=rt->siz-1);
+		split(pos,pos-1);
+		rt->c[1]->c[0]=new node(x);
+		rt->c[1]->c[0]->f=rt->c[1];
+		rt->c[1]->pushup();
+		rt->pushup();
+	}
+	void insert(int pos,inf *a,int n)//insert before pos, [1,n]
+	{
+		assert(1<=pos&&pos<=rt->siz-1);
+		split(pos,pos-1);
+		rt->c[1]->c[0]=build(a,n);
+		rt->c[1]->c[0]->f=rt->c[1];
+		rt->c[1]->pushup();
+		rt->pushup();
+	}
+	void erase(int pos)
+	{
+		assert(1<=pos&&pos<=rt->siz-2);
+		split(pos,pos);
+		delete rt->c[1]->c[0];
+		rt->c[1]->c[0]=0;
+		rt->c[1]->pushup();
+		rt->pushup();
+	}
+	void erase(int l,int r)
+	{
+		assert(1<=l&&l<=r&&r<=rt->siz-2);
+		split(l,r);
+		rt->c[1]->c[0]->clear();
+		rt->c[1]->c[0]=0;
+		rt->c[1]->pushup();
+		rt->pushup();
+	}
+	void modify(int pos,inf x)//not checked
+	{
+		assert(1<=pos&&pos<=rt->siz-2);
+		findnth(pos+1,0);
+		rt->v=x;rt->pushup();
+	}
+	void modify(int l,int r,tag w)
+	{
+		split(l,r);
+		node *x=rt->c[1]->c[0];
+		*x+=w;
+		rt->c[1]->pushup();
+		rt->pushup();
+	}
+	inf ask(int l,int r)
+	{
+		split(l,r);
+		return rt->c[1]->c[0]->s;
+	}
+	~splay(){rt->clear();}
+	#undef _rev
+};
+struct Q
+{
+	ll pl,ti;
+	bool rev;
+	Q():pl(0),ti(1),rev(0){}
+	Q(ll a,ll b,bool c):pl(a),ti(b),rev(c){}
+	void operator+=(const Q &o)
+	{
+		pl=(pl*o.ti+o.pl)%p;
+		ti=ti*o.ti%p;
+		rev^=o.rev;
+	}
+};
+struct P
+{
+	ll s,len;
+	void operator+=(const Q &o)
+	{
+		s=(s*o.ti+o.pl*len)%p;
+	}
+	P operator+(const P &o) {return {s+o.s>=p?s+o.s-p:s+o.s,len+o.len};}
+};
+
 \end{lstlisting}
 
 \subsection{第 $k$ 大线性基}
@@ -10810,7 +11015,7 @@ $m_i$ 为不同的质数。设 $M=\prod\limits_{i=1}^nm_i$，$t_i\times \dfrac {
 
 $V-E+F=2$，$S=n+\frac s2-1$。（$n$ 为内部，$s$ 为边上）
 
-用途：![](图片/1.jpg) $\text{连通块个数}=1+E-V+内部框个数$
+用途：对于相邻的不相等的值，在中间画一条线（最外也画），$\text{连通块个数}=1+E-V+内部框个数$
 
 注意全都是不含矩形边界上的。
 
