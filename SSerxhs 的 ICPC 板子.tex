@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.0.9}
+\centerline{ver:3.0.10}
 
 \tableofcontents
 
@@ -320,12 +320,13 @@ struct bit
 	ll presum(int x)
 	{
 		ll r=a[x],rr=b[x];
+		int y=x;
 		while (x^=x&-x)
 		{
 			r+=a[x];
 			rr+=b[x];
 		}
-		return r*(x+1)-rr+s[x];
+		return r*(y+1)-rr+s[y];
 	}
 	ll sum(int l,int r)
 	{
@@ -5925,7 +5926,7 @@ struct str
 		for (i=1;i<=m;i++)
 		{
 			while (j&&t[i]!=s[j+1]) j=nxt[j];
-			if ((j+=t[i]==s[j+1])==n) j=nxt[j],r.push_back({i-n+1});
+			if ((j+=t[i]==s[j+1])==n) j=nxt[j],r.push_back(i-n+1);
 		}
 		return r;
 	}
@@ -5945,6 +5946,41 @@ int main()
 	for (i=1;i<=m;i++) cout<<q.nxt[i]<<" \n"[i==m];
 }
 
+\end{lstlisting}
+
+\subsection{KMP（重构，未验证）}
+
+$O(n)$，$O(n)$。
+
+\begin{lstlisting}
+struct str//[0,n)
+{
+	vector<int> nxt,s;
+	int n;
+	str(const vector<int> &_s):nxt(_s.size(),-1),s(all(_s)),n(_s.size())
+	{
+		int i,j=-1;
+		for (i=1;i<n;i++)
+		{
+			while (j!=-1&&s[i]!=s[j+1]) j=nxt[j];
+			nxt[i]=j+=s[i]==s[j+1];
+		}
+	}
+	vector<int> match(const vector<int> &t)//find s(str) in t (start pos)
+	{
+		int m=t.size();
+		vector<int> r;
+		int i,j=-1;
+		for (i=0;i<m;i++)
+		{
+			while (j!=-1&&t[i]!=s[j+1]) j=nxt[j];
+			if ((j+=t[i]==s[j+1])==n-1) j=nxt[j],r.push_back(i-n+1);
+		}
+		return r;
+	}
+};
+
+	
 \end{lstlisting}
 
 \subsection{manacher}
