@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.0.10}
+\centerline{ver:3.1.0}
 
 \tableofcontents
 
@@ -1172,7 +1172,7 @@ template<typename inf,typename tag> struct splay
 			c[typ]=y;
 			y->pushup();
 		}
-		void splay(node *tar)//不要在 find 以外调用
+		void splay(node *tar)//不要在 makeroot 以外调用
 		{
 			for (node *y=f;y!=tar;zigzag(),y=f) if (node *z=y->f;z!=tar) (z->c[1]==y^y->c[1]==this?this:y)->zigzag();
 			pushup();
@@ -1225,6 +1225,11 @@ template<typename inf,typename tag> struct splay
 		rt->c[1]->c[0]->f=rt->c[1];
 		rt->c[1]->pushup();
 		rt->pushup();
+	}
+	void makeroot(node *u,node *tar)
+	{
+		if (!tar) rt=u;
+		u->splay();
 	}
 	void findnth(int k,node *tar)
 	{
@@ -11388,6 +11393,46 @@ void write(const int x)
 	}//main 开头，需要配合 exit(0) 食用
 \end{lstlisting}
 
+\subsection{德扑}
+
+\begin{lstlisting}
+
+struct Q
+{
+	int x,y;
+	bool operator<(const Q &o) const { return x>o.x; }
+};
+const ll inf=1e18;
+ll getrk(vector<Q> a)
+{
+	assert(a.size()==5);
+	int i,j;
+	bool isf=1,iss=1,spe=0;
+	sort(all(a));//decrease
+	for (i=1; i<5; i++) if (a[i].y!=a[0].y) { isf=0; break; }
+	for (i=1; i<5; i++) if (a[0].x!=i+a[i].x) { iss=0; break; }
+	if (a[0].x==14)
+	{
+		for (i=1; i<5; i++) if (a[i].x!=6-i) break;
+		if (i==5) iss=1,spe=1;
+	}
+	if (iss&&isf&&a[4].x==10) return 6*inf;
+	if (iss&&isf) return 5*inf+a[4].x*!spe;
+	static int cnt[15];
+	static ll hash[5];
+	for (auto [x,y]:a) ++cnt[x];
+	memset(hash,0,5*sizeof hash[0]);
+	for (auto [x,y]:a) if (cnt[x]) hash[cnt[x]]=hash[cnt[x]]*15+x,cnt[x]=0;
+	if (hash[4]) return 4*inf+hash[4]*15+hash[1];
+	if (hash[3]&&hash[2]) return 3*inf+hash[3]*225+hash[2];
+	return hash[3]*170'859'375+hash[2]*759'375+hash[1]+iss*(inf+a[4].x*!spe)+isf*2*inf;
+}
+Q stoq(const string &s)
+{
+	static string num=" ?23456789TJQKA",col=" SHCD";
+	return {(int)num.find(s[0]),(int)col.find(s[1])};
+}
+\end{lstlisting}
 
 
 \subsection{质数，$\omega(n)$ 与 $d(n)$}
@@ -11582,17 +11627,11 @@ int main()
 
 \begin{lstlisting}
 #pragma GCC optimize("Ofast")
-#pragma GCC target("popcnt")
-#pragma GCC target("sse3","sse2","sse")
-#pragma GCC target("avx","sse4","sse4.1","sse4.2","ssse3")
-#pragma GCC target("f16c")
-#pragma GCC target("fma","avx2")
-#pragma GCC target("xop","fma4")
+#pragma GCC target("popcnt","sse3","sse2","sse","avx","sse4","sse4.1","sse4.2","ssse3","f16c","fma","avx2","xop","fma4")
 #pragma GCC optimize("inline","fast-math","unroll-loops","no-stack-protector")
 #pragma GCC diagnostic error "-fwhole-program"
 #pragma GCC diagnostic error "-fcse-skip-blocks"
 #pragma GCC diagnostic error "-funsafe-loop-optimizations"
-#pragma GCC diagnostic error "-std=c++14"
 #include "bits/stdc++.h"
 #include "ext/pb_ds/assoc_container.hpp"
 #include "ext/pb_ds/tree_policy.hpp" //balanced tree
@@ -13151,6 +13190,295 @@ int main(){
 }
 
 
+\end{lstlisting}
+
+\subsection{$O(\frac{nm}{\omega})$ LCS}
+
+\begin{lstlisting}
+/*
+ * Author : _Wallace_
+ * Source : https://www.cnblogs.com/-Wallace-/
+ * Problem : LOJ #6564. 最长公共子序列
+ * Standard : GNU C++ 03
+ * Optimal : -Ofast
+ */
+#include <algorithm>
+#include <cstddef>
+#include <cstdio>
+#include <cstring>
+
+typedef unsigned long long ULL;
+
+const int N = 7e4 + 5;
+int n, m, u;
+
+struct bitset {
+  ULL t[N / 64 + 5];
+
+  bitset() {
+    memset(t, 0, sizeof(t));
+  }
+  bitset(const bitset &rhs) {
+    memcpy(t, rhs.t, sizeof(t));
+  }
+
+  bitset& set(int p) {
+    t[p >> 6] |= 1llu << (p & 63);
+    return *this;
+  }
+  bitset& shift() {
+    ULL last = 0llu;
+    for (int i = 0; i < u; i++) {
+      ULL cur = t[i] >> 63;
+      (t[i] <<= 1) |= last, last = cur;
+    }
+    return *this;
+  }
+  int count() {
+    int ret = 0;
+    for (int i = 0; i < u; i++)
+      ret += __builtin_popcountll(t[i]);
+    return ret;
+  }
+
+  bitset& operator = (const bitset &rhs) {
+    memcpy(t, rhs.t, sizeof(t));
+    return *this;
+  }
+  bitset& operator &= (const bitset &rhs) {
+    for (int i = 0; i < u; i++) t[i] &= rhs.t[i];
+    return *this;
+  }
+  bitset& operator |= (const bitset &rhs) {
+    for (int i = 0; i < u; i++) t[i] |= rhs.t[i];
+    return *this;
+  }
+  bitset& operator ^= (const bitset &rhs) {
+    for (int i = 0; i < u; i++) t[i] ^= rhs.t[i];
+    return *this;
+  }
+
+  friend bitset operator - (const bitset &lhs, const bitset &rhs) {
+    ULL last = 0llu; bitset ret;
+    for (int i = 0; i < u; i++){
+      ULL cur = (lhs.t[i] < rhs.t[i] + last);
+      ret.t[i] = lhs.t[i] - rhs.t[i] - last;
+      last = cur;
+    }
+    return ret;
+  }
+} p[N], f, g;
+
+signed main() {
+  scanf("%d%d", &n, &m), u = n / 64 + 1;
+  for (int i = 1, c; i <= n; i++)
+    scanf("%d", &c), p[c].set(i);
+  for (int i = 1, c; i <= m; i++) {
+    scanf("%d", &c), (g = f) |= p[c];
+    f.shift(), f.set(0);
+    ((f = g - f) ^= g) &= g;
+  }
+  printf("%d\n", f.count());
+  return 0;
+}
+\end{lstlisting}
+
+另一个实现
+
+\begin{lstlisting}
+
+#include <bits/stdc++.h>
+#pragma GCC target("popcnt,bmi")
+
+using namespace std;
+using ull = uint64_t;
+
+const int N = 70005, M = 1136;
+
+int n, m;
+ull g[N][M], f[M];
+
+int read() {
+    const int M = 1e6;
+    static streambuf *in = cin.rdbuf();
+#define gc (p1 == p2 && (p2 = (p1 = buf) + in -> sgetn(buf, M), p1 == p2) ? -1 : *p1++)
+    static char buf[M], *p1, *p2;
+    int c = gc, r = 0;
+
+    while (c < 48)
+        c = gc;
+
+    while (c > 47)
+        r = r * 10 + (c & 15), c = gc;
+
+    return r;
+}
+int main() {
+    cin.tie(0)->sync_with_stdio(0);
+    cin >> n >> m;
+
+    for (int i = 0; i < n; i++)
+        g[read()][i / 62] |= 1ULL << (i % 62);
+
+    int lim = (n - 1) / 62;
+
+    for (int i = 0; i < m; i++) {
+        int c = 1;
+        auto can = g[read()];
+
+        for (int j = 0; j <= lim; j++) {
+            ull x = f[j], y = x | can[j];
+            x += x + c + (~y & (1ULL << 62) - 1);
+            f[j] = x & y, c = x >> 62;
+        }
+    }
+
+    int ans = 0;
+
+    for (int i = 0; i <= lim; i++)
+        ans += __builtin_popcountll(f[i]);
+
+    cout << ans;
+}
+\end{lstlisting}
+
+\subsection{区间 LIS（排列）}
+
+\begin{lstlisting}
+
+
+#include<bits/stdc++.h>
+using namespace std;
+//dengyaotriangle!
+
+const int maxn=100005;
+
+int pool[(int)5e7];int ps;
+inline int *aloc(int x){
+    ps+=x;return pool+ps-x;
+}
+void unit_monge_mult(int *a,int *b,int *r,int n){
+    if(n==2){
+        if(a[0]==0&&b[0]==0)r[0]=0,r[1]=1;
+        else r[0]=1,r[1]=0;
+        return;
+    }
+    if(n==1){r[0]=0;return;}
+    int lps=ps;
+    int d=n/2;
+    int *a1=aloc(d),*a2=aloc(n-d),*b1=aloc(d),*b2=aloc(n-d);
+    int *mpa1=aloc(d),*mpa2=aloc(n-d),*mpb1=aloc(d),*mpb2=aloc(n-d);
+    int p[2]={0,0};
+    for(int i=0;i<n;i++){
+        if(a[i]<d)a1[p[0]]=a[i],mpa1[p[0]]=i,p[0]++;
+        else a2[p[1]]=a[i]-d,mpa2[p[1]]=i,p[1]++;
+    }
+    p[0]=p[1]=0;
+    for(int i=0;i<n;i++){
+        if(b[i]<d)b1[p[0]]=b[i],mpb1[p[0]]=i,p[0]++;
+        else b2[p[1]]=b[i]-d,mpb2[p[1]]=i,p[1]++;
+    }
+    int *c1=aloc(d),*c2=aloc(n-d);
+    unit_monge_mult(a1,b1,c1,d),unit_monge_mult(a2,b2,c2,n-d);
+    int *cpx=aloc(n),*cpy=aloc(n),*cqx=aloc(n),*cqy=aloc(n);
+    for(int i=0;i<d;i++)cpx[mpa1[i]]=mpb1[c1[i]],cpy[mpa1[i]]=0;
+    for(int i=0;i<n-d;i++)cpx[mpa2[i]]=mpb2[c2[i]],cpy[mpa2[i]]=1;
+    for(int i=0;i<n;i++)r[i]=cpx[i];
+    for(int i=0;i<n;i++)cqx[cpx[i]]=i,cqy[cpx[i]]=cpy[i];
+    int hi=n,lo=n,his=0,los=0;
+    for(int i=0;i<n;i++){
+        if(cqy[i]^(cqx[i]>=hi))his--;
+        while(hi>0&&his<0){
+            hi--;
+            if(cpy[hi]^(cpx[hi]>i))his++;
+        }
+        while(lo>0&&los<=0){
+            lo--;
+            if(cpy[lo]^(cpx[lo]>=i))los++;
+        }
+        if(los>0&&hi==lo)r[lo]=i;
+        if(cqy[i]^(cqx[i]>=lo))los--;
+    }
+    ps=lps;
+}
+void subunit_monge_mult(int*a,int*b,int*c,int n){
+    int lps=ps;
+    int *za=aloc(n),*zb=aloc(n),*res=aloc(n),*vis=aloc(n),*mpa=aloc(n),*mpb=aloc(n),*rb=aloc(n);
+    memset(vis,0,sizeof(int)*n);
+    memset(mpa,-1,sizeof(int)*n);
+    memset(mpb,-1,sizeof(int)*n);
+    memset(rb,-1,sizeof(int)*n);
+    int ca=n;
+    for(int i=n-1;i>=0;i--)if(a[i]!=-1){
+        vis[a[i]]=1;ca--;za[ca]=a[i];mpa[ca]=i;
+    }
+    for(int i=n-1;i>=0;i--)if(!vis[i])za[--ca]=i;
+    memset(vis,-1,sizeof(int)*n);
+    for(int i=0;i<n;i++)if(b[i]!=-1)vis[b[i]]=i;
+    ca=0;
+    for(int i=0;i<n;i++)if(vis[i]!=-1){
+        mpb[ca]=i;rb[vis[i]]=ca++;
+    }
+    for(int i=0;i<n;i++)if(rb[i]==-1)rb[i]=ca++;
+    for(int i=0;i<n;i++)zb[rb[i]]=i;
+    unit_monge_mult(za,zb,res,n);
+    memset(c,-1,sizeof(int)*n);
+    for(int i=0;i<n;i++)if(mpa[i]!=-1&&mpb[res[i]]!=-1)c[mpa[i]]=mpb[res[i]];
+    ps=lps;
+}
+
+
+void solve(int *p,int *ret,int n){
+    if(n==1){ret[0]=-1;return;}
+    int lps=ps,d=n/2;
+    int *pl=aloc(d),*pr=aloc(n-d);
+    for(int i=0;i<d;i++)pl[i]=p[i];
+    for(int i=0;i<n-d;i++)pr[i]=p[i+d];
+    int *vis=aloc(n);memset(vis,-1,sizeof(int)*n);
+    for(int i=0;i<d;i++)vis[pl[i]]=i;
+    int *tl=aloc(d),*tr=aloc(n-d),*mpl=aloc(d),*mpr=aloc(n-d);
+    int ca=0;
+    for(int i=0;i<n;i++)if(vis[i]!=-1)mpl[ca]=i,tl[vis[i]]=ca++;
+    ca=0;memset(vis,-1,sizeof(int)*n);
+    for(int i=0;i<n-d;i++)vis[pr[i]]=i;
+    for(int i=0;i<n;i++)if(vis[i]!=-1)mpr[ca]=i,tr[vis[i]]=ca++;
+    int *vl=aloc(d),*vr=aloc(n-d);
+    solve(tl,vl,d),solve(tr,vr,n-d);
+    int *sl=aloc(n),*sr=aloc(n);
+    iota(sl,sl+n,0);iota(sr,sr+n,0);
+    for(int i=0;i<d;i++)sl[mpl[i]]=(vl[i]==-1?-1:mpl[vl[i]]);
+    for(int i=0;i<n-d;i++)sr[mpr[i]]=(vr[i]==-1?-1:mpr[vr[i]]);
+    subunit_monge_mult(sl,sr,ret,n);
+    ps=lps;
+}
+int invp[maxn],res_monge[maxn];
+int main(){
+    ios::sync_with_stdio(0);cin.tie(0);
+    int n,q;
+    cin>>n>>q;
+    vector<int> a(n);
+    for(int i=0;i<n;i++)cin>>a[i],invp[a[i]]=i;
+    solve(invp,res_monge,n);
+    vector<int> fwk(n+1),ans(q);
+    vector<vector<pair<int,int> > > qry(n+1);
+    for(int i=0;i<q;i++){
+        int l,r;
+        cin>>l>>r;
+        qry[l].push_back({r,i});
+        ans[i]=r-l;
+    }
+    for(int i=n-1;i>=0;i--){
+        if(res_monge[i]!=-1){
+            for(int p=res_monge[i]+1;p<=n;p+=p&-p)fwk[p]++;
+        }
+        for(auto& z:qry[i]){
+            int id,c;tie(id,c)=z;
+            for(int p=id;p;p-=p&-p)ans[c]-=fwk[p];
+        }
+    }
+    for(int i=0;i<q;i++)cout<<ans[i]<<'\n';
+    return 0;
+}
 \end{lstlisting}
 
 \end{document}
