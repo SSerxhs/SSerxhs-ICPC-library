@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.1.0}
+\centerline{ver:3.1.2}
 
 \tableofcontents
 
@@ -1707,49 +1707,43 @@ int main()
 均摊 $O(\log ^2n)$ 插入，$O(\sqrt n)$ 矩形查询。
 
 \begin{lstlisting}
-#include <bits/stdc++.h>
-using namespace std;
+#define tmpl template<typename T>
 typedef long long ll;
-struct P
+tmpl struct P
 {
-	int x,y,v;
-	P(){}
-	P(int a,int b,int c):x(a),y(b),v(c){}
+	ll x,y;
+	T v;
 };
-template<typename T> struct Q
+tmpl struct Q
 {
-	int x[2],y[2],t;
+	ll x[2],y[2];
+	bool t;
 	T s;
-	Q(){}
-	Q(P &a)
+	Q() {}
+	Q(const P<T> &a)
 	{
 		x[0]=x[1]=a.x;
 		y[0]=y[1]=a.y;
 		s=a.v;
 	}
 };
-bool cmp0(const P &a,const P &b)
+tmpl bool cmp0(const P<T> &a,const P<T> &b) { return a.x<b.x; }
+tmpl bool cmp1(const P<T> &a,const P<T> &b) { return a.y<b.y; }
+tmpl struct kdt
 {
-	return a.x<b.x;
-}
-bool cmp1(const P &a,const P &b)
-{
-	return a.y<b.y;
-}
-template<typename T> struct kdt
-{
-	vector<P> c;
+	vector<P<T>> c;
 	vector<Q<T>> a;
-	int m,u,d,l,r;
+	ll m,u,d,l,r;
 	T ans;
-	void build(int x,P *b,int n)
+	bool fir;
+	void build(int x,P<T> *b,int n)
 	{
 		if (x==1)
 		{
 			a.resize(m=n<<1);
 			a[x].t=0;
 			c.resize(n);
-			for (int i=0;i<n;i++) c[i]=b[i];
+			for (int i=0; i<n; i++) c[i]=b[i];
 		}
 		if (n==1)
 		{
@@ -1757,7 +1751,7 @@ template<typename T> struct kdt
 			return;
 		}
 		int mid=n>>1,c=x<<1;
-		nth_element(b,b+mid,b+n,a[x].t?cmp1:cmp0);
+		nth_element(b,b+mid,b+n,a[x].t?cmp1<T>:cmp0<T>);
 		a[c].t=a[c|1].t=a[x].t^1;
 		build(c,b,mid);
 		build(c|1,b+mid,n-mid);
@@ -1770,65 +1764,160 @@ template<typename T> struct kdt
 	void find(int x)
 	{
 		if (x>=m||a[x].x[1]<u||a[x].x[0]>d||a[x].y[1]<l||a[x].y[0]>r) return;
-		if (u<=a[x].x[0]&&a[x].x[1]<=d&&l<=a[x].y[0]&&a[x].y[1]<=r) {ans+=a[x].s;return;}
-		find(x<<1);find(x<<1|1);
+		if (u<=a[x].x[0]&&a[x].x[1]<=d&&l<=a[x].y[0]&&a[x].y[1]<=r)
+		{
+			ans=fir?a[x].s:ans+a[x].s;
+			fir=0;
+			return;
+		}
+		find(x<<1); find(x<<1|1);
 	}
-	T find(int x1,int y1,int x2,int y2)
+	pair<bool,T> find(ll x1,ll y1,ll x2,ll y2)
 	{
-		ans=0;
-		u=x1;d=x2;
-		l=y1;r=y2;
+		fir=1;
+		ans={};
+		u=x1; d=x2;
+		l=y1; r=y2;
 		find(1);
-		return ans;
+		return {!fir,ans};
 	}
 };
 const int N=2e5+2,M=18;
-template<typename T> struct KDT
+tmpl struct KDT
 {
 	kdt<T> s[M];
-	P a[N];
+	P<T> a[N];
 	int n,m,i;
-	KDT(){n=0;}
-	KDT(int N,int *x,int *y,int *w)//[0,n)
+	KDT() { n=0; }
+	KDT(int N,ll *x,ll *y,T *w)//[0,n)
 	{
 		n=N;
 		int i,j;
-		for (i=0;i<n;i++) a[i]=P(x[i],y[i],w[i]);
-		for (i=j=0;n>>i;i++) if (n>>i&1) s[i].build(1,a+j,1<<i),j+=1<<i;
+		for (i=0; i<n; i++) a[i]={x[i],y[i],w[i]};
+		for (i=j=0; n>>i; i++) if (n>>i&1) s[i].build(1,a+j,1<<i),j+=1<<i;
 	}
-	void ins(int x,int y,int w)
+	void insert(ll x,ll y,T w)
 	{
-		a[0]=P(x,y,w);m=1;
-		for (i=0;n&1<<i;i++) for (auto u:s[i].c) a[m++]=u;
+		a[0]={x,y,w}; m=1;
+		for (i=0; n&1<<i; i++) for (auto u:s[i].c) a[m++]=u;
 		s[i].build(1,a,m);
 		++n;
 	}
-	T ask(int x,int y,int xx,int yy)
+	pair<bool,T> ask(ll x,ll y,ll xx,ll yy)
 	{
-		T ans=0;
-		for (i=0;1<<i<=n;i++) if (1<<i&n) ans+=s[i].find(x,y,xx,yy);
-		return ans;
+		T ans;
+		bool fir=1;
+		for (i=0; 1<<i<=n; i++) if (1<<i&n)
+		{
+			auto [_,tmp]=s[i].find(x,y,xx,yy);
+			if (!_) continue;
+			ans=fir?tmp:ans+tmp;
+			fir=0;
+		}
+		return {!fir,ans};
 	}
 };
 int x[N],y[N],w[N];
 int main()
 {
-	ios::sync_with_stdio(0);cin.tie(0);cout.tie(0);
+	ios::sync_with_stdio(0); cin.tie(0); cout.tie(0);
 	int n,q,i;
 	cin>>n>>q;
-	for (i=0;i<n;i++) cin>>x[i]>>y[i]>>w[i];
+	for (i=0; i<n; i++) cin>>x[i]>>y[i]>>w[i];
 	KDT<ll> s(n,x,y,w);
 	while (q--)
 	{
 		int op,x,y,w;
 		cin>>op>>x>>y>>w;
-		if (op==0) s.ins(x,y,w); else
+		if (op==0) s.insert(x,y,w); else
 		{
 			cin>>op;
 			cout<<s.ask(x,y,w-1,op-1)<<'\n';
 		}
 	}
+	return 0;
 }
+\end{lstlisting}
+
+\subsection{双端队列全局查询}
+
+\begin{lstlisting}
+
+template<typename T> struct dq
+{
+	vector<T> l,sl,r,sr;
+	void push_front(const T &o)
+	{
+		sl.push_back(sl.size()?o+sl.back():o);
+		l.push_back(o);
+	}
+	void push_back(const T &o)
+	{
+		sr.push_back(sr.size()?sr.back()+o:o);
+		r.push_back(o);
+	}
+	void pop_front()
+	{
+		if (l.size()) sl.pop_back(),l.pop_back();
+		else
+		{
+			assert(r.size());
+			int n=r.size(),m,i;
+			if (m=n-1>>1)
+			{
+				l.resize(m); sl.resize(m);
+				for (i=1; i<=m; i++) l[m-i]=r[i];
+				sl[0]=l[0];
+				for (i=1; i<m; i++) sl[i]=l[i]+sl[i-1];
+			}
+			for (i=m+1; i<n; i++) r[i-(m+1)]=r[i];
+			m=n-(m+1);
+			r.resize(m); sr.resize(m);
+			if (m)
+			{
+				sr[0]=r[0];
+				for (i=1; i<m; i++) sr[i]=sr[i-1]+r[i];
+			}
+		}
+	}
+	void pop_back()
+	{
+		if (r.size()) sr.pop_back(),r.pop_back();
+		else
+		{
+			assert(l.size());
+			int n=l.size(),m,i;
+			if (m=n-1>>1)
+			{
+				r.resize(m); sr.resize(m);
+				for (i=1; i<=m; i++) r[m-i]=l[i];
+				sr[0]=r[0];
+				for (i=1; i<m; i++) sr[i]=sr[i-1]+r[i];
+			}
+			for (i=m+1; i<n; i++) l[i-(m+1)]=l[i];
+			m=n-(m+1);
+			l.resize(m); sl.resize(m);
+			if (m)
+			{
+				sl[0]=l[0];
+				for (i=1; i<m; i++) sl[i]=l[i]+sl[i-1];
+			}
+		}
+	}
+	template<typename TT> TT ask(TT r)
+	{
+		if (sl.size()) r=r+sl.back();
+		if (sr.size()) r=r+sr.back();
+		return r;
+	}
+	T ask()
+	{
+		assert(sl.size()||sr.size());
+		if (sl.size()&&sr.size()) return sl.back()+sr.back();
+		return sl.size()?sl.back():sr.back();
+	}
+};//参数：类型。结合使用 + 运算符
+
 \end{lstlisting}
 
 \newpage
@@ -2777,6 +2866,7 @@ struct linear
 	}
 	template<typename T> void add(const vector<T> &a,db b)//limit: \sum a(i-1)xi<=b
 	{
+		assert(a.size()==n);
 		++m;
 		for (int i=1;i<=n;i++) r[m][i]=-a[i-1];
 		r[m][0]=b;
@@ -8364,6 +8454,223 @@ int siz[N],dep[N];
 	}
 \end{lstlisting}
 
+\subsection{点分树}
+
+$O(n\log^2 n)$，$O(n\log n)$。
+
+\begin{lstlisting}
+namespace DFS
+{
+	template<typename typC> struct bit0
+	{
+		vector<typC> a;
+		int n;
+		bit0() {}
+		bit0(int nn):n(nn),a(nn+1) {}
+		template<typename T> bit0(int nn,T *b):n(nn),a(nn+1)
+		{
+			for (int i=1; i<=n; i++) a[i]=b[i-1];
+			for (int i=1; i<=n; i++) if (i+(i&-i)<=n) a[i+(i&-i)]+=a[i];
+		}
+		void add(int x,typC y)
+		{
+			++x;
+			//cerr<<"add "<<x<<" by "<<y<<endl;
+			assert(1<=x&&x<=n);
+			a[x]+=y;
+			while ((x+=x&-x)<=n) a[x]+=y;
+		}
+		typC sum(int x)
+		{
+			++x;
+			//cerr<<"sum "<<x;
+			if (x>n) x=n;
+			assert(0<=x&&x<=n);
+			typC r=a[x];
+			while (x^=x&-x) r+=a[x];
+			//cerr<<"= "<<r<<endl;
+			return r;
+		}
+		typC sum(int x,int y)
+		{
+			return sum(y)-sum(x-1);
+		}
+	};
+	typedef long long ll;
+	const int N=1e5+5,M=18;
+	ll a[N];
+	bit0<ll> s[N],rc[N];
+	int st[M][N*2],lg[N*2];
+	int dep[N],dfn[N],siz[N],f[N];
+	vector<int> e[N],c[N];
+	bool ed[N];
+	int n,ksiz,rt,mn,id;
+	int lca(int u,int v)
+	{
+		u=dfn[u]; v=dfn[v];
+		if (u>v) swap(u,v);
+		int z=lg[v-u+1];
+		return dep[st[z][u]]<dep[st[z][v-(1<<z)+1]]?st[z][u]:st[z][v-(1<<z)+1];
+	}
+	int dis(int u,int v)
+	{
+		return dep[u]+dep[v]-dep[lca(u,v)]*2;
+	}
+	void findroot(int u)
+	{
+		ed[u]=siz[u]=1;
+		int mx=0;
+		for (int v:e[u]) if (!ed[v])
+		{
+			findroot(v);
+			siz[u]+=siz[v];
+			mx=max(mx,siz[v]);
+		}
+		mx=max(mx,ksiz-siz[u]);
+		ed[u]=0;
+		if (mn>mx) mn=mx,rt=u;
+	}
+	int fun(int u)
+	{
+		mn=1e9;
+		findroot(u);
+		u=rt;
+		ed[u]=1;
+		for (int v:e[u]) if (!ed[v]&&siz[v]>siz[u]) siz[v]=ksiz-siz[u];
+		for (int v:e[u]) if (!ed[v])
+		{
+			ksiz=siz[v];
+			c[u].push_back(fun(v));
+			f[c[u].back()]=u;
+		}
+		return u;
+	}
+	void pre_dfs(int u)
+	{
+		st[0][dfn[u]=++id]=u;
+		ed[u]=1;
+		for (int v:e[u]) if (!ed[v])
+		{
+			dep[v]=dep[u]+1;
+			pre_dfs(v);
+			st[0][++id]=u;
+		}
+		ed[u]=0;
+	}
+	void clear(int _n)
+	{
+		n=_n; id=0;
+		int i;
+		for (int i=1; i<=n; i++)
+		{
+			e[i].clear();
+			a[i]=f[i]=ed[i]=0;
+		}
+	}
+	void new_dfs(int u)
+	{
+		siz[u]=1;
+		for (int v:c[u]) new_dfs(v),siz[u]+=siz[v];
+		static int nd[N];
+		vector<int> q={u};
+		int mx=0,ql=0;
+		nd[u]=0;
+		while (ql<q.size())
+		{
+			int x=q[ql++];
+			for (int v:c[x]) q.push_back(v),mx=max(mx,nd[v]=nd[u]+1);
+		}
+		static ll tmp[N];
+		static int ds[N];
+		mx=0;
+		for (int v:q) mx=max(mx,ds[v]=dis(u,v));
+		++mx;
+		fill_n(tmp,mx,0);
+		for (int v:q) tmp[ds[v]]+=a[v];
+		s[u]=bit0<ll>(mx,tmp);
+		if (u!=rt)
+		{
+			mx=0;
+			for (int v:q) mx=max(mx,ds[v]=dis(f[u],v));
+			++mx;
+			fill_n(tmp,mx,0);
+			for (int v:q) tmp[ds[v]]+=a[v];
+			rc[u]=bit0<ll>(mx,tmp);
+		}
+	}
+	void init()
+	{
+		pre_dfs(1);
+		int i,j;
+		for (i=2; i<=id; i++) lg[i]=lg[i>>1]+1;
+		for (j=0; j<lg[id]; j++)
+		{
+			int R=id-(2<<j)+1;
+			for (i=1; i<=R; i++) st[j+1][i]=dep[st[j][i]]<dep[st[j][i+(1<<j)]]?st[j][i]:st[j][i+(1<<j)];
+		}
+		ksiz=n;
+		int tmp=fun(1);
+		rt=tmp;
+		new_dfs(rt);
+	}
+	void add(int u,ll val)
+	{
+		static int st[N],ds[N];
+		int tp=1,i; st[1]=u;
+		while (u=f[u]) st[++tp]=u;
+		u=st[1];
+		for (i=1; i<=tp; i++) ds[i]=dis(u,st[i]);
+		for (i=1; i<=tp; i++)
+		{
+			s[st[i]].add(ds[i],val);
+			if (i<tp) rc[st[i]].add(ds[i+1],val);
+		}
+	}
+	ll ask(int u,int k)
+	{
+		ll res=0;
+		static int st[N],ds[N];
+		int tp=1,i; st[1]=u;
+		while (u=f[u]) st[++tp]=u;
+		u=st[1];
+		for (i=1; i<=tp; i++) ds[i]=dis(u,st[i]);
+		for (i=1; i<=tp; i++)
+		{
+			if (ds[i]<=k) res+=s[st[i]].sum(k-ds[i]);
+			if (i<tp&&ds[i+1]<=k) res-=rc[st[i]].sum(k-ds[i+1]);
+		}
+		return res;
+	}
+}
+//核心：点分树上 lca 出现在原树路径上
+int main()
+{
+	ios::sync_with_stdio(0); cin.tie(0);
+	cout<<setiosflags(ios::fixed)<<setprecision(15);
+	int n,m,i;
+	cin>>n>>m;
+	DFS::clear(n);
+	for (i=1; i<=n; i++) cin>>DFS::a[i];
+	for (i=1; i<n; i++)
+	{
+		int u,v;
+		cin>>u>>v;
+		DFS::e[u].push_back(v);
+		DFS::e[v].push_back(u);
+	}
+	DFS::init();
+	ll ans=0;
+	while (m--)
+	{
+		int op,x,y;
+		cin>>op>>x>>y; x^=ans; y^=ans;
+		if (op==1) DFS::add(x,y-DFS::a[x]),DFS::a[x]=y;
+		else cout<<(ans=DFS::ask(x,y))<<'\n';
+	}
+}
+
+\end{lstlisting}
+
 \subsection{prufer 与树的互相转化}
 
 $O(n)$，$O(n)$。
@@ -11299,6 +11606,18 @@ pair<int, int> approx(int p,int q,int A)
 }
 \end{lstlisting}
 
+\subsection{快速取模}
+
+\begin{lstlisting}
+__uint128_t brt=((__uint128_t)1<<64)/mod;
+for(int i=1;i<=n;i++)
+{
+    ans*=i;
+    ans=ans-mod*(brt*ans>>64);
+    while(ans>=mod) ans-=mod;//可以替换为 if，但据说会变慢。如果循环展开则需要替换
+}
+\end{lstlisting}
+
 \subsection{IO 优化}
 
 \subsubsection{WDOI}
@@ -13481,4 +13800,67 @@ int main(){
 }
 \end{lstlisting}
 
+\subsection{区间 LCS}
+
+$s_{[0,a)}$ 和 $t_{[b,c)}$ 的 LCS
+
+\begin{lstlisting}
+
+
+#include<bits/stdc++.h>
+using namespace std;
+//dengyaotriangle!
+
+const int maxn=1005;
+const int maxq=500005;
+int n,m,q;
+char a[maxn],b[maxn];
+struct qryt{
+    int x,nxt;
+}z[maxq];
+int qry[maxn][maxn];
+int ans[maxq];
+int r[maxn];
+int bit[maxn];
+
+int main(){
+    ios::sync_with_stdio(0);cin.tie(0);
+    cin>>q>>b>>a;n=strlen(a);m=strlen(b);
+	//q,s,t
+    for(int i=1;i<=q;i++){
+        int a,b,c;
+        cin>>a>>b>>c;
+        if(a){
+            ans[i]=c-b;
+            z[i].x=b;z[i].nxt=qry[a][c];
+            qry[a][c]=i;
+        }
+    }    
+    for(int i=0;i<n;i++)r[i]=i;
+    for(int i=0;i<m;i++){
+        int lp=-1;
+        for(int j=0;j<n;j++)if(a[j]==b[i]){lp=j;break;}
+        if(lp!=-1){
+            for(int j=lp+1;j<n;j++){
+                if(a[j]!=b[i]){
+                    if(r[j-1]<r[j])swap(r[j-1],r[j]);
+                }
+            }
+            for(int i=n-1;i>lp;i--)r[i]=r[i-1];
+            r[lp]=-1;
+        }
+        for(int i=0;i<=n;i++)bit[i]=0;
+        for(int j=0;j<n;j++){
+            if(r[j]!=-1){
+                for(int p=n-r[j];p<=n;p+=p&-p)bit[p]++;
+            }
+            for(int y=qry[i+1][j+1];y;y=z[y].nxt){
+                for(int p=n-z[y].x;p;p-=p&-p)ans[y]-=bit[p];
+            }
+        }
+    }
+    for(int i=1;i<=q;i++)cout<<ans[i]<<'\n';
+    return 0;
+}
+\end{lstlisting}
 \end{document}
