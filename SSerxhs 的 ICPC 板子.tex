@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.1.3}
+\centerline{ver:3.1.6}
 
 \tableofcontents
 
@@ -84,7 +84,6 @@ template<int N,typename T,typename TT> struct ht//个数，定义域，值域
 
 \begin{lstlisting}
 #define all(x) (x).begin(),(x).end()
-multiset<int> ss;
 namespace chtholly_tree
 {
 	typedef int TT;
@@ -93,11 +92,11 @@ namespace chtholly_tree
 		int l;
 		mutable int r;
 		mutable TT v;
-		int len() const {return r-l+1;}
-		bool operator<(const Q &x) const {return l<x.l;}
+		int len() const { return r-l+1; }
+		bool operator<(const Q &x) const { return l<x.l; }
 	};
-	void add(const Q &a) {ss.insert(a.len());}
-	void del(const Q &a) {ss.erase(ss.find(a.len()));}
+	void add(const Q &a) {}
+	void del(const Q &a) {}
 	class odt: public set<Q>
 	{
 	public:
@@ -107,20 +106,22 @@ namespace chtholly_tree
 			iter it=lower_bound({x});
 			if (it!=end()&&it->l==x) return it;
 			Q t=*--it,a={t.l,x-1,t.v},b={x,t.r,t.v};
-			del(*it);add(a);add(b);
-			erase(it);insert(a);
+			del(*it); add(a); add(b);
+			erase(it); insert(a);
 			return insert(b).first;
 		}
 		void modify(int l,int r,TT v)//[l,r]
 		{
+			assert(l<=r&&r<10);
 			iter lt,rt,it;
-			rt=split(r+1);lt=split(l);//[lt,rt)
+			rt=r==rbegin()->r?end():split(r+1); lt=split(l);//[lt,rt)
 			while (lt!=begin()&&(it=prev(lt))->v==v) l=(lt=it)->l;
 			while (rt!=end()&&rt->v==v) r=(rt++)->r;
-			for (it=lt;it!=rt;it++) del(*it);
+			for (it=lt; it!=rt; it++) del(*it);
 			add({l,r,v});
-			erase(lt,rt);insert({l,r,v});
+			erase(lt,rt); insert({l,r,v});
 		}
+		TT operator[](const int x) const { return prev(upper_bound({x}))->v; }
 	};
 }
 using chtholly_tree::Q,chtholly_tree::odt;
@@ -1918,6 +1919,172 @@ template<typename T> struct dq
 	}
 };//参数：类型。结合使用 + 运算符
 
+\end{lstlisting}
+
+\subsection{线段树分裂}
+
+\begin{lstlisting}
+
+namespace sgt
+{
+#define ask_kth
+	int L=0,R=1e9;
+	void set_bound(int l,int r) { L=l; R=r; }
+	typedef ll info;
+	const info E=0;//找不到会返回 E
+	const int N=8e6+5;
+#define lc(x) (a[x].lc)
+#define rc(x) (a[x].rc)
+#define s(x) (a[x].s)
+	struct node
+	{
+		int lc,rc;
+		info s;
+	};
+	node a[N];
+	vector<int> id;
+	int ids=0,pos,z,y;
+	bool fir;
+	info tmp;
+	int npt()
+	{
+		int x;
+		if (id.size()) x=id.back(),id.pop_back();
+		else x=++ids;
+		lc(x)=rc(x)=0;
+		return x;
+	}
+	void pushup(int &x)
+	{
+		if (lc(x)&&rc(x)) s(x)=s(lc(x))+s(rc(x));
+		else if (lc(x)) s(x)=s(lc(x));
+		else if (rc(x)) s(x)=s(rc(x));
+		else id.push_back(x),x=0;
+	}
+	void insert(int &x,int l,int r)
+	{
+		if (l==r)
+		{
+			if (!x) x=npt(),s(x)=tmp;
+			else s(x)=s(x)+tmp;
+			return;
+		}
+		if (!x) x=npt();
+		int mid=l+r>>1;
+		if (pos<=mid)
+		{
+			insert(lc(x),l,mid);
+			if (rc(x)) s(x)=s(lc(x))+s(rc(x)); else s(x)=s(lc(x));
+		}
+		else
+		{
+			insert(rc(x),mid+1,r);
+			if (lc(x)) s(x)=s(lc(x))+s(rc(x)); else s(x)=s(rc(x));
+		}
+	}
+	void modify(int &x,int l,int r)
+	{
+		if (!x) x=npt();
+		if (l==r)
+		{
+			s(x)=tmp;
+			return;
+		}
+		int mid=l+r>>1;
+		if (pos<=mid)
+		{
+			insert(lc(x),l,mid);
+			if (rc(x)) s(x)=s(lc(x))+s(rc(x)); else s(x)=s(lc(x));
+		}
+		else
+		{
+			insert(rc(x),mid+1,r);
+			if (lc(x)) s(x)=s(lc(x))+s(rc(x)); else s(x)=s(rc(x));
+		}
+	}
+	int merge(int x1,int x2,int l,int r)
+	{
+		if (!(x1&&x2)) return x1|x2;
+		if (l==r) { s(x1)=s(x1)+s(x2); return x1; }
+		int mid=l+r>>1;
+		lc(x1)=merge(lc(x1),lc(x2),l,mid);
+		rc(x1)=merge(rc(x1),rc(x2),mid+1,r);
+		pushup(x1);
+		return x1;
+	}
+	void ask(int x,int l,int r)
+	{
+		if (!x) return;
+		if (z<=l&&r<=y)
+		{
+			if (fir) tmp=s(x),fir=0; else tmp=tmp+s(x);
+			return;
+		}
+		int mid=l+r>>1;
+		if (z<=mid) ask(lc(x),l,mid);
+		if (y>mid) ask(rc(x),mid+1,r);
+	}
+	void split(int &x1,int &x2,int l,int r)
+	{
+		assert(!x1);
+		if (!x2) return;
+		if (z<=l&&r<=y) { x1=x2; x2=0; return; }
+		x1=npt();
+		int mid=l+r>>1;
+		if (z<=mid) split(lc(x1),lc(x2),l,mid);
+		if (y>mid) split(rc(x1),rc(x2),mid+1,r);
+		pushup(x1); pushup(x2);
+	}
+	info *b;
+	void build(int &x,int l,int r)
+	{
+		x=npt();
+		if (l==r) { s(x)=b[l]; return; }
+		int mid=l+r>>1;
+		build(lc(x),l,mid); build(rc(x),mid+1,r);
+		s(x)=s(lc(x))+s(rc(x));
+	}
+	struct set
+	{
+		int rt;
+		set():rt(0) {}
+		set(info *a):rt(0) { b=a; build(rt,L,R); }
+		void modify(int p,const info &o) { pos=p; tmp=o; sgt::modify(rt,L,R); }
+		void insert(int p,const info &o) { pos=p; tmp=o; sgt::insert(rt,L,R); }
+		void join(const set &o) { rt=merge(rt,o.rt,L,R); }
+		info ask(int l,int r)
+		{
+			z=l; y=r; fir=1;
+			sgt::ask(rt,L,R);
+			return fir?E:tmp;
+		}
+		set split(int l,int r)
+		{
+			z=l; y=r; set p;
+			sgt::split(p.rt,rt,L,R);
+			return p;
+		}
+#ifdef ask_kth
+		int kth(info k)
+		{
+			int x=rt,l=L,r=R,mid;
+			if (k>s(x)) return -1;
+			s(0)=0;
+			while (l<r)
+			{
+				mid=l+r>>1;
+				if (s(lc(x))>=k) x=lc(x),r=mid;
+				else k-=s(lc(x)),x=rc(x),l=mid+1;
+			}
+			return l;
+		}
+#endif
+	};
+#undef lc
+#undef rc
+#undef s
+}
+typedef sgt::set tree;
 \end{lstlisting}
 
 \newpage
@@ -5911,7 +6078,7 @@ scanf("%d",&n);
 		}
 		ys[i]=x;
 	}tou=1;wei=0;
-	for (i=0;i<=25;i++) if (c[0][i]) dl[++wei]=c[0][i];
+	for (int v:c[0]) if (v) dl[++wei]=v;
 	while (tou<=wei)
 	{
 		x=dl[tou++];
@@ -8886,7 +9053,6 @@ template<int N,typename Q> struct LCT
 			#ifdef Rev
 			rs[x]=rs[x]+rs[lc];
 			#endif
-
 		}
 		if (rc)
 		{
@@ -8983,6 +9149,216 @@ template<int N,typename Q> struct LCT
 	}
 };
 \end{lstlisting}
+
+\subsection{LCT（重构，代码为动态割边割点）}
+
+\begin{lstlisting}
+#include "bits/stdc++.h"
+using namespace std;
+template<int N,typename info,typename tag> struct LCT
+{
+	int f[N],c[N][2];
+	info s[N],v[N];
+#ifdef Rev
+	info rs[N];
+#endif
+	tag tg[N];
+	bool rev[N],lz[N];
+	void init(int n,info *a)
+	{
+		for (int i=0; i<=n; i++)
+		{
+			rev[i]=lz[i]=0;
+			f[i]=c[i][0]=c[i][1]=0;
+			s[i]=v[i]=a[i];
+#ifdef Rev
+			rs[i]=a[i];
+#endif
+		}
+	}
+	bool nroot(int x) const
+	{
+		return c[f[x]][0]==x||c[f[x]][1]==x;
+	}
+	void pushup(int x)
+	{
+		int lc=c[x][0],rc=c[x][1];
+		s[x]=v[x];
+#ifdef Rev
+		rs[x]=v[x];
+#endif
+		if (lc)
+		{
+			s[x]=s[lc]+s[x];
+#ifdef Rev
+			rs[x]=rs[x]+rs[lc];
+#endif
+		}
+		if (rc)
+		{
+			s[x]=s[x]+s[rc];
+#ifdef Rev
+			rs[x]=rs[rc]+rs[x];
+#endif
+		}
+	}
+	void swp(int x)
+	{
+		swap(c[x][0],c[x][1]);
+#ifdef Rev
+		swap(s[x],rs[x]);
+#endif
+		rev[x]^=1;
+	}
+	void pushdown(int x)
+	{
+		if (rev[x])
+		{
+			for (int y:c[x]) if (y) swp(y);
+			rev[x]=0;
+		}
+		if (lz[x])
+		{
+			for (int y:c[x]) if (y)
+			{
+				if (lz[y]) tg[y]+=tg[x]; else tg[y]=tg[x],lz[y]=1;
+				s[y]+=tg[x];
+			}
+			lz[x]=0;
+		}
+	}
+	void zigzag(int x)
+	{
+		int y=f[x],z=f[y],typ=(c[y][0]==x);
+		if (nroot(y)) c[z][c[z][1]==y]=x;
+		f[x]=z; f[y]=x;
+		if (c[x][typ]) f[c[x][typ]]=y;
+		c[y][typ^1]=c[x][typ]; c[x][typ]=y;
+		pushup(y);
+	}
+	void splay(int x)
+	{
+		static int st[N];
+		int y,tp;
+		st[tp=1]=y=x;
+		while (nroot(y)) st[++tp]=y=f[y];
+		while (tp) pushdown(st[tp--]);
+		for (; nroot(x); zigzag(x)) if (nroot(y=f[x])) zigzag((c[y][0]==x)^(c[f[y]][0]==y)?x:f[x]);
+		pushup(x);
+	}
+	int access(int x)
+	{
+		int y=0;
+		for (; x; x=f[y=x]) splay(x),c[x][1]=y,pushup(x);
+		return y;
+	}
+	int findroot(int x)//splay 根为树根，splay 维护树根到 x 的链
+	{
+		access(x); splay(x); pushdown(x);
+		while (c[x][0]) pushdown(x=c[x][0]);
+		splay(x); return x;
+	}
+	void split(int x,int y)//x 为树新根，y 为 splay 新根
+	{ makeroot(x); access(y); splay(y); }
+	void makeroot(int x)//x 为树、splay 新根
+	{ access(x); splay(x); swp(x); }
+	void modify(int x,const info &o)
+	{ makeroot(x); v[x]=o; pushup(x); }
+	void modify(int x,int y,const tag &o)
+	{
+		split(x,y); s[y]+=o;
+		if (lz[y]) tg[y]+=o; else tg[y]=o,lz[y]=1;
+	}
+	info ask(int x,int y) { split(x,y); return s[y]; }
+	bool connected(int x,int y)//注意会改变形态
+	{ makeroot(x); return findroot(y)==x; }
+	void link(int x,int y)//y 为新根
+	{ if (!connected(x,y)) makeroot(f[x]=y); }
+	void cut(int x,int y)
+	{
+		if (connected(x,y))//可能本不连通
+		{
+			pushdown(x);
+			if (c[x][1]==y&&!c[y][0]&&!c[y][1])//可能连通但无边
+			{
+				c[x][1]=f[y]=0;
+				pushup(x);
+			}
+		}
+	}
+	int lca(int x,int y) { access(x); return access(y); }
+	vector<int> res;
+	void dfs(int x)
+	{
+		if (!x) return;
+		pushdown(x);
+		dfs(c[x][0]); res.push_back(x); dfs(c[x][1]);
+	}
+	vector<int> get_path(int x,int y)
+	{
+		res.clear(); split(x,y); dfs(y);
+		if (res[0]!=x) return {};
+		return res;
+	}
+};
+const int N=2e5+5,M=4e5+5;
+struct Q
+{
+	void operator+=(const Q &o) const {}
+};
+void operator+=(int &x,const Q &o) { x=0; }
+LCT<N,int,Q> s;
+LCT<M,int,Q> t;
+int a[N],b[M];
+int main()
+{
+	ios::sync_with_stdio(0); cin.tie(0);
+	int n,m,i,r=0;
+	cin>>n>>m;
+	fill_n(a+n+1,n,1);
+	fill_n(b+1,n,1);
+	s.init(n*2,a);
+	t.init(n+m,b);
+	int bs=n,ds=n;
+	while (m--)
+	{
+		int op,u,v;
+		cin>>op>>u>>v;
+		u^=r; v^=r;
+		// dbg(op,u,v);
+		if (u<1||u>n||v<1||v>n) return 0;
+		if (op==1)
+		{
+			if (s.connected(u,v))
+			{
+				s.modify(u,v,{});
+				auto c=t.get_path(u,v);
+				for (i=1; i<c.size(); i++) t.cut(c[i-1],c[i]);
+				++ds;
+				for (int x:c) t.link(ds,x);
+			}
+			else
+			{
+				s.link(++bs,u);
+				s.link(bs,v);
+				t.link(++ds,u);
+				t.link(ds,v);
+			}
+		}
+		else
+		{
+			if (!s.connected(u,v))
+			{
+				cout<<"-1\n";
+				continue;
+			}
+			r=op==2?s.ask(u,v):t.ask(u,v);
+			cout<<r<<'\n';
+		}
+	}
+}
+\end{lstlisting}
+
 
 \subsection{带子树的 LCT}
 
