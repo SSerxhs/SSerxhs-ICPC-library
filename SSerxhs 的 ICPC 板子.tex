@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.1.6}
+\centerline{ver:3.1.9}
 
 \tableofcontents
 
@@ -112,7 +112,6 @@ namespace chtholly_tree
 		}
 		void modify(int l,int r,TT v)//[l,r]
 		{
-			assert(l<=r&&r<10);
 			iter lt,rt,it;
 			rt=r==rbegin()->r?end():split(r+1); lt=split(l);//[lt,rt)
 			while (lt!=begin()&&(it=prev(lt))->v==v) l=(lt=it)->l;
@@ -3217,7 +3216,7 @@ int main()
 $O(m)$，$O(m)$。
 
 \begin{lstlisting}
-int f(int *a,int n,int m)//这种写法不包含0处取值，n是值，m-1是次数
+int f(int *a,int n,int m)//这种写法不包含0处取值，n是值，m-1是次数，至少需要 m 项
 {
 	if (n<=m) return a[n];
 	static int inv[N],l[N],r[N],ifac[N]; 
@@ -11350,8 +11349,8 @@ namespace geometry//不要用 int！
 		}
 		return (point<db>)m.o+(n.o-m.o)*n.d/(db)(m.d*n.d)*(point<db>)m.d;
 	}
-	tmpl db dis(const line<T> &m,const point<T> &o) {return m.d*(o-m.o)/m.d.len();}
-	tmpl db dis(const point<T> &o,const line<T> &m) {return m.d*(o-m.o)/m.d.len();}
+	tmpl db dis(const line<T> &m,const point<T> &o) {return abs(m.d*(o-m.o)/m.d.len());}
+	tmpl db dis(const point<T> &o,const line<T> &m) {return abs(m.d*(o-m.o)/m.d.len());}
 	struct circle
 	{
 		point<db> o;
@@ -12016,10 +12015,22 @@ pair<int, int> approx(int p,int q,int A)
 __uint128_t brt=((__uint128_t)1<<64)/mod;
 for(int i=1;i<=n;i++)
 {
-    ans*=i;
-    ans=ans-mod*(brt*ans>>64);
-    while(ans>=mod) ans-=mod;//可以替换为 if，但据说会变慢。如果循环展开则需要替换
+	ans*=i;
+	ans=ans-mod*(brt*ans>>64);
+	while(ans>=mod) ans-=mod;//可以替换为 if，但据说会变慢。如果循环展开则需要替换
 }
+
+struct barret{
+    ll p,m; //p 表示上面的模数, m 为取模参数
+    int c=0;
+    inline void init(ll t){
+    	c=48+log2(t),p=t;
+		m=(ll((ulll(1)<<c)/t));
+	}
+    friend inline ll operator % (ll n,const barret &d) { // get n % d
+        return n-((ulll(n)*d.m)>>d.c)*d.p;
+    }
+}modp;
 \end{lstlisting}
 
 \subsection{IO 优化}
@@ -12409,6 +12420,15 @@ int main()
 }
 \end{lstlisting}
 
+\subsection{python 使用方法}
+
+\begin{lstlisting}
+fi = open("discuss.in", "r")
+fo = open("discuss.out", "w")
+n=int(fi.readline())
+fo.write(str(ans))
+\end{lstlisting}
+
 
 \newpage
 
@@ -12744,122 +12764,111 @@ void write(const poly& a,int n=-1){
 1s：$200$ 组 $10^{18}$。
 
 \begin{lstlisting}
-#include <bits/stdc++.h>
-using namespace std;
-typedef long long ll;
-typedef __int128 lll;
-typedef pair<ll,int> pa;
-ll ksm(ll x,ll y,const ll p)
+namespace pr
 {
-	ll r=1;
-	while (y)
+	typedef long long ll;
+	typedef __int128 lll;
+	typedef pair<ll,int> pa;
+	ll ksm(ll x,ll y,const ll p)
 	{
-		if (y&1) r=(lll)r*x%p;
-		x=(lll)x*x%p;y>>=1;
-	}
-	return r;
-}
-namespace miller
-{
-	const int p[7]={2,3,5,7,11,61,24251};
-	ll s,t;
-	bool test(ll n,int p)
-	{
-		if (p>=n) return 1;
-		ll r=ksm(p,t,n),w;
-		for (int j=0;j<s&&r!=1;j++)
+		ll r=1;
+		while (y)
 		{
-			w=(lll)r*r%n;
-			if (w==1&&r!=n-1) return 0;
-			r=w;
+			if (y&1) r=(lll)r*x%p;
+			x=(lll)x*x%p; y>>=1;
 		}
-		return r==1;
+		return r;
 	}
-	bool prime(ll n)
+	namespace miller
 	{
-		if (n<2||n==46'856'248'255'981ll) return 0;
-		for (int i=0;i<7;++i) if (n%p[i]==0) return n==p[i];
-		s=__builtin_ctz(n-1);t=n-1>>s;
-		for (int i=0;i<7;++i) if (!test(n,p[i])) return 0;
-		return 1;
-	}
-}
-using miller::prime;
-mt19937_64 rnd(chrono::steady_clock::now().time_since_epoch().count());
-namespace rho
-{
-	void nxt(ll &x,ll &y,ll &p) {x=((lll)x*x+y)%p;}
-	ll find(ll n,ll C)
-	{
-		ll l,r,d,p=1;
-		l=rnd()%(n-2)+2,r=l;
-		nxt(r,C,n);
-		int cnt=0;
-		while (l^r)
+		const int p[7]={2,3,5,7,11,61,24251};
+		ll s,t;
+		bool test(ll n,int p)
 		{
-			p=(lll)p*llabs(l-r)%n;
-			if(!p) return gcd(n,llabs(l-r));
-			++cnt;
-			if (cnt==127)
+			if (p>=n) return 1;
+			ll r=ksm(p,t,n),w;
+			for (int j=0; j<s&&r!=1; j++)
 			{
-				cnt=0;
-				d=gcd(llabs(l-r),n);
-				if(d>1) return d;
+				w=(lll)r*r%n;
+				if (w==1&&r!=n-1) return 0;
+				r=w;
 			}
-			nxt(l,C,n);nxt(r,C,n);nxt(r,C,n);
+			return r==1;
 		}
-		return gcd(n,p);
+		bool prime(ll n)
+		{
+			if (n<2||n==46'856'248'255'981ll) return 0;
+			for (int i=0; i<7; ++i) if (n%p[i]==0) return n==p[i];
+			s=__builtin_ctz(n-1); t=n-1>>s;
+			for (int i=0; i<7; ++i) if (!test(n,p[i])) return 0;
+			return 1;
+		}
 	}
-	vector<pa> w;
-	vector<ll> d;
-	void dfs(ll n,int cnt)
+	using miller::prime;
+	mt19937_64 rnd(chrono::steady_clock::now().time_since_epoch().count());
+	namespace rho
 	{
-		if (n==1) return;
-		if (prime(n)) return w.emplace_back(n,cnt),void();
-		ll p=n,C=rnd()%(n-1)+1;
-		while (p==1||p==n) p=find(n,C++);
-		int r=1;n/=p;
-		while (n%p==0) n/=p,++r;
-		dfs(p,r*cnt);dfs(n,cnt);
+		void nxt(ll &x,ll &y,ll &p) { x=((lll)x*x+y)%p; }
+		ll find(ll n,ll C)
+		{
+			ll l,r,d,p=1;
+			l=rnd()%(n-2)+2,r=l;
+			nxt(r,C,n);
+			int cnt=0;
+			while (l^r)
+			{
+				p=(lll)p*llabs(l-r)%n;
+				if (!p) return gcd(n,llabs(l-r));
+				++cnt;
+				if (cnt==127)
+				{
+					cnt=0;
+					d=gcd(llabs(l-r),n);
+					if (d>1) return d;
+				}
+				nxt(l,C,n); nxt(r,C,n); nxt(r,C,n);
+			}
+			return gcd(n,p);
+		}
+		vector<pa> w;
+		vector<ll> d;
+		void dfs(ll n,int cnt)
+		{
+			if (n==1) return;
+			if (prime(n)) return w.emplace_back(n,cnt),void();
+			ll p=n,C=rnd()%(n-1)+1;
+			while (p==1||p==n) p=find(n,C++);
+			int r=1; n/=p;
+			while (n%p==0) n/=p,++r;
+			dfs(p,r*cnt); dfs(n,cnt);
+		}
+		vector<pa> getw(ll n)
+		{
+			w=vector<pa>(0); dfs(n,1);
+			if (n==1) return w;
+			sort(w.begin(),w.end());
+			int i,j;
+			for (i=1,j=0; i<w.size(); i++) if (w[i].first==w[j].first) w[j].second+=w[i].second; else w[++j]=w[i];
+			w.resize(j+1);
+			return w;
+		}
+		void dfss(int x,ll n)
+		{
+			if (x==w.size()) return d.push_back(n),void();
+			dfss(x+1,n);
+			for (int i=1; i<=w[x].second; i++) dfss(x+1,n*=w[x].first);
+		}
+		vector<ll> getd(ll n)
+		{
+			getw(n); d=vector<ll>(0); dfss(0,1);
+			sort(d.begin(),d.end());
+			return d;
+		}
 	}
-	vector<pa> getw(ll n)
-	{
-		w=vector<pa>(0);dfs(n,1);
-		if (n==1) return w;
-		sort(w.begin(),w.end());
-		int i,j;
-		for (i=1,j=0;i<w.size();i++) if (w[i].first==w[j].first) w[j].second+=w[i].second; else w[++j]=w[i];
-		w.resize(j+1);
-		return w;
-	}
-	void dfss(int x,ll n)
-	{
-		if (x==w.size()) return d.push_back(n),void();
-		dfss(x+1,n);
-		for (int i=1;i<=w[x].second;i++) dfss(x+1,n*=w[x].first);
-	}
-	vector<ll> getd(ll n)
-	{
-		getw(n);d=vector<ll>(0);dfss(0,1);
-		sort(d.begin(),d.end());
-		return d;
-	}
+	using rho::getw,rho::getd;
+	using miller::prime;
 }
-int main()
-{
-	ios::sync_with_stdio(0);
-	int t;
-	cin>>t;
-	while (t--)
-	{
-		ll x;cin>>x;
-		auto v=rho::getw(x);
-		int ans=0;
-		for (auto &[u,v]:v) ans+=v;
-		cout<<ans;
-		for (auto &[u,v]:v) for (int i=1;i<=v;i++) cout<<' '<<u;cout<<'\n';
-	}
-}
+using pr::getw,pr::getd;
 \end{lstlisting}
 
 \subsection{半平面交}
@@ -14267,4 +14276,28 @@ int main(){
     return 0;
 }
 \end{lstlisting}
+
+\subsection{毛毛虫剖分}
+毛毛虫剖分，一种由轻重链剖分（HLD）推广而成的树上结点重标号方法，支持修改 / 查询一只毛毛虫的信息，并且可以对毛毛虫的身体和足分别修改 / 查询不同信息 .
+
+严格强于树剖，而且复杂度和树剖一样哦！
+
+一些定义（默认在一棵树上）：
+
+毛毛虫：一条链和与这条链邻接的所有结点构成的集合 .
+虫身（身体）：毛毛虫的链部分 .
+虫足（足）：毛毛虫除虫身的部分 .
+重标号方法
+首先重剖求出重链 .
+DFS，若现在处理到结点 u：
+若 u 还未被标号，则为其标号 .
+若 u 是重链头，遍历这条重链，将邻接这条链的结点依次标号 .
+先递归重儿子，再递归轻儿子 .
+重标号性质
+对于重链，除链头外的结点标号连续 .
+对于任意结点，其轻儿子标号连续 .
+对于以重链头为根的子树，与这条重链邻接的所有结点标号连续 .
+这样就可以随便维护毛毛虫信息了，顺便还能维护链信息，子树信息等 .
+
+时间复杂度同轻重链剖分 .
 \end{document}
