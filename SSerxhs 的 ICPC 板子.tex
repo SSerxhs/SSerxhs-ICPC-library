@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.2.0}
+\centerline{ver:3.2.2}
 
 \tableofcontents
 
@@ -4529,6 +4529,7 @@ vector<ui> fst(const vector<ui> &s,const vector<ui> &t)
 \subsection{NTT}
 
 \begin{lstlisting}
+typedef unsigned long long ll;
 namespace NTT//禁止混用三模与普通 NTT
 {
 	mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
@@ -5320,6 +5321,7 @@ namespace NTT//禁止混用三模与普通 NTT
 	}//板子 OJ 1e5/1e18 1310ms，Luogu 32000/1e9 160ms
 	Q prod(const vector<Q> &a)
 	{
+		if (!a.size()) return Q(vector<ll>{1});
 		auto dfs=[&](auto dfs,const Q *a,int n) -> Q
 		{
 			if (n==1) return a[0];
@@ -5327,6 +5329,22 @@ namespace NTT//禁止混用三模与普通 NTT
 			return dfs(dfs,a,m)&dfs(dfs,a+m,n-m);
 		};
 		return dfs(dfs,a.data(),a.size());
+	}
+	Q prod_new(const vector<Q> &a)
+	{
+		if (!a.size()) return Q(vector<ll>{1});
+		struct cmp
+		{
+			bool operator()(const Q &f,const Q &g) const { return f.a.size()>g.a.size(); }
+		};
+		priority_queue<Q,vector<Q>,cmp> q(all(a));
+		while (q.size()>1)
+		{
+			auto f=q.top(); q.pop();
+			f&=q.top(); q.pop();
+			q.push(f);
+		}
+		return q.top();
 	}
 	vector<ll> get_fx(const Q &f,const vector<ll> &X)
 	{
