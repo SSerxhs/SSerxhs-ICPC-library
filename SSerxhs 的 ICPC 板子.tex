@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.2.2}
+\centerline{ver:3.2.3}
 
 \tableofcontents
 
@@ -1388,7 +1388,7 @@ void split_val(int now,int &x,int &y)//调用外部val,相等归入y
 	else split_val(c[x=now][1],c[now][1],y);
 	pushup(now);
 }
-void split_kth(int now,int &x,int &y)//调用外部kth
+void split_kth(int now,int &x,int &y)//调用外部kth，左子树大小为 kth
 {
 	if (!now) return x=y=0,void();
 	if (kth<=s[c[now][0]]) split_kth(c[y=now][0],x,c[now][0]);
@@ -4560,13 +4560,13 @@ namespace NTT//禁止混用三模与普通 NTT
 /**/}
 	vector<ll> getinvs(vector<ll> a)
 	{
-		static ll l[N],r[N];
 		int n=a.size(),i;
 		if (n<=2)
 		{
 			for (i=0; i<n; i++) a[i]=ksm(a[i],p-2);
 			return a;
 		}
+		vector<ll> l(n),r(n);
 		l[0]=a[0]; r[n-1]=a[n-1];
 		for (i=1; i<n; i++) l[i]=l[i-1]*a[i]%p;
 		for (i=n-2; i; i--) r[i]=r[i+1]*a[i]%p;
