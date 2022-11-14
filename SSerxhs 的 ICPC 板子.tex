@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.2.3}
+\centerline{ver:3.3.1}
 
 \tableofcontents
 
@@ -6806,33 +6806,65 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{三元环计数}
+\subsection{三/四元环计数}
 
 $O(m\sqrt m)$，$O(n+m)$。
 
+注意四元环数的是边四元环。
+
 \begin{lstlisting}
-typedef pair<int,int> pa;
-typedef tuple<int,int,int> tu;
-vector<tu> get_triangles(int n,vector<pa> eg)//[0,n]
+ll triple(const vector<pair<int,int>> &edges)//0-labelled
 {
+	int n=0,i;
+	for (auto [u,v]:edges) n=max({n,u,v});
 	++n;
-	vector<tu> r;
-	vector<int> e[n];
-	int d[n],ed[n];
-	fill_n(d,n,0);fill_n(ed,n,0);
-	for (auto [x,y]:eg) ++d[y];
-	for (auto [x,y]:eg)
+	vector d(n,0);
+	vector e(n,vector(0,0));
+	for (auto [u,v]:edges) ++d[u],++d[v];
+	for (auto [u,v]:edges)
 	{
-		if (pa{d[y],y}<pa{d[x],x}) swap(x,y);
-		e[x].push_back(y);
+		if (pair{d[u],u}>pair{d[v],v}) swap(u,v);
+		e[u].push_back(v);
 	}
-	for (int u=0;u<n;u++)
+	fill(all(d),0);
+	ll ans=0;
+	for (i=0; i<n; i++)
 	{
-		for (int v:e[u]) ed[v]=1;
-		for (int v:e[u]) for (int w:e[v]) if (ed[w]) r.push_back({u,v,w});
-		for (int v:e[u]) ed[v]=0;
+		for (int u:e[i]) d[u]=1;
+		for (int u:e[i]) for (int v:e[u]) ans+=d[v];
+		for (int u:e[i]) d[u]=0;
 	}
-	return r;
+	return ans;
+}
+ll quadruple(const vector<pair<int,int>> &edges)//0-labelled
+{
+	int n=0,i;
+	for (auto [u,v]:edges) n=max({n,u,v});
+	++n;
+	vector d(n,0),id(n,0),rk(n,0);
+	vector e(n,vector(0,0)),lk(n,vector(0,0));
+	for (auto [u,v]:edges)
+	{
+		++d[u]; ++d[v];
+		lk[u].push_back(v);
+		lk[v].push_back(u);
+	}
+	iota(all(id),0);
+	stable_sort(all(id),[&](int u,int v) { return d[u]<d[v]; });
+	for (i=0; i<n; i++) rk[id[i]]=i;
+	for (auto [u,v]:edges)
+	{
+		if (rk[u]>rk[v]) swap(u,v);
+		e[u].push_back(v);
+	}
+	fill(all(d),0);
+	ll ans=0;
+	for (i=0; i<n; i++)
+	{
+		for (int u:lk[i]) for (int v:e[u]) if (rk[v]>rk[i]) ans+=d[v]++;
+		for (int u:lk[i]) for (int v:e[u]) d[v]=0;
+	}
+	return ans;
 }
 \end{lstlisting}
 
