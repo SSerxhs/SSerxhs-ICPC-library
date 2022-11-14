@@ -9,7 +9,7 @@
 \setstretch{1.1} 
 \geometry{a4paper}
 \geometry{top=2cm} 
-\geometry{bottom=0cm} 
+\geometry{bottom=1cm} 
 \definecolor{mygreen}{rgb}{0,0.6,0}
 \definecolor{mygray}{rgb}{0.5,0.5,0.5}
 \definecolor{mymauve}{rgb}{0.58,0,0.82}
@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.3.1}
+\centerline{ver:3.3.2}
 
 \tableofcontents
 
@@ -83,7 +83,6 @@ template<int N,typename T,typename TT> struct ht//个数，定义域，值域
 \subsection{珂朵莉树}
 
 \begin{lstlisting}
-#define all(x) (x).begin(),(x).end()
 namespace chtholly_tree
 {
 	typedef int TT;
@@ -6810,59 +6809,54 @@ int main()
 
 $O(m\sqrt m)$，$O(n+m)$。
 
-注意四元环数的是边四元环。
+注意四元环数的是边四元环。点四元环需要去掉四点完全图个数*2，似乎不太能做？
 
 \begin{lstlisting}
-ll triple(const vector<pair<int,int>> &edges)//0-labelled
+ll triple(const vector<pair<int,int>> &edges)//start from 0
 {
 	int n=0,i;
 	for (auto [u,v]:edges) n=max({n,u,v});
 	++n;
-	vector d(n,0);
+	vector d(n,0),id(d),rk(d),cnt(d);
 	vector e(n,vector(0,0));
-	for (auto [u,v]:edges) ++d[u],++d[v];
-	for (auto [u,v]:edges)
-	{
-		if (pair{d[u],u}>pair{d[v],v}) swap(u,v);
-		e[u].push_back(v);
-	}
-	fill(all(d),0);
-	ll ans=0;
-	for (i=0; i<n; i++)
-	{
-		for (int u:e[i]) d[u]=1;
-		for (int u:e[i]) for (int v:e[u]) ans+=d[v];
-		for (int u:e[i]) d[u]=0;
-	}
-	return ans;
-}
-ll quadruple(const vector<pair<int,int>> &edges)//0-labelled
-{
-	int n=0,i;
-	for (auto [u,v]:edges) n=max({n,u,v});
-	++n;
-	vector d(n,0),id(n,0),rk(n,0);
-	vector e(n,vector(0,0)),lk(n,vector(0,0));
-	for (auto [u,v]:edges)
-	{
-		++d[u]; ++d[v];
-		lk[u].push_back(v);
-		lk[v].push_back(u);
-	}
-	iota(all(id),0);
-	stable_sort(all(id),[&](int u,int v) { return d[u]<d[v]; });
+	iota(all(id),0); sort(all(id),[&](int x,int y) { return d[x]<d[y]; });
 	for (i=0; i<n; i++) rk[id[i]]=i;
 	for (auto [u,v]:edges)
 	{
 		if (rk[u]>rk[v]) swap(u,v);
 		e[u].push_back(v);
 	}
-	fill(all(d),0);
 	ll ans=0;
 	for (i=0; i<n; i++)
 	{
-		for (int u:lk[i]) for (int v:e[u]) if (rk[v]>rk[i]) ans+=d[v]++;
-		for (int u:lk[i]) for (int v:e[u]) d[v]=0;
+		for (int u:e[i]) cnt[u]=1;
+		for (int u:e[i]) for (int v:e[u]) ans+=cnt[v];
+		for (int u:e[i]) cnt[u]=0;
+	}
+	return ans;
+}
+ll quadruple(const vector<pair<int,int>> &edges)
+{
+	int n=0,i;
+	for (auto [u,v]:edges) n=max({n,u,v});
+	++n;
+	vector d(n,0),id(d),rk(d),cnt(d);
+	vector e(n,vector(0,0)),lk(n,vector(0,0));
+	for (auto [u,v]:edges) ++d[u],++d[v];
+	iota(all(id),0); sort(all(id),[&](int x,int y) { return d[x]<d[y]; });
+	for (i=0; i<n; i++) rk[id[i]]=i;
+	for (auto [u,v]:edges)
+	{
+		if (rk[u]>rk[v]) swap(u,v);
+		e[u].push_back(v);
+		lk[u].push_back(v);
+		lk[v].push_back(u);
+	}
+	ll ans=0;
+	for (i=0; i<n; i++)
+	{
+		for (int u:lk[i]) for (int v:e[u]) if (rk[v]>rk[i]) ans+=cnt[v]++;
+		for (int u:lk[i]) for (int v:e[u]) cnt[v]=0;
 	}
 	return ans;
 }
