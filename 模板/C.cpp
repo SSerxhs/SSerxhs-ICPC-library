@@ -18,8 +18,8 @@ template<typename typC> bool cmax(typC &x,const typC &y) { if (x<y) { x=y; retur
 typedef unsigned int ui;
 typedef long long ll;
 #define all(x) (x).begin(),(x).end()
-// void inc(ui &x,const ui &y) { if ((x+=y)>=p) x-=p; }
-// void dec(ui &x,const ui &y) { if ((x+=p-y)>=p) x-=p; }
+// template<typename T1,typename T2> void inc(T1 &x,const T2 &y) { if ((x+=y)>=p) x-=p; }
+// template<typename T1,typename T2> void dec(T1 &x,const T2 &y) { if ((x+=p-y)>=p) x-=p; }
 const int N=1e6+5;
 int main()
 {
