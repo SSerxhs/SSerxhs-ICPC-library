@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.3.5}
+\centerline{ver:3.3.6}
 
 \tableofcontents
 
@@ -2234,6 +2234,153 @@ namespace sgt
 }
 typedef sgt::set tree;
 \end{lstlisting}
+
+\subsection{bitset（手写，未验）}
+
+\begin{lstlisting}
+
+	struct Bitset
+{
+	typedef unsigned int ui;
+	typedef unsigned long long ll;
+#define all(x) (x).begin(),(x).end()
+	const static ll B=-1llu;
+	vector<ll> a;
+	int n;
+	Bitset() {}
+	Bitset(int _n) :n(_n),a(_n+63>>6) {}
+	bool operator[](int x) const { assert(x>=0&&x<n); return a[x>>6]>>(x&63)&1; }
+	void set(int x,bool y) { assert(x>=0&&x<n); a[x>>6]=(a[x>>6]&(B^1<<(x&63)))|((ll)y<<(x&63)); }
+	void set(int x) { assert(x>=0&&x<n); a[x>>6]|=1llu<<(x&63); }
+	void set() { memset(a.data(),0xff,a.size()*sizeof a[0]); a.back()&=(1llu<<1+(n-1&63))-1; }
+	void reset(int x) { a[x>>6]&=~(1llu<<(x&63)); }
+	void reset() { memset(a.data(),0,a.size()*sizeof a[0]); }
+	int count() const
+	{
+		int r=0;
+		for (ll x:a) r+=__builtin_popcountll(x);
+		return r;
+	}
+	Bitset &operator|=(const Bitset &o)
+	{
+		assert(n==o.n);
+		for (int i=0; i<a.size(); i++) a[i]|=o.a[i];
+		return *this;
+	}
+	Bitset operator|(Bitset o) { o|=*this; return o; }
+	Bitset &operator&=(const Bitset &o)
+	{
+		assert(n==o.n);
+		for (int i=0; i<a.size(); i++) a[i]&=o.a[i];
+		return *this;
+	}
+	Bitset operator&(Bitset o) { o&=*this; return o; }
+	Bitset &operator^=(const Bitset &o)
+	{
+		assert(n==o.n);
+		for (int i=0; i<a.size(); i++) a[i]^=o.a[i];
+		return *this;
+	}
+	Bitset operator^(Bitset o) { o^=*this; return o; }
+	Bitset operator~() const
+	{
+		auto r=*this;
+		for (ll &x:r.a) x=~x;
+		return r;
+	}
+	Bitset &operator<<=(int x)
+	{
+		if (x>=n)
+		{
+			fill(all(a),0);
+			return *this;
+		}
+		assert(x>=0);
+		int y=x>>6;
+		x&=63;
+		for (int i=(int)a.size()-1; i>y; i--) a[i]=a[i-y]<<x|a[i-y-1]>>64-x;
+		a[y]=a[0]<<x;
+		memset(a.data(),0,y*sizeof a[0]);
+		// fill_n(a.begin(),y,0);
+		a.back()&=(1llu<<1+(n-1&63))-1;
+		return *this;
+	}
+	Bitset operator<<(int x)
+	{
+		auto r=*this;
+		r<<=x;
+		return r;
+	}
+	Bitset &operator>>=(int x)
+	{
+		if (x>=n)
+		{
+			fill(all(a),0);
+			return *this;
+		}
+		assert(x>=0);
+		int y=x>>6,R=(int)a.size()-y-1;
+		x&=63;
+		for (int i=0; i<R; i++) a[i]=a[i+y]>>x|a[i+y+1]<<64-x;
+		a[R]=a.back()>>x;
+		memset(a.data()+R+1,y*sizeof a[0]);
+		// fill(R+1+all(a),0);
+		return *this;
+	}
+	Bitset operator>>(int x)
+	{
+		auto r=*this;
+		r>>=x;
+		return r;
+	}
+	void range_set(int l,int r)//[l,r) to 1
+	{
+		if (l>>6==r>>6)
+		{
+			a[l>>6]|=(1llu<<r-l)-1<<(l&63);
+			return;
+		}
+		if (l&63)
+		{
+			a[l>>6]|=~((1llu<<(l&63))-1);//[l&63,64)
+			l=(l>>6)+1<<6;
+		}
+		if (r&63)
+		{
+			a[r>>6]|=(1llu<<(r&63))-1;
+			r=(r>>6)-1<<6;
+		}
+		memset(a.data()+(l>>6),0xff,(r-l>>6)*sizeof a[0]);
+	}
+	void range_reset(int l,int r)//[l,r) to 0
+	{
+		if (l>>6==r>>6)
+		{
+			a[l>>6]&=~((1llu<<r-l)-1<<(l&63));
+			return;
+		}
+		if (l&63)
+		{
+			a[l>>6]&=(1llu<<(l&63))-1;//[l&63,64)
+			l=(l>>6)+1<<6;
+		}
+		if (r&63)
+		{
+			a[r>>6]&=~((1llu<<(r&63))-1);
+			r=(r>>6)-1<<6;
+		}
+		memset(a.data()+(l>>6),0,(r-l>>6)*sizeof a[0]);
+	}
+	void range_set(int l,int r,bool x)//[l,r)
+	{
+		if (x) range_set(l,r);
+		else range_reset(l,r);
+	}
+};
+
+\end{lstlisting}
+
+
 
 \newpage
 
@@ -11385,6 +11532,140 @@ vector<int> indep_set(int n,const vector<pair<int,int>> &edges)//[0,n)
 \end{lstlisting}
 
 
+\subsection{2-sat}
+\begin{lstlisting}
+struct sat
+{
+	vector<vector<int>> e;
+	vector<int> dfn,low,st,f,ed;
+	int fs,tp,id,n;
+	sat(int n):n(n),e(n*2),dfn(n*2,-1),low(n*2),st(n*2),f(n*2,-1),ed(n*2),fs(0),tp(-1),id(0){}
+	void dfs(int u)
+	{
+		dfn[u]=low[u]=id++;
+		ed[u]=1;st[++tp]=u;
+		for (int v:e[u]) if (dfn[v]!=-1)
+		{
+			if (ed[v]) low[u]=min(low[u],dfn[v]);
+		} else dfs(v),low[u]=min(low[u],low[v]);
+		if (dfn[u]==low[u])
+		{
+			do
+			{
+				f[st[tp]]=fs;
+				ed[st[tp]]=0;
+			} while (st[tp--]!=u);
+			++fs;
+		}
+	}
+	void add(int u,bool x,int v,bool y)//d:dif
+	{
+		assert(u>=0&&u<n&&v>=0&&v<n);
+		e[u+x*n].push_back(v+y*n);
+		e[v+(y^1)*n].push_back(u+(x^1)*n);
+	}
+	void set(int u,bool x)
+	{
+		assert(u>=0&&u<n);
+		e[u+(x^1)*n].push_back(u+x*n);
+	}
+	vector<int> getans()
+	{
+		int i;
+		for (i=0;i<n*2;i++) if (dfn[i]==-1) dfs(i);
+		vector<int> r(n);
+		for (i=0;i<n;i++)
+		{
+			if (f[i]==f[i+n]) return {};
+			r[i]=f[i]>f[i+n];
+		}
+		return r;
+	}
+};
+
+\end{lstlisting}
+
+\subsection{树剖}
+
+\begin{lstlisting}
+	namespace HLD
+{
+	const int N=5e5+2;
+	vector<int> e[N];
+	int dfn[N],nfd[N],dep[N],f[N],siz[N],hc[N],top[N];
+	int id;
+	void dfs1(int u)
+	{
+		siz[u]=1;
+		for (int v:e[u]) if (v!=f[u])
+		{
+			dep[v]=dep[f[v]=u]+1;
+			dfs1(v);
+			siz[u]+=siz[v];
+			if (siz[v]>siz[hc[u]]) hc[u]=v;
+		}
+	}
+	void dfs2(int u)
+	{
+		dfn[u]=++id;
+		nfd[id]=u;
+		if (hc[u])
+		{
+			top[hc[u]]=top[u];
+			dfs2(hc[u]);
+			for (int v:e[u]) if (v!=hc[u]&&v!=f[u]) dfs2(top[v]=v);
+		}
+	}
+	int lca(int u,int v)
+	{
+		while (top[u]!=top[v])
+		{
+			if (dep[top[u]]<dep[top[v]]) swap(u,v);
+			u=f[top[u]];
+		}
+		if (dep[u]>dep[v]) swap(u,v);
+		return u;
+	}
+	int dis(int u,int v)
+	{
+		return dep[u]+dep[v]-(dep[lca(u,v)]<<1);
+	}
+	void init(int n)
+	{
+		for (int i=1;i<=n;i++)
+		{
+			e[i].clear();
+			f[i]=hc[i]=0;
+		}
+		id=0;
+	}
+	void fun(int root)
+	{
+		dep[root]=1;dfs1(root);dfs2(top[root]=root);
+	}
+	vector<pair<int,int>> get_path(int u,int v)//u->v，注意可能出现 [r>l]（表示反过来走）
+	{
+		//cerr<<"path from "<<u<<" to "<<v<<": ";
+		vector<pair<int,int>> v1,v2;
+		while (top[u]!=top[v])
+		{
+			if (dep[top[u]]>dep[top[v]]) v1.push_back({dfn[u],dfn[top[u]]}),u=f[top[u]];
+			else v2.push_back({dfn[top[v]],dfn[v]}),v=f[top[v]];
+		}
+		v1.reserve(v1.size()+v2.size()+1);
+		v1.push_back({dfn[u],dfn[v]});
+		reverse(v2.begin(),v2.end());
+		for (auto v:v2) v1.push_back(v);
+		//for (auto [x,y]:v1) cerr<<"["<<x<<','<<y<<"] ";cerr<<endl;
+		return v1;
+	}
+}
+using HLD::e,HLD::lca,HLD::dis,HLD::dfn,HLD::nfd,HLD::dep,HLD::f,HLD::siz,HLD::get_path;
+using HLD::fun,HLD::init;//5e5
+
+
+\end{lstlisting}
+
 
 
 \newpage
@@ -12612,6 +12893,13 @@ fi = open("discuss.in", "r")
 fo = open("discuss.out", "w")
 n=int(fi.readline())
 fo.write(str(ans))
+\end{lstlisting}
+
+\subsection{Makefile}
+
+\begin{lstlisting}
+%:%.cpp
+	g++ $< -o $@ -std=c++17 -O2 -Wall -Wextra
 \end{lstlisting}
 
 
@@ -14485,4 +14773,6 @@ DFS，若现在处理到结点 u：
 这样就可以随便维护毛毛虫信息了，顺便还能维护链信息，子树信息等 .
 
 时间复杂度同轻重链剖分 .
+
+以 SAM 为例，若我们只保留所有的转移边 $(u,v)$ ，满足到达 $u$ 的路径数目大于到达 $v$ 的路径数目一半，且从 $v$ 出发的路径数目大于从 $u$ 出发的路径数目一半，这样剩余的子图显然会形成若干条链，且每个点恰好在一条链上。这样，我们容易证明，从根结点出发的任何一条路径，至多经过 $O(\log n)$ 条不在链上的转移边（也意味着至多经过 $O(\log n)$ 条链） 。
 \end{document}
