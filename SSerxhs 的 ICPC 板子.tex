@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.3.10}
+\centerline{ver:3.4.0}
 
 \tableofcontents
 
@@ -485,7 +485,7 @@ $O(n\sqrt n)$，$O(n)$。
 
 二次离线莫队，通过扫描线，再次将更新答案的过程离线处理，降低时间复杂度。假设更新答案的复杂度为 $O(k)$，它将莫队的复杂度从 $O(nk\sqrt n)$ 降到了 $O(nk + n\sqrt n)$，大大简化了计算。
 设 $x$ 对区间 $[l,r]$ 的贡献为 $f(x,[l,r])$，我们考虑区间端点变化对答案的影响：以 $[l..r]$ 变成 $[l..(r+k)]$ 为例，$\forall x \in [r+1,r+k]$ 求 $f(x,[l,x-1])$。
-我们可以进行差分：$f(x,[l,x-1])=f(x,[1,x-1])-f(x,[1,l-1])$，这样转化为了一个数对一个前缀的贡献。保存下来所有这样的询问，从左到右扫描数组计算就可以了。  
+我们可以进行差分：$f(x,[l,x-1])=f(x,[1,x-1])-f(x,[1,l-1])$，这样转化为了一个数对一个前缀的贡献。保存下来所有这样的询问，从左到右扫描数组计算就可以了。
 但是这样做，空间是 $O(n\sqrt n)$ 的，不太优秀，而且时间常数巨大。。
 这样的贡献分为两类：
 
@@ -1581,11 +1581,11 @@ $O((n+q)\log n)\sim O(n+q\log^2 n)$，$O(n)$。
 
 \begin{itemize}
 
-\item $\texttt{1 l r k}$：对于所有的 $i\in[l,r]$，将 $A_i$ 加上 $k$（$k$ 可以为负数）。
-\item $\texttt{2 l r v}$：对于所有的 $i\in[l,r]$，将 $A_i$ 变成 $\min(A_i,v)$。
-\item $\texttt{3 l r}$：求 $\sum_{i=l}^{r}A_i$。
-\item $\texttt{4 l r}$：对于所有的 $i\in[l,r]$，求 $A_i$ 的最大值。
-\item $\texttt{5 l r}$：对于所有的 $i\in[l,r]$，求 $B_i$ 的最大值。
+	\item $\texttt{1 l r k}$：对于所有的 $i\in[l,r]$，将 $A_i$ 加上 $k$（$k$ 可以为负数）。
+	\item $\texttt{2 l r v}$：对于所有的 $i\in[l,r]$，将 $A_i$ 变成 $\min(A_i,v)$。
+	\item $\texttt{3 l r}$：求 $\sum_{i=l}^{r}A_i$。
+	\item $\texttt{4 l r}$：对于所有的 $i\in[l,r]$，求 $A_i$ 的最大值。
+	\item $\texttt{5 l r}$：对于所有的 $i\in[l,r]$，求 $B_i$ 的最大值。
 \end{itemize}
 
 \begin{lstlisting}
@@ -4846,35 +4846,660 @@ vector<ui> fst(const vector<ui> &s,const vector<ui> &t)
 \subsection{NTT}
 
 \begin{lstlisting}
-typedef unsigned long long ll;
-namespace NTT//禁止混用三模与普通 NTT
+namespace NTT
 {
-	mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
-/**/const int N=1<<22;//务必修改
-// #define MTT
-// #define CRT
-/**/const ll g=3,I=86'583'718;//g^((p-1)/4)
-#ifndef MTT
-/**/const ll p=998244353;
-/**/ll w[N];
-#else
-	const ll p=1e9+7;
-	const ll p1=469'762'049,p2=998'244'353,p3=1004'535'809;//三模，原根都是 3，非常好
-	const ll inv_p1=554'580'198,inv_p12=395'249'030;//三模，1 关于 2 逆，1*2 关于 3 逆，1*2 mod 3
-#endif
-/**/int r[N];
-	ll inv[N],fac[N],ifac[N];//W for mosqrt
-/**/ll ksm(ll x,ll y)
-/**/{
-/**/	ll r=1;
-/**/	while (y)
-/**/	{
-/**/		if (y&1) r=r*x%p;
-/**/		x=x*x%p;
-/**/		y>>=1;
-/**/	}
-/**/	return r;
-/**/}
+	const ll g=3,p=998244353;
+	const int N=1<<22;//务必修改
+	ll inv[N],fac[N],ifac[N];//非必要
+	void getfac(int n)//非必要
+	{
+		static int pre=-1;
+		if (pre==-1) pre=1,ifac[0]=fac[0]=fac[1]=ifac[1]=inv[1]=1;
+		if (n<=pre) return;
+		for (int i=pre+1,j; i<=n; i++)
+		{
+			j=p/i;
+			inv[i]=(p-j)*inv[p-i*j]%p;
+			fac[i]=fac[i-1]*i%p;
+			ifac[i]=ifac[i-1]*inv[i]%p;
+		}
+		pre=n;
+	}
+	ll w[N];
+	int r[N];
+	ll ksm(ll x,ll y)
+	{
+		ll r=1;
+		while (y)
+		{
+			if (y&1) r=r*x%p;
+			x=x*x%p;
+			y>>=1;
+		}
+		return r;
+	}
+	void init(int n)
+	{
+		static int pr=0,pw=0;
+		if (pr==n) return;
+		int b=__lg(n)-1,i,j,k;
+		for (i=1; i<n; i++) r[i]=r[i>>1]>>1|(i&1)<<b;
+		if (pw<n)
+		{
+			for (j=1; j<n; j=k)
+			{
+				k=j*2;
+				ll wn=ksm(g,(p-1)/k);
+				w[j]=1;
+				for (i=j+1; i<k; i++) w[i]=w[i-1]*wn%p;
+			}
+			pw=n;
+		}
+		pr=n;
+	}
+	int cal(int x) { return 1<<__lg(max(x,1)*2-1); }
+	struct Q:vector<ll>
+	{
+		bool flag;
+		Q &operator%=(int n) { assert((n&-n)==n); resize(n); return *this; }
+		Q operator%(int n) const
+		{
+			assert((n&-n)==n);
+			if (size()<=n)
+			{
+				auto f=*this;
+				return f%=n;
+			}
+			return Q(vector(begin(),begin()+n));
+		}
+		int deg() const
+		{
+			int n=size()-1;
+			while (n>=0&&begin()[n]==0) --n;
+			return n;
+		}
+		explicit Q(int x=1,bool f=0):flag(f),vector<ll>(cal(x)) { }//小心：{}会调用这条而非下一条
+		explicit Q(const vector<ll> &o,bool f=0):Q(o.size(),f) { copy(all(o),begin()); }
+		ll fx(ll x)
+		{
+			ll r=0;
+			for (auto it=rbegin(); it!=rend(); ++it) r=(r*x+*it)%p;
+			return r;
+		}
+		void dft()
+		{
+			int n=size(),i,j,k;
+			ll y,*f,*g,*wn,*a=data();
+			init(n);
+			for (i=1; i<n; i++) if (i<r[i]) ::swap(a[i],a[r[i]]);
+			for (k=1; k<n; k*=2)
+			{
+				wn=w+k;
+				for (i=0; i<n; i+=k*2)
+				{
+					g=(f=a+i)+k;
+					for (j=0; j<k; j++)
+					{
+						y=g[j]*wn[j]%p;
+						g[j]=f[j]+p-y;
+						f[j]+=y;
+					}
+				}
+				if (k*2==n||k==1<<14) for (i=0; i<n; i++) a[i]%=p;
+			}
+			if (flag)
+			{
+				y=ksm(n,p-2);
+				for (i=0; i<n; i++) a[i]=a[i]*y%p;
+				reverse(a+1,a+n);
+			}
+			flag^=1;
+		}
+		void hf_dft()
+		{
+			assert(size()>=2&&flag);
+			int n=size()/2,i,j,k;
+			ll x,y,*f,*g,*wn,*a=data();
+			init(n);
+			for (i=1; i<n; i++) if (i<r[i]) ::swap(a[i],a[r[i]]);
+			for (k=1; k<n; k*=2)
+			{
+				wn=w+k;
+				for (i=0; i<n; i+=k*2)
+				{
+					g=(f=a+i)+k;
+					for (j=0; j<k; j++)
+					{
+						y=g[j]*wn[j]%p;
+						g[j]=f[j]+p-y;
+						f[j]+=y;
+					}
+				}
+				if (k*2==n||k==1<<14) for (i=0; i<n; i++) a[i]%=p;
+			}
+			if (flag)
+			{
+				x=ksm(n,p-2);
+				for (i=0; i<n; i++) a[i]=a[i]*x%p;
+				reverse(a+1,a+n);
+			}
+			flag^=1;
+		}
+	};
+	Q der(const Q &f)
+	{
+		ll n=f.size(),i;
+		Q r(n);
+		for (i=1; i<n; i++) r[i-1]=f[i]*i%p;
+		return r;
+	}
+	Q integral(const Q &f)
+	{
+		ll n=f.size(),i;
+		getfac(n);
+		Q r(n);
+		for (i=1; i<n; i++) r[i]=f[i-1]*inv[i]%p;
+		return r;
+	}
+	Q operator-(Q f) { for (ll &x:f) if (x) x=p-x; return f; }
+	Q &operator+=(Q &f,ll x) { (f[0]+=x)%=p; return f; }
+	Q operator+(Q f,ll x) { return f+=x; }
+	Q &operator-=(Q &f,ll x) { (f[0]+=p-x)%=p; return f; }
+	Q operator-(Q f,ll x) { return f-=x; }
+	Q &operator*=(Q &f,ll x) { for (ll &y:f) (y*=x)%=p; return f; }
+	Q operator*(Q f,ll x) { return f*=x; }
+	Q &operator+=(Q &f,const Q &g) { f%=max(f.size(),g.size()); for (int i=0; i<g.size(); i++) f[i]=(f[i]+g[i])%p; return f; }
+	Q operator+(Q f,const Q &g) { return f+=g; }
+	Q &operator-=(Q &f,const Q &g) { f%=max(f.size(),g.size()); for (int i=0; i<g.size(); i++) f[i]=(f[i]+p-g[i])%p; return f; }
+	Q operator-(Q f,const Q &g) { return f-=g; }
+	Q &operator*=(Q &f,Q g)//卷积
+	{
+		if (f.flag|g.flag)
+		{
+			int n=f.size(),i;
+			assert(n==g.size());
+			if (!f.flag) f.dft();
+			if (!g.flag) g.dft();
+			for (i=0; i<n; i++) (f[i]*=g[i])%=p;
+			f.dft();
+		}
+		else
+		{
+			int n=cal(f.size()+g.size()-1),i;
+			(f%=n).dft(); (g%=n).dft();
+			for (i=0; i<n; i++) (f[i]*=g[i])%=p;
+			f.dft();
+		}
+		return f;
+	}
+	Q operator*(Q f,const Q &g) { return f*=g; }
+	Q &operator&=(Q &f,Q g)//循环卷积
+	{
+		assert(f.size()==g.size());
+		int n=f.size(),i;
+		if (!f.flag) f.dft();
+		if (!g.flag) g.dft();
+		for (i=0; i<n; i++) (f[i]*=g[i])%=p;
+		f.dft();
+		return f;
+	}
+	Q operator&(Q f,const Q &g) { return f&=g; }
+	Q &operator^=(Q &f,Q g)//差卷积
+	{
+		int n=f.size();
+		g%=n;
+		reverse(all(g));
+		f*=g;
+		rotate(f.begin(),n-1+all(f));
+		return f%=n;
+	}
+	Q operator^(Q f,const Q &g) { return f^=g; }
+	Q sqr(Q f)
+	{
+		assert(!f.flag);
+		int n=f.size()*2,i;
+		(f%=n).dft();
+		for (i=0; i<n; i++) f[i]=f[i]*f[i]%p;
+		f.dft();
+		return f;
+	}
+	/*Q operator~(const Q &f)
+	{
+		Q r;
+		r[0]=ksm(f[0],p-2);
+		for (int i=1; i<=f.size(); i*=2) r=(-((f%i)*r-2)*r)%i;
+		return r;
+	}//trivial, 5e5 750ms*/
+	Q operator~(const Q &f)
+	{
+		Q q,r,g;
+		int n=f.size(),i,j,k;
+		r[0]=ksm(f[0],p-2);
+		for (j=2; j<=n; j*=2)
+		{
+			k=j/2;
+			g=(r%=j)%k;
+			r.dft();
+			q=f%j*r;
+			fill_n(q.begin(),k,0);
+			r*=q;
+			copy(all(g),r.begin());
+			for (i=k; i<j; i++) r[i]=(p-r[i])%p;
+		}
+		return r;
+	}//5e5 200ms, inv(1 6 3 4 9)=(1 998244347 33 998244169 1020)
+	Q &operator/=(Q &f,const Q &g) { int n=f.size(); return (f*=~g)%=n; }
+	Q operator/(Q f,const Q &g) { return f/=g; }
+	void cdq(Q &f,Q &g,int l,int r)//g_0=1,i*g_i=g_{i-j}*f_j,use for cdq
+	{
+		static vector<Q> cd;
+		int i,m=l+r>>1,n=r-l,nn=n>>1;
+		if (r-l==f.size())
+		{
+			getfac(n-1);
+			g=Q(n);
+			cd.clear();
+			for (i=2; i<=n; i*=2)
+			{
+				cd.emplace_back(i);
+				Q &h=cd.back();
+				h%=i;
+				copy_n(f.begin(),i,h.begin());
+				h.dft();
+			}
+		}
+		if (l+1==r)
+		{
+			g[l]=l?g[l]*inv[l]%p:1;
+			return;
+		}
+		cdq(f,g,l,m);
+		Q h(n);
+		copy_n(g.begin()+l,nn,h.begin());
+		h*=cd[__lg(n)-1];
+		for (i=m; i<r; i++) (g[i]+=h[i-l])%p;
+		cdq(f,g,m,r);
+	}
+	Q exp_cdq(Q f)
+	{
+		Q g;
+		int n=f.size(),i;
+		for (i=1; i<n; i++) f[i]=f[i]*i%p;
+		cdq(f,g,0,n);
+		return g;
+	}//5e5 455ms
+	Q ln(const Q &f) { return integral(der(f)/f); }
+	//5e5 330ms, ln(1 2 3 4 5)=(0 2 1 665496236 499122177)
+	Q exp(Q f)
+	{
+		Q r; r[0]=1;
+		for (int i=1; i<=f.size(); i*=2) (r*=f%i-ln(r%i)+1)%=i;
+		return r;
+	}//5e5 700ms, exp(0 4 2 3 5)=(1 4 10 665496257 665496281)
+	Q exp_new(Q b)
+	{
+		Q h,f,r,u,v,bj;
+		int n=b.size(),i,j,k;
+		r[0]=h[0]=1;
+		for (j=2; j<=n; j*=2)
+		{
+			f=bj=der(b%j); k=j/2; fill(k+all(bj),0);
+			h.dft(); u=der(r)&h;
+			v=(r&h)%j-1&bj;
+			for (i=0; i<k; i++) f[i+k]=(p*p+u[i]-v[i]-f[i]-f[i+k])%p,f[i]=0;
+			f[k-1]=(f[j-1]+v[k-1])%p;
+			u=(r%=j)&integral(f);
+			for (i=k; i<j; i++) r[i]=(p-u[i])%p;
+			if (j<n) h=~r;
+		}
+		return r;
+	}//5e5 420ms
+	optional<ll> mosqrt(ll x)
+	{
+		static mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
+		static ll W;
+		struct P
+		{
+			ll x,y;
+			P operator*(const P &a) const
+			{
+				return {(x*a.x+y*a.y%p*W)%p,(x*a.y+y*a.x)%p};
+			}
+		};
+		if (x==0) return {0};
+		if (ksm(x,p-1>>1)!=1) return { };
+		ll y;
+		do y=rnd()%p; while (ksm(W=(y*y%p+p-x)%p,p-1>>1)<=1);//not for p=2
+		y=[&](P x,ll y)
+			{
+				P r{1,0};
+				while (y)
+				{
+					if (y&1) r=r*x;
+					x=x*x; y>>=1;
+				}
+				return r.x;
+			}({y,1},p+1>>1);
+			return {y*2<p?y:p-y};
+	}
+	optional<Q> sqrt(Q f)
+	{
+		const static ll i2=p+1>>1;
+		Q r;
+		int n=f.size(),i,l;
+
+		for (i=0; i<n; i++) if (f[i]) break;
+		if (i==n) return f;
+		if (i&1) return { };
+		l=i/2;
+		copy(i+all(f),f.begin());
+		fill(n-i+all(f),0);
+
+		auto rt=mosqrt(f[0]);
+		if (rt) r[0]=rt.value(); else return { };
+		for (i=2; i<=n; i*=2) r=(sqr(r)+f%i)/(r%i)%i*i2;
+
+		copy_backward(all(r)-l,r.end());
+		fill_n(r.begin(),l,0);
+
+		return {r};
+	}//5e5 530ms, sqrt(0 0 4 2 3)=(0 2 499122177 311951361 171573248)
+	optional<Q> sqrt_new(Q f)
+	{
+		const static ll i2=p+1>>1;
+		Q q,r;
+		int n=f.size(),i,j,k,l;
+
+		for (i=0; i<n; i++) if (f[i]) break;
+		if (i==n) return f;
+		if (i&1) return { };
+		l=i/2;
+		copy(i+all(f),f.begin());
+		fill(n-i+all(f),0);
+
+		auto rt=mosqrt(f[0]);
+		if (rt) r[0]=rt.value(); else return { };
+		for (j=2; j<=n; j*=2)
+		{
+			k=j/2; (q=r).dft(); (q&=q)%=j;
+			for (i=k; i<j; i++) q[i]=(q[i-k]+p*2-f[i]-f[i-k])*i2%p,q[i-k]=0;
+			q&=~r%j; r%=j;
+			for (i=k; i<j; i++) r[i]=(p-q[i])%p;
+		}
+
+		copy_backward(all(r)-l,r.end());
+		fill_n(r.begin(),l,0);
+
+		return {r};
+	}//5e5 280ms
+	Q pow(Q b,ll m)//不应传入超过 int 内容
+	{
+		assert(m<=1llu<<32);
+		int n=b.size(),i,j=n,k;
+		for (i=0; i<n; i++) if (b[i]) { j=i; break; }
+		if (j==n) return b[0]=!m,b;
+		if (j*m>=n) return Q(n);
+		copy(j+all(b),b.begin());
+		fill(n-j+all(b),0);
+		k=b[0]; j*=m;
+		b=exp_new(ln(b*ksm(k,p-2))*m)*ksm(k,m);
+		copy_backward(all(b)-j,b.end());
+		fill_n(b.begin(),j,0);
+		return b;
+	}
+	Q pow(Q b,string s)
+	{
+		int n=b.size(),i,j=n,k;
+		for (i=0; i<n; i++) if (b[i]) { j=i; break; }
+		if (j==n) return b[0]=s=="0",b;
+		if (j&&(s.size()>8||j*stoll(s)>=n)) return Q(n);
+		ll m0=0,m1=0;
+		for (auto c:s) m0=(m0*10+c-'0')%p,m1=(m1*10+c-'0')%(p-1);
+		copy(j+all(b),b.begin());
+		fill(n-j+all(b),0);
+		k=b[0]; j*=m0;
+		b=exp_new(ln(b*ksm(k,p-2))*m0)*ksm(k,m1);
+		copy_backward(all(b)-j,b.end());
+		fill_n(b.begin(),j,0);
+		return b;
+	}//5e5 1e18 700ms
+	Q pow2(Q b,ll m)
+	{
+		int n=b.size();
+		Q r(n); r[0]=1;
+		while (m)
+		{
+			if (m&1) (r*=b)%=n;
+			if (m>>=1) b=sqr(b)%n;
+		}
+		return r;
+	}//5e5 1e18 7425ms
+	Q div(Q f,Q g)
+	{
+		int n=0,m=0,i;
+		for (i=f.size()-1; i>=0; i--) if (f[i]) { n=i+1; break; }
+		for (i=g.size()-1; i>=0; i--) if (g[i]) { m=i+1; break; }
+		assert(m);
+		if (n<m) return Q(1);
+		reverse(f.begin(),f.begin()+n);
+		reverse(g.begin(),g.begin()+m);
+		n=n-m+1; m=cal(n);
+		f=(f%m)/(g%m)%m;
+		fill(n+all(f),0);
+		reverse(f.begin(),f.begin()+n);
+		return f;
+	}
+	Q mod(const Q &a,const Q &b) { Q r=(a-b*div(a,b));  return r%=min(r.size(),b.size()); }
+	pair<Q,Q> div_mod(const Q &a,const Q &b) { Q q=div(a,b); Q r=(a-b*q); return {q,r%=min(r.size(),b.size())}; }
+	//5e5 430ms (1 2 3 4)=(916755018 427819009)*(5 6 7)+(407446676 346329673)
+	// Q cdq_inv(const Q &f) { return (~(f-1))*(p-1); }//g_0=1,g_i=g_{i-j}*f_j ?
+	ll recurrent(const vector<ll> &f,const vector<ll> &a,ll m)//常系数齐次线性递推，find a_m,a_n=a_{n-i}*f_i,f_1...k,a_0...k-1
+	{
+		if (m<a.size()) return a[m];
+		assert(f.size()==a.size()+1);
+		int k=a.size(),n=cal(k+1)*2,i;
+		ll ans=0;
+		Q h(n),g(2),r;
+		for (i=1; i<=k; i++) h[k-i]=(p-f[i])%p;
+		h[k]=g[1]=r[0]=1;
+		while (m)
+		{
+			if (m&1) r=mod(r*g,h);
+			if (m>>=1) g=mod(sqr(g),h);
+		}
+		k=min(k,(int)r.size());
+		for (i=0; i<k; i++) ans=(ans+a[i]*r[i])%p;
+		return ans;
+	}//1e5 1e18 8500ms
+	ll recurrent_new(const vector<ll> &f,const vector<ll> &a,ll m)//常系数齐次线性递推，find a_m,a_n=a_{n-i}*f_i,f_1...k,a_0...k-1
+	{
+		const static ll i2=p+1>>1;
+		if (m<a.size()) return a[m];
+		assert(f.size()==a.size()+1);
+		int k=a.size(),n=cal(k+1),i;
+		Q g(n*2),h(n*2);
+		for (h[0]=i=1; i<=k; i++) h[i]=(p-f[i])%p;
+		copy(all(a),g.begin());
+		g&=h; fill(k+++all(g),0);
+		vector<ll> res(n);
+		while (m)
+		{
+			if (m&1)
+			{
+				ll x=p-g[0];
+				for (i=1; i<k; i+=2) res[i>>1]=x*h[i]%p;
+				copy_n(g.begin()+1,k-1,g.begin());
+				g[k-1]=0;
+			}
+			g.dft(); h.dft();
+			ll *a=g.data(),*b=h.data(),*c=a+n,*d=b+n;
+			for (i=0; i<n; i++) g[i]=(a[i]*d[i]+b[i]*c[i])%p*i2%p;
+			for (i=0; i<n; i++) h[i]=h[i]*h[i^n]%p;
+			g.hf_dft(); h.hf_dft();
+			fill(k+all(g),0);
+			if (m&1) for (i=0; i<k; i++) (g[i]+=res[i])%=p;
+			fill(k+all(h),0);
+			m>>=1;
+		}
+		assert(h[0]==1);
+		return g[0];
+	}//1e5 1e18 1000ms
+	Q shrink(Q f) { return f%=cal(f.deg()+1); }
+	Q prod(const vector<Q> &a)
+	{
+		if (!a.size()) return Q(vector<ll>{1});
+		function<Q(int,int)> dfs=[&](int l,int r)
+			{
+				if (r-l==1) return a[l];
+				int m=l+r>>1;
+				return shrink(dfs(l,m)*dfs(m,r));
+			};
+		return dfs(0,a.size());
+	}//not check
+	Q prod_new(const vector<Q> &a)
+	{
+		if (!a.size()) return Q(vector<ll>{1});
+		struct cmp
+		{
+			bool operator()(const Q &f,const Q &g) const { return f.size()>g.size(); }
+		};
+		priority_queue<Q,vector<Q>,cmp> q(all(a));
+		while (q.size()>1)
+		{
+			auto f=q.top(); q.pop();
+			f=shrink(f*q.top()); q.pop();
+			q.push(f);
+		}
+		return q.top();
+	}//not check
+	vector<ll> evaluation(const Q &f,const vector<ll> &X)
+	{
+		int m=X.size(),n=f.size()-1,i,j;
+		vector<Q> pro(m*4+4);
+		while (n>1&&!f[n]) --n;
+		vector<ll> y(m);
+		function<void(int,int,int)> build=[&](int x,int l,int r)
+			{
+				if (l+1==r)
+				{
+					pro[x]=Q(vector{(p-X[l])%p,1llu});
+					return;
+				}
+				int mid=l+r>>1,c=x*2;
+				build(c,l,mid); build(c+1,mid,r);
+				pro[x]=shrink(pro[c]*pro[c+1]);
+			};
+		function<void(int,int,int,Q,int)> dfs=[&](int x,int l,int r,Q f,int d)
+			{
+				const static int limit=256;
+				if (d>=r-l) f=shrink(mod(f,pro[x]));
+				if (r-l<limit)
+				{
+					for (int i=l; i<r; i++) y[i]=f.fx(X[i]);
+					return;
+				}
+				int mid=l+r>>1,c=x*2;
+				dfs(c,l,mid,f,d);
+				dfs(c+1,mid,r,f,d);
+			};
+		build(1,0,m);
+		dfs(1,0,m,f,n);
+		return y;
+	}//131072 880ms
+	vector<ll> evaluation_new(Q f,const vector<ll> &X)//多项式多点求值
+	{
+		int m=X.size(),i,j;
+		vector<ll> y(m);
+		if (X.size()<=10)
+		{
+			for (i=0; i<m; i++) y[i]=f.fx(X[i]);
+			return y;
+		}
+		int n=f.size();
+		while (n>1&&!f[n-1]) --n;
+		f.resize(cal(n));
+		vector<Q> pro(m*4+4);
+		function<void(int,int,int)> build=[&](int x,int l,int r)
+			{
+				if (l==r)
+				{
+					pro[x]=Q(vector{1llu,(p-X[l])%p});
+					return;
+				}
+				int m=l+r>>1,c=x*2;
+				build(c,l,m); build(c+1,m+1,r);
+				pro[x]=shrink(pro[c]*pro[c+1]);
+			};
+		function<void(int,int,int,Q)> dfs=[&](int x,int l,int r,Q f)
+			{
+				const static int limit=30;
+				if (r-l+1<=limit)
+				{
+					int m=r-l+1,m1,m2,mid=l+r>>1,i,j,k;
+					static ll g[limit+2],g1[limit+2],g2[limit+2];
+					m1=m2=r-l;
+					copy_n(f.data(),m,g1);
+					copy_n(g1,m,g2);
+					for (i=mid+1; i<=r; i++,--m1) for (k=0; k<m1; k++) g1[k]=(g1[k]+g1[k+1]*(p-X[i]))%p;
+					for (i=l; i<=mid; i++,--m2) for (k=0; k<m2; k++) g2[k]=(g2[k]+g2[k+1]*(p-X[i]))%p;
+					for (i=l; i<=mid; i++)
+					{
+						copy_n(g1,(m=m1)+1,g);
+						for (j=l; j<=mid; j++) if (i!=j)
+						{
+							for (k=0; k<m; k++) g[k]=(g[k]+g[k+1]*(p-X[j]))%p;
+							--m;
+						}
+						y[i]=g[0];
+					}
+					for (i=mid+1; i<=r; i++)
+					{
+						copy_n(g2,(m=m2)+1,g);
+						for (j=mid+1; j<=r; j++) if (i!=j)
+						{
+							for (k=0; k<m; k++) g[k]=(g[k]+g[k+1]*(p-X[j]))%p;
+							--m;
+						}
+						y[i]=g[0];
+					}
+					return;
+				}
+				int mid=l+r>>1,c=x*2,n=f.size();
+				f.dft();
+				for (auto [x,len]:{pair{c,r-mid},{c+1,mid-l+1}})
+				{
+					pro[x]%=n;
+					reverse(all(pro[x])); pro[x]&=f;
+					rotate(all(pro[x])-1,pro[x].end());
+					pro[x]%=cal(len);
+					fill(len+all(pro[x]),0);
+				}
+				dfs(c,l,mid,pro[c+1]);
+				dfs(c+1,mid+1,r,pro[c]);
+			};
+		build(1,0,m-1);
+		pro[1]%=f.size();
+		(f^=~pro[1])%=cal(m);
+		fill(min(m,n)+all(f),0);
+		dfs(1,0,m-1,f);
+		return y;
+	}//131072 460ms
+	ll factorial(ll n)
+	{
+		if (n>=p) return 0;
+		if (n<=1) return 1%p;
+		ll B=::sqrt(n),i;
+		vector F(B,Q(vector<ll>{0,1}));
+		for (i=0; i<B; i++) F[i][0]=i+1;
+		auto f=prod(F);
+		vector<ll> x(B);
+		for (i=0; i<B; i++) x[i]=i*B;
+		ll r=1;
+		auto y=evaluation(f,x);
+		for (i=0; i<B; i++) r=r*y[i]%p;
+		for (i=B*B+1; i<=n; i++) r=r*i%p;
+		return r;
+	}//998244352 170ms
 	vector<ll> getinvs(vector<ll> a)
 	{
 		int n=a.size(),i;
@@ -4892,903 +5517,7 @@ namespace NTT//禁止混用三模与普通 NTT
 		for (i=1; i<n-1; i++) a[i]=x*l[i-1]%p*r[i+1]%p;
 		return a;
 	}
-	int mosqrt(ll x)
-	{
-		static ll W;
-		struct P
-		{
-			ll x,y;
-			P operator*(const P &a) const
-			{
-				return {(x*a.x+y*a.y%p*W)%p,(x*a.y+y*a.x)%p};
-			}
-		};
-		if (x==0) return 0;
-		if (ksm(x,p-1>>1)!=1) { cout<<"-1\n"; exit(0); }
-		ll y;
-		do y=rnd()%p; while (ksm(W=(y*y%p+p-x)%p,p-1>>1)<=1);//not for p=2
-		y=[&](P x,ll y)
-		{
-			P r{1,0};
-			while (y)
-			{
-				if (y&1) r=r*x;
-				x=x*x; y>>=1;
-			}
-			return r.x;
-		}({y,1},p+1>>1);
-		return y*2<p?y:p-y;
-	}
-#ifdef MTT
-#ifdef CRT
-	void init(int);
-	template<const ll p> struct M
-	{
-		ll w[N];
-		ll ksm(ll x,ll y)
-		{
-			ll r=1;
-			while (y)
-			{
-				if (y&1) r=r*x%p;
-				x=x*x%p;
-				y>>=1;
-			}
-			return r;
-		}
-		void init(int n)
-		{
-			static int pre=0;
-			int i,j,k;
-			for (j=1; j<n; j=k)
-			{
-				k=j*2;
-				ll wn=ksm(g,(p-1)/k);
-				w[j]=1;
-				for (i=j+1; i<k; i++) w[i]=w[i-1]*wn%p;
-			}
-		}
-		void dft(vector<ll> &a,int o=0)
-		{
-			int n=a.size(),i,j,k;
-			ll *f,*g,*wn,*A=a.data(),x,y;
-			NTT::init(n);
-			for (i=1; i<n; i++) if (i<r[i]) swap(A[i],A[r[i]]);
-			for (k=1; k<n; k*=2)
-			{
-				wn=w+k;
-				for (i=0; i<n; i+=k*2)
-				{
-					f=A+i; g=A+i+k;
-					for (j=0; j<k; j++)
-					{
-						y=g[j]*wn[j]%p;
-						g[j]=f[j]+p-y;
-						f[j]+=y;
-					}
-				}
-				if (k*2==n||k==1<<14) for (ll &x:a) x%=p;
-			}
-			if (o)
-			{
-				x=ksm(n,p-2);
-				for (ll &y:a) y=y*x%p;
-				reverse(1+all(a));
-			}
-		}
-	};
-	M<p1> s1;
-	M<p2> s2;
-	M<p3> s3;
-	void init(int n)
-	{
-		static int pre=0;
-		if (pre==n) return;
-		int b=__lg(n)-1,i;
-		for (i=1; i<n; i++) r[i]=r[i>>1]>>1|(i&1)<<b;
-		if (pre<n)
-		{
-			s1.init(n);
-			s2.init(n);
-			s3.init(n);
-		}
-		pre=n;
-	}
-#endif
-#else
-/**/void init(int n)
-/**/{
-/**/	static int pr=0,pw=0;
-/**/	if (pr==n) return;
-/**/	int b=__lg(n)-1,i,j,k;
-/**/	for (i=1; i<n; i++) r[i]=r[i>>1]>>1|(i&1)<<b;
-/**/	if (pw<n)
-/**/	{
-/**/		for (j=1; j<n; j=k)
-/**/		{
-/**/			k=j*2;
-/**/			ll wn=ksm(g,(p-1)/k);
-/**/			w[j]=1;
-/**/			for (i=j+1; i<k; i++) w[i]=w[i-1]*wn%p;
-/**/		}
-/**/		pw=n;
-/**/	}
-/**/	pr=n;
-/**/}
-#endif
-	void getinv(int n)
-	{
-		static int pre=0;
-		if (!pre) pre=inv[1]=1;
-		if (n<=pre) return;
-		for (int i=pre+1,j; i<=n; i++)
-		{
-			j=p/i;
-			inv[i]=(p-j)*inv[p-i*j]%p;
-		}
-		pre=n;
-	}
-	void getfac(int n)
-	{
-		static int pre=-1;
-		if (pre==-1) pre=0,ifac[0]=fac[0]=1;
-		if (n<=pre) return;
-		getinv(n);
-		for (int i=pre+1,j; i<=n; i++) fac[i]=fac[i-1]*i%p,ifac[i]=ifac[i-1]*inv[i]%p;
-		pre=n;
-	}
-/**/int cal(int x) { return 1<<__lg(max(x,1)*2-1); }
-/**/struct Q
-/**/{
-/**/	vector<ll> a;
-/**/	ll *pt() { return a.data(); }
-/**/	Q(int x=1):a(cal(x)) {}//小心：{}会调用这条而非下一条
-		Q(const vector<ll> &o):a(cal(o.size())) { copy(all(o),a.begin()); }
-		ll fx(ll x)
-		{
-			ll r=0;
-			int i;
-			for (i=a.size()-1; i>=0&&!a[i]; i--);
-			for (; i>=0; i--) r=(r*x+a[i])%p;
-			return r;
-		}
-#ifndef MTT
-/**/	void dft(int o=0)
-/**/	{
-/**/		int n=a.size(),i,j,k;
-/**/		ll y,*f,*g,*wn,*A=pt();
-/**/		init(n);
-/**/		for (i=1; i<n; i++) if (i<r[i]) swap(A[i],A[r[i]]);
-/**/		for (k=1; k<n; k*=2)
-/**/		{
-/**/			wn=w+k;
-/**/			for (i=0; i<n; i+=k*2)
-/**/			{
-/**/				f=A+i; g=A+i+k;
-/**/				for (j=0; j<k; j++)
-/**/				{
-/**/					y=g[j]*wn[j]%p;
-/**/					g[j]=f[j]+p-y;
-/**/					f[j]+=y;
-/**/				}
-/**/			}
-/**/			if (k*2==n||k==1<<14) for (ll &x:a) x%=p;
-/**/		}
-/**/		if (o)
-/**/		{
-/**/			y=ksm(n,p-2);
-/**/			// getinv(n); x=inv[n];
-/**/			for (ll &x:a) x=x*y%p;
-/**/			reverse(1+all(a));
-/**/		}
-/**/	}
-		void hf_dft(int o=0)
-		{
-			int n=a.size()>>1,i,j,k;
-			ll x,y,*f,*g,*wn,*A=pt();
-			init(n);
-			for (i=1; i<n; i++) if (i<r[i]) swap(A[i],A[r[i]]);
-			for (k=1; k<n; k*=2)
-			{
-				wn=w+k;
-				for (i=0; i<n; i+=k*2)
-				{
-					f=A+i; g=A+i+k;
-					for (j=0; j<k; j++)
-					{
-						x=f[j]; y=g[j]*wn[j]%p;
-						if (x+y>=p) f[j]=x+y-p; else f[j]=x+y;
-						if (x<y) g[j]=x-y+p; else g[j]=x-y;
-					}
-				}
-			}
-			if (o)
-			{
-				x=ksm(n,p-2);
-				// t_tinv(n); x=inv[n];
-				for (i=0; i<n; i++) A[i]=A[i]*x%p;
-				reverse(A+1,A+n);
-			}
-		}
-#endif
-/**/	void resize(int n)
-/**/	{
-/**/		assert((n&-n)==n);
-/**/		a.resize(n);
-/**/	}
-/**/	ll &operator[](const int &x) { return a[x]; }
-/**/	const ll &operator[](const int &x) const { return a[x]; }
-		Q dao() const
-		{
-			ll n=a.size();
-			Q r(n);
-			for (ll i=1; i<n; i++) r[i-1]=a[i]*i%p;
-			return r;
-		}
-		Q ji() const
-		{
-			int n=a.size();
-			getinv(n);
-			Q r(n);
-			for (int i=1; i<n; i++) r[i]=a[i-1]*inv[i]%p;
-			return r;
-		}
-		Q operator-() const { Q r=*this; for (ll &x:r.a) if (x) x=p-x; return r; }
-		Q operator+(ll x) const { Q r=*this; r+=x; return r; }
-		Q &operator+=(ll x) { (a[0]+=x)%=p; return *this; }
-		Q operator-(ll x) const { Q r=*this; r-=x; return r; }
-		Q &operator-=(ll x) { (a[0]+=p-x)%=p; return *this; }
-		Q operator*(ll k) const { Q r=*this; r*=k; return r; }
-		Q &operator*=(ll k) { for (ll &x:a) x=x*k%p; return *this; }
-		Q operator+(Q f) const { f+=*this; return f; }
-		Q &operator+=(const Q &f) { int n=f.a.size(),i; if (a.size()<n) resize(n); for (i=0; i<n; i++) (a[i]+=f[i])%=p; return *this; }
-		Q operator-(Q f) const { Q r=*this; r-=f; return r; }
-		Q &operator-=(const Q &f) { int n=f.a.size(),i; if (a.size()<n) resize(n); for (i=0; i<n; i++) (a[i]+=p-f[i])%=p; return *this; }
-/**/	Q operator*(Q f) const { f*=*this; return f; }
-#ifdef MTT
-#ifdef CRT
-		template<const ll p> void fun(M<p> &s,Q &g)
-		{
-			Q f=*this;
-			int n=g.a.size(),i;
-			s.dft(f.a); s.dft(g.a);
-			for (i=0; i<n; i++) g[i]=g[i]*f[i]%p;
-			s.dft(g.a,1);
-		}
-		void operator*=(Q g3)
-		{
-			assert(a.size()==g3.a.size());
-			int n=a.size()*2,i;
-			resize(n); g3.resize(n);
-			Q g1=g3,g2=g3;
-			fun(s1,g1);
-			fun(s2,g2);
-			fun(s3,g3);
-			resize(n>>=1);
-			ll _p12=p1*p2%p,x;
-			for (i=0; i<n; i++)
-			{
-				x=(g2[i]+p2-g1[i])*inv_p1%p2*p1+g1[i];
-				a[i]=((x+p3-g3[i])%p3*(p3-inv_p12)%p3*_p12+x)%p;
-			}
-		}//三模，板子 OJ 5e5 0.9s
-#else
-		void operator*=(const Q &g)
-		{
-			ll n=a.size(),m=(1<<15)-1,i;
-			assert(n==g.a.size());
-			n*=2;
-			foly a0(n),a1(n),b0(n),b1(n),u(n),v(n);
-			n/=2;
-			for (i=0; i<n; i++) a0.a[i].x=a[i]>>15,a1.a[i].x=a[i]&m;
-			for (i=0; i<n; i++) b0.a[i].x=g.a[i]>>15,b1.a[i].x=g.a[i]&m;
-			ddt(a0,a1); ddt(b0,b1);
-			n*=2;
-			for (i=0; i<n; i++)
-			{
-				u.a[i]=a0.a[i]*b0.a[i]+FFT::I*a1.a[i]*b0.a[i];
-				v.a[i]=a0.a[i]*b1.a[i]+FFT::I*a1.a[i]*b1.a[i];
-			}
-			u.dft(1); v.dft(1);
-			n>>=1; resize(n);
-			for (i=0; i<n; i++) a[i]=((((ll)dtol(u.a[i].x)<<15)%p+dtol(u.a[i].y)+dtol(v.a[i].x)<<15)+dtol(v.a[i].y))%p;
-		}//4 次拆系数
-		void operator|=(const Q &g)//直接卷积
-		{
-			ui n=cal(a.size()+g.a.size()-1),m=(1<<15)-1,i;
-			foly a0(n),a1(n),b0(n),b1(n),u(n),v(n);
-			for (i=0; i<a.size(); i++) a0.a[i].x=a[i]>>15,a1.a[i].x=a[i]&m;
-			for (i=0; i<g.a.size(); i++) b0.a[i].x=g.a[i]>>15,b1.a[i].x=g.a[i]&m;
-			ddt(a0,a1); ddt(b0,b1);
-			for (i=0; i<n; i++)
-			{
-				u.a[i]=a0.a[i]*b0.a[i]+FFT::I*a1.a[i]*b0.a[i];
-				v.a[i]=a0.a[i]*b1.a[i]+FFT::I*a1.a[i]*b1.a[i];
-			}
-			u.dft(1); v.dft(1);
-			resize(n);
-			for (i=0; i<n; i++) a[i]=((((ll)dtol(u.a[i].x)<<15)%p+dtol(u.a[i].y)+dtol(v.a[i].x)<<15)+dtol(v.a[i].y))%p;
-		}//4 次拆系数，板子 OJ 5e5 1.4s 精度也爆，待修复
-#endif
-#else
-		Q &operator|=(Q f)//直接卷积，不 shift
-		{
-			int n=cal(a.size()+f.a.size()-1),i;
-			resize(n); f.resize(n);
-			dft(); f.dft();
-			for (i=0; i<n; i++) a[i]=a[i]*f[i]%p;
-			dft(1);
-			return *this;
-		}
-		Q operator|(Q f) const { f|=*this; return f; }
-/**/	Q &operator*=(Q f)//群内卷积
-/**/	{
-/**/		assert(a.size()==f.a.size());
-/**/		int n=a.size()*2,i;
-/**/		resize(n); f.resize(n);
-/**/		dft(); f.dft();
-/**/		for (i=0; i<n; i++) a[i]=a[i]*f[i]%p;
-/**/		dft(1); resize(n>>1);
-/**/		return *this;
-/**/	}
-		Q &operator&=(const Q &f)//卷积并 shift
-		{
-			*this|=f;
-			int n=a.size(),i;
-			for (i=n-1; i; i--) if (a[i]) break;
-			resize(cal(i+1));
-			return *this;
-		}
-		Q operator&(Q f) const { f&=*this; return f; }
-		Q &operator^=(Q f)//差卷积
-		{
-			assert(a.size()==f.a.size());
-			int n=a.size();
-			reverse(all(f.a));
-			*this|=f;
-			copy(pt()+n-1,pt()+n*2-1,pt());
-			resize(n);
-			return *this;
-		}
-		Q operator^(const Q &f) const { Q g=*this; g^=f; return g; }
-#endif
-#ifdef MTT
-		Q operator~()
-		{
-			Q q=*this,r(1);
-			int n=a.size()*2,i,j,k;
-			resize(n);
-			r[0]=ksm(a[0],p-2);
-			for (j=2; j<=n; j*=2)
-			{
-				k=j>>1;
-				r.resize(j);
-				q.resize(j);
-				copy_n(pt(),k,q.pt());
-				r=-(q*r-2)*r;
-				r.resize(k);
-			}
-			n>>=1;
-			resize(n);
-			return r;
-		}//trivial
-#else
-		Q operator~()
-		{
-			Q q=*this,r(1),g(1);
-			int n=a.size(),i,j,k;
-			r[0]=ksm(a[0],p-2);
-			for (j=2; j<=n; j*=2)
-			{
-				k=j>>1;
-				r.resize(j);
-				g=r;
-				q.resize(j);
-				copy_n(pt(),j,q.pt());
-				r.dft(); q.dft();
-				for (i=0; i<j; i++) q[i]=q[i]*r[i]%p;
-				q.dft(1);
-				fill_n(q.pt(),k,0);
-				q.dft();
-				for (i=0; i<j; i++) r[i]=q[i]*r[i]%p;
-				r.dft(1);
-				copy_n(g.pt(),k,r.pt());
-				for (i=k; i<j; i++) r[i]=(p-r[i])%p;
-			}
-			return r;
-		}//inv(1 6 3 4 9)=(1 998244347 33 998244169 1020)
-#endif
-		Q operator/(Q f) const { return (*this)*~f; }
-		Q &operator/=(Q f) { f=~f; (*this)*=f; return *this; }
-	};
-#ifndef MTT
-	Q sqr(Q f)
-	{
-		int n=f.a.size()*2,i;
-		f.resize(n);
-		f.dft();
-		for (i=0; i<n; i++) f[i]=f[i]*f[i]%p;
-		f.dft(1);
-		f.resize(n>>1);
-		return f;
-	}
-	void cdq(Q &f,Q &g,int l,int r)//g_0=1,i*g_i=g_{i-j}*f_j,use for exp_cdq
-	{
-		static vector<Q> cd;
-		int i,m=l+r>>1,n=r-l,nn=n>>1;
-		if (l==0&&r==f.a.size())
-		{
-			getinv(n-1);
-			g=Q(n);
-			cd.clear();
-			for (i=2; i<=n; i*=2)
-			{
-				cd.emplace_back(i);
-				Q &h=cd.back();
-				h.resize(i);
-				copy_n(f.pt(),i,h.pt());
-				h.dft();
-			}
-		}
-		if (l+1==r)
-		{
-			g[l]=l?g[l]*inv[l]%p:1;
-			return;
-		}
-		cdq(f,g,l,m);
-		Q u=cd[__lg(n)-1],v(n);
-		copy_n(g.pt()+l,nn,v.pt());
-		v.dft();
-		for (i=0; i<n; i++) u[i]=u[i]*v[i]%p;
-		u.dft(1);
-		for (i=m; i<r; i++) (g[i]+=u[i-l])%p;
-		cdq(f,g,m,r);
-	}
-	Q exp_cdq(Q f)
-	{
-		Q g(1);
-		int n=f.a.size(),i;
-		for (i=1; i<n; i++) f[i]=f[i]*i%p;
-		cdq(f,g,0,n);
-		return g;
-	}
-	Q sqrt(Q b)
-	{
-		Q q(1),f(1),r(1);
-		int n=b.a.size(),i,j=n,l;
-		for (i=0; i<n; i++) if (b[i]) { j=i; break; }
-		if (j==n) return b;
-		if (j&1) { cout<<"-1\n"; exit(0); }
-		l=j>>1;
-		for (i=0; i<n-j; i++) b[i]=b[i+j];
-		for (i=n-j; i<n; i++) b[i]=0;
-		r[0]=i=mosqrt(b[0]);
-		assert(i!=-1);
-		for (j=2; j<=n; j*=2)
-		{
-			r.resize(j);
-			q=~r; f.resize(j*2);
-			copy_n(b.pt(),j,f.pt());
-			q.resize(j*2); r.resize(j*2);
-			q.dft(); r.dft(); f.dft();
-			for (i=0; i<j*2; i++) r[i]=(r[i]*r[i]+f[i])%p*q[i]%p*(p+1>>1)%p;
-			r.dft(1);
-			fill(j+all(r.a),0);
-		}
-		r.resize(n);
-		for (i=n-1; i>=l; i--) r[i]=r[i-l];
-		for (i=0; i<l; i++) r[i]=0;
-		return r;
-	}//sqrt(0 0 4 2 3)=(0 2 499122177 311951361 171573248)
-#endif
-	Q ln(const Q &f) { return (f.dao()/f).ji(); }//ln(1 927384623 878326372 3882 273455637 998233543)=(0 927384623 817976920 427326948 149643566 610586717)
-#ifdef MTT
-	Q exp(Q f)
-	{
-		Q q(1),r(1);
-		int n=f.a.size()*2,i,j,k;
-		r[0]=1;
-		for (j=2; j<=n; j*=2)
-		{
-			k=j>>1;
-			r.resize(j); q.resize(j);
-			copy_n(f.pt(),k,q.pt());
-			// for (i=0; i<k; i++) q[i]=f[i];
-			r=r*(q-ln(r)+1);
-			r.resize(k);
-		}
-		return r;
-	}
-#else
-	Q exp(Q b)
-	{
-		Q q(1),r(1);
-		int n=b.a.size(),i,j;
-		r[0]=1;
-		for (j=2; j<=n; j*=2)
-		{
-			r.resize(j);
-			q=ln(r);
-			for (i=0; i<j; i++) q[i]=(b[i]+p-q[i])%p;
-			// for (i=0; i<j; i++) if ((q[i]=b[i]+p-q[i])>=p) q[i]-=p;
-			(++q[0])%=p;
-			r.resize(j*2); q.resize(j*2);
-			r.dft(); q.dft();
-			for (i=0; i<j*2; i++) r[i]=r[i]*q[i]%p;
-			r.dft(1);
-			r.resize(j);
-		}
-		return r;
-	}//exp(0 4 2 3 5)=(1 4 10 665496257 665496281)
-	void mul(Q &f,Q &g)
-	{
-		int n=f.a.size(),i;
-		assert(n==g.a.size());
-		f.dft(); g.dft();
-		for (i=0; i<n; i++) f[i]=f[i]*g[i]%p;
-		f.dft(1);
-	}
-	Q exp_new(Q b)
-	{
-		Q h(1),f(1),r(1),u(1),v(1);
-		int n=b.a.size(),i,j,k;
-		r[0]=1; h[0]=1;
-		for (j=2; j<=n; j*=2)
-		{
-			f.resize(j);
-			for (i=0; i<j; i++) f[i]=b[i];
-			f=f.dao();
-			k=j>>1;
-			for (i=0; i<k-1; i++) { (f[i+k]+=f[i])%=p; f[i]=0; }
-			for (i=k-1; i<j; i++) f[i]=(p-f[i])%p;
-			u.resize(k); v.resize(k);
-			copy_n(r.pt(),k,u.pt()); copy_n(h.pt(),k,v.pt());
-			u=u.dao(); mul(u,v);
-			for (i=0; i<k-1; i++) (f[i+k]+=u[i])%=p;
-			(f[k-1]+=u[k-1])%=p;
-			copy_n(r.pt(),k,u.pt());
-			u.dft();
-			for (i=0; i<k; i++) u[i]=u[i]*v[i]%p;
-			u.dft(1);
-			(u[0]+=p-1)%=p;
-			u.resize(j); v.resize(j);
-			copy_n(b.pt(),k,v.pt());
-			v=v.dao(); mul(u,v);
-			for (i=0; i<k; i++) (f[i+k]+=p-u[i])%=p;
-			f=f.ji();
-			copy_n(r.pt(),k,u.pt()); fill_n(u.pt()+k,k,0);
-			mul(u,f); r.resize(j);
-			for (i=k; i<j; i++) r[i]=(p-u[i])%p;
-			if (j!=n) h=~r;
-		}
-		return r;
-	}
-	Q sqrt_new(Q b)
-	{
-		Q q(1),r(1),h(1);
-		int n=b.a.size(),i,j=n,k,l;
-		for (i=0; i<n; i++) if (b[i]) { j=i; break; }
-		if (j==n) return b;
-		if (j&1) { cout<<"-1\n"; exit(0); }
-		l=j>>1;
-		for (i=0; i<n-j; i++) b[i]=b[i+j];
-		for (i=n-j; i<n; i++) b[i]=0;
-		r[0]=mosqrt(b[0]); h[0]=ksm(r[0],p-2);
-		r.resize(1);
-		ll i2=p+1>>1;
-		for (j=2; j<=n; j*=2)
-		{
-			k=j>>1;
-			q=r; q.dft();
-			for (i=0; i<k; i++) q[i]=q[i]*q[i]%p;
-			q.dft(1);
-			q.resize(j);
-			for (i=k; i<j; i++) q[i]=(q[i-k]+p*2-b[i]-b[i-k])*i2%p,q[i-k]=0;
-			h.resize(j);
-			mul(q,h);
-			r.resize(j);
-			for (i=k; i<j; i++) r[i]=(p-q[i])%p;
-			if (j!=n) h=~r;
-		}
-		r.resize(n);
-		for (i=n-1; i>=l; i--) r[i]=r[i-l];
-		for (i=0; i<l; i++) r[i]=0;
-		return r;
-	}
-	Q pow(Q b,ll m)//不应传入超过 int 内容
-	{
-		int n=b.a.size(),i,j=n,k;
-		for (i=0; i<n; i++) if (b[i]) { j=i; break; }
-		if (j==n) return b[0]=!m,b;
-		if (j*m>=n)
-		{
-			fill_n(b.pt(),n,0);
-			return b;
-		}
-		for (i=0; i<n-j; i++) b[i]=b[i+j];
-		for (i=n-j; i<n; i++) b[i]=0;
-		k=b[0]; assert(k);
-		b=exp_new(ln(b*ksm(k,p-2))*m)*ksm(k,m);
-		j*=m;
-		for (i=n-1; i>=j; i--) b[i]=b[i-j];
-		for (i=0; i<j; i++) b[i]=0;
-		return b;
-	}
-	Q pow(Q b,string s)
-	{
-		int n=b.a.size(),i,j=n,k;
-		for (i=0; i<n; i++) if (b[i]) { j=i; break; }
-		if (j==n) return b[0]=s=="0",b;
-		if (j)
-		{
-			if (s.size()>8||j*stoll(s)>=n)
-			{
-				fill_n(b.pt(),n,0);
-				return b;
-			}
-		}
-		ll m0=0,m1=0;
-		for (auto c:s) m0=(m0*10+c-'0')%p,m1=(m1*10+c-'0')%(p-1);
-		for (i=0; i<n-j; i++) b[i]=b[i+j];
-		for (i=n-j; i<n; i++) b[i]=0;
-		k=b[0]; assert(k);
-		b=exp_new(ln(b*ksm(k,p-2))*m0)*ksm(k,m1);
-		j*=m0;
-		for (i=n-1; i>=j; i--) b[i]=b[i-j];
-		for (i=0; i<j; i++) b[i]=0;
-		return b;
-	}
-	Q pow2(Q b,ll m)
-	{
-		Q r(b.a.size()); r[0]=1;
-		while (m)
-		{
-			if (m&1) r=r*b;
-			if (m>>=1) b=sqr(b);
-		}
-		return r;
-	}
-	pair<Q,Q> div(Q a,Q b)
-	{
-		int n=0,m=0,l,i,nn=a.a.size();
-		for (i=a.a.size()-1; i>=0; i--) if (a[i]) { n=i+1; break; }
-		for (i=b.a.size()-1; i>=0; i--) if (b[i]) { m=i+1; break; }
-		assert(m);
-		if (n<m) return {Q(1),a};
-		l=cal(n+m-1);
-		Q c(n),d(m);
-		reverse_copy(a.pt(),a.pt()+n,c.pt());
-		reverse_copy(b.pt(),b.pt()+m,d.pt());
-		c.resize(cal(n-m+1)); d.resize(c.a.size());
-		d=~d;
-		fill(n-m+1+all(d.a),0);
-		c*=d;
-		fill(n-m+1+all(c.a),0);
-		reverse(c.pt(),c.pt()+n-m+1);
-		n=a.a.size(); b.resize(n); c.resize(n);
-		d=a-c*b;
-		assert(count(m+all(d.a),0)==d.a.size()-m);
-		c.resize(cal(n-m+1)); d.resize(cal(m));
-		return {c,d};
-	}
-	Q sin(const Q &f) { return (exp_new(f*I)-exp_new(f*(p-I)))*ksm(2*I%p,p-2); }
-	Q cos(const Q &f) { return (exp_new(f*I)+exp_new(f*(p-I)))*ksm(2,p-2); }
-	Q tan(const Q &f) { return sin(f)/cos(f); }
-	Q asin(const Q &f) { return (f.dao()/sqrt_new((f*f-1)*(p-1))).ji(); }
-	Q acos(const Q &f) { return ((f.dao()/sqrt_new((f*f-1)*(p-1)))*(p-1)).ji(); }
-	Q atan(const Q &f) { return (f.dao()/(f*f+1)).ji(); }
-	Q cdq_inv(const Q &f) { return (~(f-1))*(p-1); }//g_0=1,g_i=g_{i-j}*f_j
-	Q operator%(const Q &f,const Q &g) { return div(f,g).second; }
-	Q &operator%=(Q &f,const Q &g) { f=f%g; return f; }
-	ll dt(const vector<ll> &f,const vector<ll> &a,ll m)//常系数齐次线性递推，find a_m,a_n=a_{n-i}*f_i,f_1...k,a_0...k-1
-	{
-		if (m<a.size()) return a[m];
-		assert(f.size()==a.size()+1);
-		int k=a.size(),n=cal(k+1<<1),i,l;
-		ll ans=0;
-		Q h(n);
-		for (i=1; i<=k; i++) h[k-i]=(p-f[i])%p;
-		h[k]=1;
-		Q g(2),r(2); g[1]=1; r[0]=1;
-		while (m)
-		{
-			if (m&1) r=(r&g)%h;
-			l=g.a.size()*2; g.resize(l);
-			g.dft();
-			for (i=0; i<l; i++) g[i]=g[i]*g[i]%p;
-			g.dft(1); g%=h; m>>=1;
-		}
-		k=min(k,(int)r.a.size());
-		for (i=0; i<k; i++) ans=(ans+a[i]*r[i])%p;
-		return ans;
-	}//板子 OJ 1e5/1e18 8246ms，Luogu 32000/1e9 710ms
-	ll dt_new(const vector<ll> &f,const vector<ll> &a,ll m)//常系数齐次线性递推，find a_m,a_n=a_{n-i}*f_i,f_1...k,a_0...k-1
-	{
-		if (m<a.size()) return a[m];
-		assert(f.size()==a.size()+1);
-		int k=a.size(),n=cal(k+1),lim=n*2,i;
-		Q g(n),h(n);
-		for (i=1; i<=k; i++) h[k-i]=(p-f[i])%p;
-		h[0]=1;
-		for (i=0; i<k; i++) g[i]=a[i];
-		g*=h;
-		fill(k+all(g.a),0);
-		++k; g.resize(lim); h.resize(lim);
-		vector<ll> res(k);
-		while (m)
-		{
-			if (m&1)
-			{
-				ll x=p-g[0];
-				for (i=1; i<k; i+=2) res[i>>1]=x*h[i]%p;
-				copy(g.pt()+1,g.pt()+k,g.pt());
-				g[k-1]=0;
-			}
-			g.dft(); h.dft();
-			ll *a=g.pt(),*b=h.pt(),*c=a+n,*d=b+n;
-			for (i=0; i<n; i++) g[i]=(a[i]*d[i]+b[i]*c[i])%p*(p+1>>1)%p;
-			for (i=0; i<n; i++) h[i]=h[i]*h[i^n]%p;
-			g.hf_dft(1); h.hf_dft(1);
-			fill(g.pt()+k,g.pt()+lim,0);
-			if (m&1) for (i=0; i<k; i++) (g[i]+=res[i])%=p;
-			fill(h.pt()+k,h.pt()+lim,0);
-			m>>=1;
-		}
-		return g[0];
-	}//板子 OJ 1e5/1e18 1310ms，Luogu 32000/1e9 160ms
-	Q prod(const vector<Q> &a)
-	{
-		if (!a.size()) return Q(vector<ll>{1});
-		auto dfs=[&](auto dfs,const Q *a,int n) -> Q
-		{
-			if (n==1) return a[0];
-			int m=n>>1;
-			return dfs(dfs,a,m)&dfs(dfs,a+m,n-m);
-		};
-		return dfs(dfs,a.data(),a.size());
-	}
-	Q prod_new(const vector<Q> &a)
-	{
-		if (!a.size()) return Q(vector<ll>{1});
-		struct cmp
-		{
-			bool operator()(const Q &f,const Q &g) const { return f.a.size()>g.a.size(); }
-		};
-		priority_queue<Q,vector<Q>,cmp> q(all(a));
-		while (q.size()>1)
-		{
-			auto f=q.top(); q.pop();
-			f&=q.top(); q.pop();
-			q.push(f);
-		}
-		return q.top();
-	}
-	vector<ll> get_fx(const Q &f,const vector<ll> &X)
-	{
-		int m=X.size(),n=f.a.size()-1,i,j;
-		vector<Q> pro(m*4+4);
-		while (n>1&&!f[n]) --n;
-		vector<ll> y(m);
-		function<void(int,int,int)> build=[&](int x,int l,int r)
-		{
-			if (l+1==r)
-			{
-				pro[x]={vector{(p-X[l])%p,1llu}};
-				return;
-			}
-			int mid=l+r>>1,c=x*2;
-			build(c,l,mid); build(c+1,mid,r);
-			pro[x]=pro[c]&pro[c+1];
-		};
-		function<void(int,int,int,Q,int)> dfs=[&](int x,int l,int r,Q f,int d)
-		{
-			const static int limit=256;
-			if (d>=r-l)
-			{
-				f%=pro[x];
-				d=r-l-1;
-				while (d>0&&!f[d]) --d;
-				f.resize(cal(d+1));
-			}
-			if (r-l<limit)
-			{
-				for (int i=l; i<r; i++) y[i]=f.fx(X[i]);
-				return;
-			}
-			int mid=l+r>>1,c=x*2;
-			dfs(c,l,mid,f,d);
-			dfs(c+1,mid,r,f,d);
-		};
-		build(1,0,m);
-		dfs(1,0,m,f,n);
-		return y;
-	}//板子 OJ 2^17 920ms
-	vector<ll> get_fx_new(Q f,const vector<ll> &X)//多项式多点求值
-	{
-		int m=X.size(),i,j;
-		vector<ll> y(m);
-		if (X.size()<=10)
-		{
-			for (i=0; i<m; i++) y[i]=f.fx(X[i]);
-			return y;
-		}
-		int n=f.a.size();
-		while (n>1&&!f[n-1]) --n;
-		f.resize(cal(n));
-		vector<Q> pro(m*4+4);
-		function<void(int,int,int)> build=[&](int x,int l,int r)
-		{
-			if (l==r)
-			{
-				pro[x]={vector{1llu,(p-X[l])%p}};
-				return;
-			}
-			int m=l+r>>1,c=x*2;
-			build(c,l,m); build(c+1,m+1,r);
-			pro[x]=pro[c]&pro[c+1];
-		};
-		function<void(int,int,int,Q)>dfs=[&](int x,int l,int r,Q f)
-		{
-			const static int limit=30;
-			if (r-l+1<=limit)
-			{
-				int m=r-l+1,m1,m2,mid=l+r>>1,i,j,k;
-				static ll g[limit+2],g1[limit+2],g2[limit+2];
-				m1=m2=r-l;
-				copy_n(f.pt(),m,g1);
-				copy_n(f.pt(),m,g2);
-				for (i=mid+1; i<=r; i++,--m1) for (k=0; k<m1; k++) g1[k]=(g1[k]+g1[k+1]*(p-X[i]))%p;
-				for (i=l; i<=mid; i++,--m2) for (k=0; k<m2; k++) g2[k]=(g2[k]+g2[k+1]*(p-X[i]))%p;
-				for (i=l; i<=mid; i++)
-				{
-					copy_n(g1,(m=m1)+1,g);
-					for (j=l; j<=mid; j++) if (i!=j)
-					{
-						for (k=0; k<m; k++) g[k]=(g[k]+g[k+1]*(p-X[j]))%p;
-						--m;
-					}
-					y[i]=g[0];
-				}
-				for (i=mid+1; i<=r; i++)
-				{
-					copy_n(g2,(m=m2)+1,g);
-					for (j=mid+1; j<=r; j++) if (i!=j)
-					{
-						for (k=0; k<m; k++) g[k]=(g[k]+g[k+1]*(p-X[j]))%p;
-						--m;
-					}
-					y[i]=g[0];
-				}
-				return;
-			}
-			int mid=l+r>>1,c=x*2,n=f.a.size(),i;
-			pro[c].resize(n); pro[c+1].resize(n);
-			f.dft(); reverse(all(pro[c].a));
-			pro[c].dft();
-			for (i=0; i<n; i++) pro[c][i]=pro[c][i]*f[i]%p;
-			pro[c].dft(1); rotate(all(pro[c].a)-1,pro[c].a.end());
-			pro[c].resize(cal(r-mid));
-			fill(r-mid+all(pro[c].a),0);
-			c^=1;
-			reverse(all(pro[c].a));
-			pro[c].dft();
-			for (i=0; i<n; i++) pro[c][i]=pro[c][i]*f[i]%p;
-			pro[c].dft(1); rotate(all(pro[c].a)-1,pro[c].a.end());
-			pro[c].resize(cal(mid-l+1));
-			fill(mid-l+1+all(pro[c].a),0);
-			c^=1;
-			dfs(c,l,mid,pro[c+1]);
-			dfs(c+1,mid+1,r,pro[c]);
-		};
-		build(1,0,m-1);
-		pro[1].resize(f.a.size());
-		f^=~pro[1];
-		f.resize(cal(m));
-		fill(min(m,n)+all(f.a),0);
-		dfs(1,0,m-1,f);
-		return y;
-	}//板子 OJ 2^17 510ms
-	Q get_poly(const vector<ll> &X,const vector<ll> &y)//多项式快速插值
+	Q interpolation(const vector<ll> &X,const vector<ll> &y)//多项式快速插值
 	{
 		assert(X.size()==y.size());
 		int n=X.size(),i,j;
@@ -5800,130 +5529,106 @@ namespace NTT//禁止混用三模与普通 NTT
 		}
 		vector<Q> sum(4*n+4),pro(4*n+4);
 		function<void(int,int,int)> build=[&](int x,int l,int r)
-		{
-			if (l==r)
 			{
-				sum[x]={vector{(p-X[l])%p,1llu}};
-				return;
-			}
-			int mid=l+r>>1,c=x*2;
-			build(c,l,mid); build(c+1,mid+1,r);
-			sum[x]=sum[c]&sum[c+1];
-		};
+				if (l==r)
+				{
+					sum[x]=Q(vector{(p-X[l])%p,1llu});
+					return;
+				}
+				int mid=l+r>>1,c=x*2;
+				build(c,l,mid); build(c+1,mid+1,r);
+				sum[x]=shrink(sum[c]*sum[c+1]);
+			};
 		build(1,0,n-1);
-		sum[1]=sum[1].dao();
-		auto v=get_fx_new(sum[1],X);
+		auto v=evaluation_new(sum[1]=der(sum[1]),X);
 		assert(v.size()==n);
 		auto Y=getinvs(v);
 		for (i=0; i<n; i++) Y[i]=Y[i]*y[i]%p;
 		function<void(int,int,int)> dfs=[&](int x,int l,int r)
-		{
-			if (l==r)
 			{
-				pro[x]={vector{Y[l],0llu}};
-				return;
-			}
-			int c=x*2,mid=l+r>>1;
-			dfs(c,l,mid); dfs(c|1,mid+1,r);
-			pro[x]=(pro[c]&sum[c|1])+(pro[c|1]&sum[c]);
-		};
+				if (l==r)
+				{
+					pro[x][0]=Y[l];
+					return;
+				}
+				int c=x*2,mid=l+r>>1;
+				dfs(c,l,mid); dfs(c|1,mid+1,r);
+				pro[x]=shrink((pro[c]*sum[c|1])+(pro[c|1]*sum[c]));
+			};
 		dfs(1,0,n-1);
-		pro[1].resize(cal(n));
-		return pro[1];
-	}//板子 OJ 2^17 1.2s
+		return pro[1]%=cal(n);
+	}//131072 1150ms
 	Q comp(const Q &f,Q g)//多项式复合 f(g(x))=[x^i]f(x)g(x)^i
 	{
-		int n=f.a.size(),l=ceil(::sqrt(n)),i,j;
-		assert(n>=g.a.size());//返回 n-1 次多项式
+		int n=f.size(),l=ceil(::sqrt(n)),i,j;
+		assert(n>=g.size());//返回 n-1 次多项式
 		vector<Q> a(l+1),b(l);
-		a[0].resize(n); a[0][0]=1; a[1]=g;
-		g.resize(n*2);
-		Q w=g,u,v(n);
-		w.dft(); u=w;
-		for (i=2; i<=l; i++)
-		{
-			if (i>2) u.dft();
-			for (j=0; j<n*2; j++) u[j]=u[j]*w[j]%p;
-			u.dft(1);
-			fill(n+all(u.a),0);
-			a[i]=u;
-		}
-		w=a[l];
-		w.dft(); u=w;
-		for (i=2; i<=l; i++) a[i].resize(n);
+		a[0]%=n; a[0][0]=1; a[1]=g;
+		g%=n*2;
+		Q u=g,v(n);
+		g.dft();
+		for (i=2; i<=l; i++) a[i]=((u&=g)%=n),u%=n*2;
 		for (i=2; i<l; i++)
 		{
-			if (i>2) u.dft();
-			b[i-1]=u;
-			for (j=0; j<n*2; j++) u[j]=u[j]*w[j]%p;
-			u.dft(1);
-			fill(n+all(u.a),0);
+			u.dft(); b[i-1]=u;
+			u&=b[1]; fill(n+all(u),0);
 		}
-		if (l>2) u.dft(); b[l-1]=u;
+		u.dft(); b[l-1]=u;
 		for (i=0; i<l; i++)
 		{
-			fill(all(v.a),0);
+			fill(all(v),0);
 			for (j=0; j<l; j++) if (i*l+j<n) v+=a[j]*f[i*l+j];
-			if (i==0) u=v; else
-			{
-				v.resize(n*2); v.dft();
-				for (j=0; j<n*2; j++) v[j]=v[j]*b[i][j]%p;
-				v.dft(1); v.resize(n); u+=v;
-			}
+			if (i==0) u=v; else u+=((v%=n*2)&=b[i])%=n;
 		}
 		return u;
-	}//n^2+n\sqrt n\log n，8000 板子 OJ 300ms，20000 luogu 3.5s
+	}//n^2+n\sqrt n\log n，8000 350ms
 	Q comp_inv(Q f)//多项式复合逆 g(f(x))=x，求 g，[x^n]g=([x^{n-1}](x/f)^n)/n，要求常数 0 一次非 0
 	{
 		assert(!f[0]&&f[1]);
-		int n=f.a.size(),l=ceil(::sqrt(n)),i,j,k,m;//l>=2
-		rotate(f.a.begin(),1+all(f.a));
+		int n=f.size(),l=ceil(::sqrt(n)),i,j,k,m;//l>=2
+		rotate(f.begin(),1+all(f));
 		f=~f;
-		getinv(n*2);
+		getfac(n*2);
 		vector<Q> a(l+1),b(l);
 		Q u,v;
 		u=a[1]=f;
-		u.resize(n*2); u.dft(); v=u;
+		u%=n*2; (v=u).dft();
 		for (i=2; i<=l; i++)
 		{
-			if (i>2) u.dft();
-			for (j=0; j<n*2; j++) u[j]=u[j]*v[j]%p;
-			u.dft(1);
-			fill(n+all(u.a),0);
+			u&=v;
+			fill(n+all(u),0);
 			a[i]=u;
 		}
-		b[0].resize(n); b[0][0]=1; b[1]=a[l]; u.dft(); v=u;
+		b[0]%=n; b[0][0]=1; b[1]=u; (v=u).dft();
 		for (i=2; i<l; i++)
 		{
-			if (i>2) u.dft();
-			for (j=0; j<n*2; j++) u[j]=u[j]*v[j]%p;
-			u.dft(1);
-			fill(n+all(u.a),0);
+			u&=v;
+			fill(n+all(u),0);
 			b[i]=u;
 		}
-		u.resize(n); u[0]=0;
+		u%=n; u[0]=0;
 		for (i=0; i<l; i++) for (j=1; j<=l; j++) if (i*l+j<n)
 		{
 			m=i*l+j-1;
-			ll r=0,*f=b[i].pt(),*g=a[j].pt();
+			ll r=0,*f=b[i].data(),*g=a[j].data();
 			for (k=0; k<=m; k++) r=(r+f[k]*g[m-k])%p;
 			u[m+1]=r*inv[m+1]%p;
 		}
 		return u;
-	}
+	}//8000 200ms
 	Q shift(Q f,ll c)//get f(x+c),c\in [0,p)
 	{
-		int n=f.a.size(),i,j;
+		int n=f.size(),i,j;
 		Q g(n);
 		getfac(n);
-		for (i=0; i<n; i++) f[i]=f[i]*fac[i]%p;
+		for (i=0; i<n; i++) (f[i]*=fac[i])%=p;
 		g[0]=1;
 		for (i=1; i<n; i++) g[i]=g[i-1]*c%p;
-		for (i=0; i<n; i++) g[i]=g[i]*ifac[i]%p;
+		for (i=0; i<n; i++) (g[i]*=ifac[i])%=p;
 		f^=g;
-		for (i=0; i<n; i++) f[i]=f[i]*ifac[i]%p;
+		for (i=0; i<n; i++) (f[i]*=ifac[i])%=p;
 		return f;
-	}//板子 OJ 5e5 200ms
+	}//5e5 200ms (1 2 3 4 5) 3 -> (547 668 309 64 5)
 	vector<ll> shift(vector<ll> y,ll c,ll m)//[0,n) 点值 -> [c,c+m) 点值
 	{
 		assert(y.size());
@@ -5947,8 +5652,8 @@ namespace NTT//禁止混用三模与普通 NTT
 		vector<ll> v(m+n-1);
 		c-=n-1;
 		for (i=0; i<l; i++) v[i]=(c+i)%p;
-		f.a=y; g.a=getinvs(v); g.resize(len);
-		f|=g;
+		f=Q(y); g=Q(getinvs(v))%len;
+		f*=g;
 		vector<ll> u(m);
 		for (i=n-1; i<l; i++) u[i-(n-1)]=f[i];
 		v.resize(m);
@@ -5956,18 +5661,17 @@ namespace NTT//禁止混用三模与普通 NTT
 		v=getinvs(v); c+=n;
 		ll tmp=1;
 		for (i=c-n; i<c; i++) tmp=tmp*i%p;
-		for (i=0; i<m; i++) u[i]=u[i]*tmp%p,tmp=tmp*(c+i)%p*v[i]%p;
+		for (i=0; i<m; i++) (u[i]*=tmp)%=p,tmp=tmp*(c+i)%p*v[i]%p;
 		r.insert(r.end(),all(u));
 		r.insert(r.end(),all(res));
 		assert(r.size()==mm);
 		return r;
-	}//板子 OJ 5e5 430ms
-	const ll B=1e5;
-	ll a[B+2],b[B+2];
-	ll mic(ll x) { return a[x%B]*b[x/B]%p; }
-	vector<ll> Z_trans(Q f,ll c,ll m)//求 f(c^[0,m))。核心 ij=C(i+j,2)-C(i,2)-C(j,2)
+	}//5e5 430ms, (1 4 9 16) 3 5 -> (16 25 36 49 64)
+	vector<ll> Z_transform(Q f,ll c,ll m)//求 f(c^[0,m))。核心 ij=C(i+j,2)-C(i,2)-C(j,2)
 	{
-		int i,n=f.a.size();
+		const static ll B=1e5;
+		static ll a[B+2],b[B+2];
+		int i,n=f.size();
 		if (n*m<B*5)
 		{
 			vector<ll> r(m);
@@ -5975,23 +5679,20 @@ namespace NTT//禁止混用三模与普通 NTT
 			for (i=0,j=1; i<m; i++) r[i]=f.fx(j),j=j*c%p;
 			return r;
 		}
+		auto mic=[&](ll x) { return a[x%B]*b[x/B]%p; };
 		ll l=cal(m+=n-1);
 		Q g(l);
 		assert(B*B>p);
 		a[0]=b[0]=g[0]=g[1]=1;
 		for (i=1; i<=B; i++) a[i]=a[i-1]*c%p;
-		c=a[B];
-		for (i=1; i<=B; i++) b[i]=b[i-1]*c%p;
+		for (i=1; i<=B; i++) b[i]=b[i-1]*a[B]%p;
 		for (i=2; i<n; i++) f[i]=f[i]*mic((p*2-2-i)*(i-1)/2%(p-1))%p;
-		reverse(all(f.a)); f.resize(l);
 		for (i=2; i<m; i++) g[i]=mic(i*(i-1llu)/2%(p-1));
-		f.dft(); g.dft();
-		for (i=0; i<l; i++) f[i]=f[i]*g[i]%p;
-		f.dft(1);
-		vector<ll> r(f.pt()+n-1,f.pt()+m); m-=n-1;
+		reverse(all(f)); (f%=l)&=g;
+		vector<ll> r(f.begin()+n-1,f.begin()+m); m-=n-1;
 		for (i=2; i<m; i++) r[i]=r[i]*mic((p*2-2-i)*(i-1)/2%(p-1))%p;
 		return r;
-	}//luogu 1e6 400ms
+	}//luogu 1e6 500ms
 	vector<ll> get_Bell(int n)//B(0...n)
 	{
 		++n;
@@ -6001,9 +5702,9 @@ namespace NTT//禁止混用三模与普通 NTT
 		for (i=1; i<n; i++) f[i]=ifac[i];
 		f=exp_new(f);
 		for (i=2; i<n; i++) f[i]=f[i]*fac[i]%p;
-		return vector<ll>(f.pt(),f.pt()+n);
-	}
-	vector<ll> get_S1_row(int n,int m)//S1(n,0...m),O(nlogn),unsigned
+		return vector<ll>(f.begin(),f.begin()+n);
+	}//not check
+	vector<ll> S1_row(int n,int m)//S1(n,0...m),O(nlogn),unsigned
 	{
 		int cm=cal(++m);
 		if (n==0)
@@ -6012,30 +5713,32 @@ namespace NTT//禁止混用三模与普通 NTT
 			r[0]=1;
 			return r;
 		}
-		auto dfs=[&](auto self,int n)
-		{
-			if (n==1)
+		function<Q(int)> dfs=[&](int n)
 			{
-				Q f(1);
-				f[1]=1;
+				if (n==1)
+				{
+					Q f(2);
+					f[1]=1;
+					return f;
+				}
+				Q f=dfs(n/2);
+				f*=shift(f,n/2);
+				if (n&1)
+				{
+					f%=cal(n+1);
+					for (int i=n; i; i--) f[i]=f[i-1];
+					// for (int i=1; i<=n; i++) f[i]=f[i-1];
+					--n;
+					for (int i=0; i<=n; i++) f[i]=(f[i]+f[i+1]*n)%p;
+				}
+				if (f.size()>cm) f%=cm;
 				return f;
-			}
-			Q f=self(self,n>>1);
-			f|=shift(f,n>>1);
-			if (n&1)
-			{
-				f.a.resize(cal(n+1));
-				copy_n(f.pt(),n,f.pt()+1);
-				--n;
-				for (int i=0; i<=n; i++) f[i]=(f[i]+f[i+1]*n)%p;
-			}
-			if (f.a.size()>cm) f.resize(cm);
-			return f;
-		};
-		Q f=dfs(dfs,n);
-		return vector<ll>(f.pt(),f.pt()+m);
+			};
+		Q f=dfs(n);
+		if (f.size()<cm) f%=cm;
+		return vector<ll>(f.begin(),f.begin()+m);
 	}
-	vector<ll> get_S1_column(int n,int m)//S1(0...n,m),O(nlogn)
+	vector<ll> S1_column(int n,int m)//S1(0...n,m),O(nlogn)
 	{
 		if (m==0)
 		{
@@ -6049,11 +5752,11 @@ namespace NTT//禁止混用三模与普通 NTT
 		for (i=1; i<=n; i++) f[i]=inv[i];
 		f=pow(f,m);
 		for (i=m; i<=n; i++) f[i]=f[i]*fac[i]%p*ifac[m]%p;
-		return vector<ll>(f.pt(),f.pt()+n+1);
+		return vector<ll>(f.begin(),f.begin()+n+1);
 	}
-	vector<ll> get_S2_row(int n,int m)//S2(n,0...m),O(mlogm)
+	vector<ll> S2_row(int n,int m)//S2(n,0...m),O(mlogm)
 	{
-		int tm=++m;
+		int tm=++m,i,j,cnt=0;
 		if (n==0)
 		{
 			vector<ll> r(m);
@@ -6061,9 +5764,7 @@ namespace NTT//禁止混用三模与普通 NTT
 			return r;
 		}
 		m=min(m,n+1);
-		ll pr[m],pw[m],cnt=0;//i^n
-		int i,j;
-		fill_n(pw,m,0);
+		vector<ll> pr(m),pw(m);
 		pw[1]=1;
 		for (i=2; i<m; i++)
 		{
@@ -6078,13 +5779,14 @@ namespace NTT//禁止混用三模与普通 NTT
 		Q f(m),g(m);
 		for (i=0; i<m; i+=2) f[i]=ifac[i];
 		for (i=1; i<m; i+=2) f[i]=p-ifac[i];
-		for (i=1; i<m; i++) g[i]=pw[i]*ifac[i]%p;
+		// for (i=1; i<m; i++) g[i]=pw[i]*ifac[i]%p;
+		for (i=1; i<m; i++) g[i]=ksm(i,n)*ifac[i]%p;
 		f*=g;
-		vector<ll> r(f.pt(),f.pt()+m);
+		vector<ll> r(f.begin(),f.begin()+m);
 		r.resize(tm);
 		return r;
-	}
-	vector<ll> get_S2_column(int n,int m)//S2(0...n,m),O(nlogn)
+	}//5e5 150ms
+	vector<ll> S2_column(int n,int m)//S2(0...n,m),O(nlogn)
 	{
 		if (m==0)
 		{
@@ -6098,15 +5800,15 @@ namespace NTT//禁止混用三模与普通 NTT
 		for (i=1; i<=n; i++) f[i]=ifac[i];
 		f=pow(f,m);
 		for (i=m; i<=n; i++) f[i]=f[i]*fac[i]%p*ifac[m]%p;
-		return vector<ll>(f.pt(),f.pt()+n+1);
+		return vector<ll>(f.begin(),f.begin()+n+1);
 	}
-	vector<ll> get_signed_S1_row(int n,int m)
+	vector<ll> signed_S1_row(int n,int m)
 	{
-		auto v=get_S1_row(n,m);
+		auto v=S1_row(n,m);
 		for (int i=1^n&1; i<=m; i+=2) v[i]=(p-v[i])%p;
 		return v;
-	}
-	vector<ll> get_Bernoulli(int n)//B(0...n)
+	}//5e5 190ms
+	vector<ll> Bernoulli(int n)//B(0...n)
 	{
 		getfac(++n);
 		int i;
@@ -6114,9 +5816,9 @@ namespace NTT//禁止混用三模与普通 NTT
 		for (i=0; i<n; i++) f[i]=ifac[i+1];
 		f=~f;
 		for (i=0; i<n; i++) f[i]=f[i]*fac[i]%p;
-		return vector<ll>(f.pt(),f.pt()+n);
-	}
-	vector<ll> get_partition(int n)//P(0...n)，分拆数
+		return vector<ll>(f.begin(),f.begin()+n);
+	}//5e5 180ms
+	vector<ll> Partition(int n)//P(0...n)，分拆数
 	{
 		Q f(++n);
 		int i,l=0,r=0;
@@ -6126,20 +5828,131 @@ namespace NTT//禁止混用三模与普通 NTT
 		for (i=l+abs(l)%2; i<r; i+=2) f[3*i*i-i>>1]=1;
 		for (i=l+abs(l+1)%2; i<r; i+=2) f[3*i*i-i>>1]=p-1;
 		f=~f;
-		return vector<ll>(f.pt(),f.pt()+n);
-	}
-#endif
+		return vector<ll>(f.begin(),f.begin()+n);
+	}//5e5 150ms
 }
 using NTT::p;
-#define poly NTT::Q
+using poly=NTT::Q;
 /*
 函数名称：sqr, cdq, exp_cdq, sqrt, ln, exp, exp_new, sqrt_new, pow, pow2, div,
-dt, dt_new, prod, get_fx, get_fx_new, get_poly, comp, comp_inv, shift, Z_trans,
-get_Bell, get_S1_row, get_S1_column, get_S2_row, get_S2_column, get_signed_S1_row,
-get_Bernoulli.
+recurrent, recurrent_new, prod, evaluation, evaluation_new, factorial, interpolation,
+comp, comp_inv, shift, Z_transform, Bell, S1_row, S1_column, S2_row,
+S2_column, signed_S1_row, Bernoulli, Partition.
 */
 \end{lstlisting}
 
+
+\subsection{MTT}
+
+\begin{lstlisting}
+namespace MTT
+{
+	template<ll p> constexpr ll ksm(ll x,ll y=p-2)
+	{
+		ll r=1;
+		while (y)
+		{
+			if (y&1) r=r*x%p;
+			x=x*x%p;
+			y>>=1;
+		}
+		return r;
+	}
+	int cal(int x) { return 1<<__lg(max(x,1)*2-1); }
+	const int N=1<<22;
+	const ll p=1e9+7,g=3,
+		p1=469'762'049,p2=998'244'353,p3=1004'535'809,//三模，原根都是 3，非常好
+		inv_p1=ksm<p2>(p1),inv_p12=ksm<p3>(p1*p2%p3),_p12=p1*p2%p;//三模，1 关于 2 逆，1*2 关于 3 逆，1*2 mod 3
+	int r[N];
+	struct P
+	{
+		ll v1,v2,v3;
+		P operator+(const P &o) const { return {v1+o.v1,v2+o.v2,v3+o.v3}; }
+		P operator-(const P &o) const { return {v1+p1-o.v1,v2+p2-o.v2,v3+p3-o.v3}; }
+		P operator*(const P &o) const { return {v1*o.v1,v2*o.v2,v3*o.v3}; }
+		void operator+=(const P &o) { v1+=o.v1,v2+=o.v2,v3+=o.v3; }
+		void operator-=(const P &o) { v1+=p1-o.v1,v2+=p2-o.v2,v3+=p3-o.v3; }
+		void operator*=(const P &o) { v1*=o.v1,v2*=o.v2,v3*=o.v3; }
+		void mod() { v1%=p1,v2%=p2,v3%=p3; }
+	};
+	P w[N];
+	void init(int n)
+	{
+		static int pr=0,pw=0;
+		if (pr==n) return;
+		int b=__lg(n)-1,i,j,k;
+		for (i=1; i<n; i++) r[i]=r[i>>1]>>1|(i&1)<<b;
+		if (pw<n)
+		{
+			for (j=1; j<n; j=k)
+			{
+				k=j*2;
+				P wn={ksm<p1>(g,(p1-1)/k),ksm<p2>(g,(p2-1)/k),ksm<p3>(g,(p3-1)/k)};
+				w[j]={1,1,1};
+				for (i=j+1; i<k; i++) w[i]=w[i-1]*wn,w[i].mod();
+			}
+			pw=n;
+		}
+		pr=n;
+	}
+	void dft(vector<P> &a,int o=0)
+	{
+		int n=a.size(),i,j,k;
+		P *f,*g,*wn,*b=a.data(),x,y;
+		init(n);
+		for (i=1; i<n; i++) if (i<r[i]) swap(a[i],a[r[i]]);
+		for (k=1; k<n; k*=2)
+		{
+			wn=w+k;
+			for (i=0; i<n; i+=k*2)
+			{
+				f=b+i; g=b+i+k;
+				for (j=0; j<k; j++)
+				{
+					y=g[j]*wn[j];
+					y.mod();
+					g[j]=f[j]-y;
+					f[j]+=y;
+				}
+			}
+			if (k*2==n||k==1<<14) for (P &x:a) x.mod();
+		}
+		if (o)
+		{
+			x={ksm<p1>(n),ksm<p2>(n),ksm<p3>(n)};
+			for (P &y:a) y*=x,y.mod();
+			reverse(1+all(a));
+		}
+	}
+	struct Q:vector<ll>
+	{
+		Q(int x=1):vector(x) { }
+		Q &operator%=(int n) { resize(n); return *this; }
+	};
+	Q &operator*=(Q &f,const Q &g)
+	{
+		int n=f.size()+g.size()-1,m=cal(n),i;
+		vector<P> F(m,{0,0,0}),G(m,{0,0,0});
+		for (i=0; i<f.size(); i++) F[i]={f[i]%p1,f[i]%p2,f[i]%p3};
+		for (i=0; i<g.size(); i++) G[i]={g[i]%p1,g[i]%p2,g[i]%p3};
+		dft(F); dft(G);
+		for (i=0; i<m; i++) F[i]*=G[i],F[i].mod();
+		dft(F,1);
+		f%=n;
+		ll x;
+		for (i=0; i<n; i++)
+		{
+			auto [r1,r2,r3]=F[i];
+			x=(r2+p2-r1)*inv_p1%p2*p1+r1;
+			f[i]=((x+p3-r3)%p3*(p3-inv_p12)%p3*_p12+x)%p;
+		}
+		return f;
+	}//5e5 440ms
+	Q operator*(Q f,const Q &g) { return f*=g; }
+}
+using MTT::p;
+using poly=MTT::Q;
+\end{lstlisting}
 \subsection{FFT}
 
 \begin{lstlisting}
@@ -6604,31 +6417,24 @@ $O((n+\sum)\log n)$，$O(n+\sum)$。
 namespace SA
 {
 	const int N=1e6+2;
-	int x[N],y[N],s[N],lg[N];
-	int m,i,j,k,cnt;
-	bool ied=0;
-	void SA_init()
-	{
-		for (int i=2;i<N;i++) lg[i]=lg[i>>1]+1;
-	}
+	int x[N],y[N],s[N];
+	int m,cnt;
 	struct Q
 	{
 		vector<vector<int>> st;
-		vector<int> _sa,rk,h;
-		int *sa;
+		vector<int> sa,rk,h;
 		int lcp(int x,int y)
 		{
 			assert(x^y);
 			x=rk[x];y=rk[y];
 			if (x>y) swap(x,y);
 			++x;
-			int z=lg[y-x+1];
+			int z=__lg(y-x+1);
 			return min(st[z][x],st[z][y-(1<<z)+1]);
 		}
-		Q(int *a,int n)//[1,n]
+		Q(int *a,int n):sa(n+1),rk(n+1),h(n+1),st(__lg(n)+1,vector<int>(n+1))//[1,n]
 		{
-			if (!ied) ied=1,SA_init();
-			_sa.resize(n+1);rk.resize(n+1);h.resize(n+1);sa=_sa.data();
+			int i,j,k;
 			m=*min_element(a+1,a+n+1);--m;
 			for (i=1;i<=n;i++) a[i]-=m;
 			m=*max_element(a+1,a+n+1);
@@ -6661,13 +6467,12 @@ namespace SA
 				h[x[i]]=j;
 				if (j) --j;
 			}
-			st=vector<vector<int>>(lg[n]+1,vector<int>(n+1));
 			for (i=1;i<=n;i++) st[0][i]=h[i];
-			for (j=1;j<=lg[n];j++) for (i=1,k=n-(1<<j)+1;i<=k;i++) st[j][i]=min(st[j-1][i],st[j-1][i+(1<<j-1)]);
+			for (j=1;j<=__lg(n);j++) for (i=1,k=n-(1<<j)+1;i<=k;i++) st[j][i]=min(st[j-1][i],st[j-1][i+(1<<j-1)]);
 		}
 	};
 }
-#define str SA::Q
+using str=SA::Q;
 \end{lstlisting}
 
 \subsection{SAM}
@@ -6675,50 +6480,48 @@ namespace SA
 $O(n\sum)$，$O(2n\sum )$。
 
 \begin{lstlisting}
-template<int N> struct sam
+template<int M> struct sam//M：字符集大小
 {
-	int p,q,np,nq,c[N*2][26],ds,cd,len[N*2],fa[N*2];
-	sam(){np=ds=1;}
-	void ins(int zf)
+	vector<array<int,M>> c;
+	vector<int> len,fa,ep;
+	int np,cd;
+	sam():c(2),len(2),fa(2),ep(2),np(1),cd(0) { }
+	void insert(int ch)
 	{
-		p=np;len[np=++ds]=++cd;
-		while (!c[p][zf]&&p)
-		{
-			c[p][zf]=np;
-			p=fa[p];
-		}
+		int p=np,q,nq;
+		np=c.size();
+		len.push_back(++cd);
+		fa.push_back(0);
+		c.push_back({ });
+		ep.push_back(cd);
+		while (p&&!c[p][ch]) c[p][ch]=np,p=fa[p];
 		if (!p)
 		{
 			fa[np]=1;
 			return;
 		}
-		q=c[p][zf];
+		q=c[p][ch];
 		if (len[q]==len[p]+1)
 		{
 			fa[np]=q;
 			return;
 		}
-		len[nq=++ds]=len[p]+1;
-		memcpy(c[nq],c[q],sizeof(c[q]));
-		fa[nq]=fa[q];
+		nq=c.size();
+		len.push_back(len[p]+1);
+		c.push_back(c[q]);
+		fa.push_back(fa[q]);
+		ep.push_back(ep[q]);
 		fa[np]=fa[q]=nq;
-		c[p][zf]=nq;
-		while (c[p=fa[p]][zf]==q) c[p][zf]=nq;
+		c[p][ch]=nq;
+		while (c[p=fa[p]][ch]==q) c[p][ch]=nq;
 	}
-	void out()
-	{
-		int i,j;
-		for (i=1;i<=ds;i++) for (j=0;j<=25;j++) if (c[i][j]) printf("%d->%d %c\n",i,c[i][j],j+'a');
-	}
-	vector<int> match(string s)//返回每个前缀最长匹配长度
+	vector<int> match(const string &s)//返回每个前缀最长匹配长度
 	{
 		vector<int> r;
 		r.reserve(s.size());
-		p=1;
-		int nl=0;
+		int p=1,nl=0;
 		for (auto ch:s)
 		{
-			ch-='a';
 			if (c[p][ch]) ++nl,p=c[p][ch];
 			else
 			{
@@ -6727,6 +6530,24 @@ template<int N> struct sam
 			}
 			r.push_back(nl);
 		}
+		return r;
+	}
+	array<int,3> max_match(const string &s)//返回长度，结尾（开）
+	{
+		array<int,3> r{0,0,0};
+		int p=1,nl=0,i=0;
+		for (auto ch:s)
+		{
+			if (c[p][ch]) ++nl,p=c[p][ch];
+			else
+			{
+				while (p&&c[p][ch]==0) p=fa[p];
+				if (p==0) p=1,nl=0; else nl=len[p]+1,p=c[p][ch];
+			}
+			cmax(r,array{nl,ep[p],i+1});
+			++i;
+		}
+		if (r[0]==0) return { };
 		return r;
 	}
 };
@@ -6994,24 +6815,23 @@ struct suffixtree
 表示每个后缀和母串的 lcp。
 
 \begin{lstlisting}
-struct str
+vector<int> Z(const string &s)
 {
-	vector<int> z;
-	int n;
-	str(int *s,int _n)//[1,n]
+	int n=s.size(),i,l,r;
+	vector<int> z(n);
+	z[0]=n;
+	for (i=1,l=r=0; i<n; i++)
 	{
-		n=_n;
-		z=vector<int>(n+1,0);
-		int i,l,r;
-		z[1]=n;
-		for (i=2,l=r=0;i<=n;i++)
+		if (i<=r&&z[i-l]<r-i+1) z[i]=z[i-l];
+		else
 		{
-			if (i<=r) z[i]=min(z[i-l+1],r-i+1);
-			while (i+z[i]<=n&&s[i+z[i]]==s[1+z[i]]) ++z[i];
-			if (i+z[i]-1>r) l=i,r=i+z[i]-1;
+			z[i]=max(0,r-i+1);
+			while (i+z[i]<n&&s[i+z[i]]==s[z[i]]) ++z[i];
 		}
+		if (i+z[i]-1>r) l=i,r=i+z[i]-1;
 	}
-};
+	return z;
+}
 \end{lstlisting}
 
 
@@ -11566,7 +11386,7 @@ struct sat
 \subsection{树剖}
 
 \begin{lstlisting}
-	namespace HLD
+namespace HLD
 {
 	const int N=5e5+2;
 	vector<int> e[N];
@@ -12765,74 +12585,74 @@ Q stoq(const string &s)
 \subsection{质数，$\omega(n)$，$d(n)$，$\pi(n)$}
 
 \begin{tabular}{c|c|c|c|c}
-	$n$ & $n$ 前第一个质数 & $n$ 后第一个质数 & $\max\{\omega (n)\}$ & $\max\{d(n)\}$ & $\pi(n)\le$\\
+	$n$       & $n$ 前第一个质数   & $n$ 后第一个质数   & $\max\{\omega (n)\}$ & $\max\{d(n)\}$ & $\pi(n)\le$         \\
 	\hline
-	$10^{1}$   &   $10^{1}-3$  &   $10^{1}+1$  & $2$  &    $4$     &  $4$ \\
-	$10^{2}$   &   $10^{2}-3$  &   $10^{2}+1$  & $3$  &    $12$    &  $25$ \\
-	$10^{3}$   &   $10^{3}-3$  &  $10^{3}+13$  & $4$  &    $32$    &  $168$ \\
-	$10^{4}$   &  $10^{4}-27$  &   $10^{4}+7$  & $5$  &    $64$    &  $1229$ \\
-	$10^{5}$   &   $10^{5}-9$  &   $10^{5}+3$  & $6$  &   $128$    &  $9592$ \\
-	$10^{6}$   &  $10^{6}-17$  &   $10^{6}+3$  & $7$  &   $240$    &  $7.9\times 10^4$ \\
-	$10^{7}$   &   $10^{7}-9$  &  $10^{7}+19$  & $8$  &   $448$    & $6.7\times 10^5$  \\
-	$10^{8}$   &  $10^{8}-11$  &   $10^{8}+7$  & $8$  &   $768$    &  $5.8\times 10^6$ \\
-	$10^{9}$   &  $10^{9}-63$  &   $10^{9}+7$  & $9$  &   $1344$   &  $5.1\times 10^7$ \\
-	$10^{10}$  &  $10^{10}-33$ &  $10^{10}+19$ & $10$ &   $2304$   & $4.6\times 10^8$  \\
-	$10^{11}$  &  $10^{11}-23$ &  $10^{11}+3$  & $10$ &   $4032$   & $4.2\times 10^8$  \\
-	$10^{12}$  &  $10^{12}-11$ &  $10^{12}+39$ & $11$ &   $6720$   & $3.8\times 10^9$  \\
-	$10^{13}$  &  $10^{13}-29$ &  $10^{13}+37$ & $12$ &  $10752$   & $3.5\times 10^{10}$ \\
-	$10^{14}$  &  $10^{14}-27$ &  $10^{14}+31$ & $12$ &  $17280$   & $3.3\times 10^{11}$  \\
-	$10^{15}$  &  $10^{15}-11$ &  $10^{15}+37$ & $13$ &  $26880$   & $3\times 10^{12}$  \\
-	$10^{16}$  &  $10^{16}-63$ &  $10^{16}+61$ & $13$ &  $41472$   & $2.8
-	\times 10^{13}$  \\
-	$10^{17}$  &  $10^{17}-3$  &  $10^{17}+3$  & $14$ &  $64512$   &   \\
-	$10^{18}$  &  $10^{18}-11$ &  $10^{18}+3$  & $15$ &  $103680$  &   \\
-	$10^{19}$  &  $10^{19}-39$ &  $10^{19}+51$ & $16$ &  $161280$  &   \\
+	$10^{1}$  & $10^{1}-3$   & $10^{1}+1$   & $2$                  & $4$            & $4$                 \\
+	$10^{2}$  & $10^{2}-3$   & $10^{2}+1$   & $3$                  & $12$           & $25$                \\
+	$10^{3}$  & $10^{3}-3$   & $10^{3}+13$  & $4$                  & $32$           & $168$               \\
+	$10^{4}$  & $10^{4}-27$  & $10^{4}+7$   & $5$                  & $64$           & $1229$              \\
+	$10^{5}$  & $10^{5}-9$   & $10^{5}+3$   & $6$                  & $128$          & $9592$              \\
+	$10^{6}$  & $10^{6}-17$  & $10^{6}+3$   & $7$                  & $240$          & $7.9\times 10^4$    \\
+	$10^{7}$  & $10^{7}-9$   & $10^{7}+19$  & $8$                  & $448$          & $6.7\times 10^5$    \\
+	$10^{8}$  & $10^{8}-11$  & $10^{8}+7$   & $8$                  & $768$          & $5.8\times 10^6$    \\
+	$10^{9}$  & $10^{9}-63$  & $10^{9}+7$   & $9$                  & $1344$         & $5.1\times 10^7$    \\
+	$10^{10}$ & $10^{10}-33$ & $10^{10}+19$ & $10$                 & $2304$         & $4.6\times 10^8$    \\
+	$10^{11}$ & $10^{11}-23$ & $10^{11}+3$  & $10$                 & $4032$         & $4.2\times 10^8$    \\
+	$10^{12}$ & $10^{12}-11$ & $10^{12}+39$ & $11$                 & $6720$         & $3.8\times 10^9$    \\
+	$10^{13}$ & $10^{13}-29$ & $10^{13}+37$ & $12$                 & $10752$        & $3.5\times 10^{10}$ \\
+	$10^{14}$ & $10^{14}-27$ & $10^{14}+31$ & $12$                 & $17280$        & $3.3\times 10^{11}$ \\
+	$10^{15}$ & $10^{15}-11$ & $10^{15}+37$ & $13$                 & $26880$        & $3\times 10^{12}$   \\
+	$10^{16}$ & $10^{16}-63$ & $10^{16}+61$ & $13$                 & $41472$        & $2.8
+	\times 10^{13}$                                                                                       \\
+	$10^{17}$ & $10^{17}-3$  & $10^{17}+3$  & $14$                 & $64512$        &                     \\
+	$10^{18}$ & $10^{18}-11$ & $10^{18}+3$  & $15$                 & $103680$       &                     \\
+	$10^{19}$ & $10^{19}-39$ & $10^{19}+51$ & $16$                 & $161280$       &                     \\
 \end{tabular}
 
 \subsection{NTT 质数}
 
 \begin{tabular}{c|c|c|c}
-	$p=r\times 2^k+1$   &  $r$  & $k$  & $g$（最小原根）\\
- \hline
-		  $17$          &  $1$  & $4$  &  $3$  \\
-		  $97$          &  $3$  & $5$  &  $5$  \\
-		  $193$         &  $3$  & $6$  &  $5$  \\
-		  $257$         &  $1$  & $8$  &  $3$  \\
-		 $7681$         & $15$  & $9$  & $17$  \\
-		 $12289$        &  $3$  & $12$ & $11$  \\
-		 $40961$        &  $5$  & $13$ &  $3$  \\
-		 $65537$        &  $1$  & $16$ &  $3$  \\
-		$786433$        &  $3$  & $18$ & $10$  \\
-		$5767169$       & $11$  & $19$ &  $3$  \\
-		$7340033$       &  $7$  & $20$ &  $3$  \\
-	   $23068673$       & $11$  & $21$ &  $3$  \\
-	   $104857601$      & $25$  & $22$ &  $3$  \\
-	   $167772161$      &  $5$  & $25$ &  $3$  \\
-	   $469762049$      &  $7$  & $26$ &  $3$  \\
-	   $998244353$      & $119$ & $23$ &  $3$  \\
-	  $1004535809$      & $479$ & $21$ &  $3$  \\
-	  $2013265921$      & $15$  & $27$ & $31$  \\
-	  $2281701377$      & $17$  & $27$ &  $3$  \\
-	  $3221225473$      &  $3$  & $30$ &  $5$  \\
-	  $75161927681$     & $35$  & $31$ &  $3$  \\
-	  $77309411329$     &  $9$  & $33$ &  $7$  \\
-	 $206158430209$     &  $3$  & $36$ & $22$  \\
-	 $2061584302081$    & $15$  & $37$ &  $7$  \\
-	 $2748779069441$    &  $5$  & $39$ &  $3$  \\
-	 $6597069766657$    &  $3$  & $41$ &  $5$  \\
-	$39582418599937$    &  $9$  & $42$ &  $5$  \\
-	$79164837199873$    &  $9$  & $43$ &  $5$  \\
-	$263882790666241$   & $15$  & $44$ &  $7$  \\
-   $1231453023109121$   & $35$  & $45$ &  $3$  \\
-   $1337006139375617$   & $19$  & $46$ &  $3$  \\
-   $3799912185593857$   & $27$  & $47$ &  $5$  \\
-   $4222124650659841$   & $15$  & $48$ & $19$  \\
-   $7881299347898369$   &  $7$  & $50$ &  $6$  \\
-   $31525197391593473$  &  $7$  & $52$ &  $3$  \\
-  $180143985094819841$  &  $5$  & $55$ &  $6$  \\
-  $1945555039024054273$ & $27$  & $56$ &  $5$  \\
-  $4179340454199820289$ & $29$  & $57$ &  $3$  \\
- \end{tabular}
+	$p=r\times 2^k+1$     & $r$   & $k$  & $g$（最小原根） \\
+	\hline
+	$17$                  & $1$   & $4$  & $3$       \\
+	$97$                  & $3$   & $5$  & $5$       \\
+	$193$                 & $3$   & $6$  & $5$       \\
+	$257$                 & $1$   & $8$  & $3$       \\
+	$7681$                & $15$  & $9$  & $17$      \\
+	$12289$               & $3$   & $12$ & $11$      \\
+	$40961$               & $5$   & $13$ & $3$       \\
+	$65537$               & $1$   & $16$ & $3$       \\
+	$786433$              & $3$   & $18$ & $10$      \\
+	$5767169$             & $11$  & $19$ & $3$       \\
+	$7340033$             & $7$   & $20$ & $3$       \\
+	$23068673$            & $11$  & $21$ & $3$       \\
+	$104857601$           & $25$  & $22$ & $3$       \\
+	$167772161$           & $5$   & $25$ & $3$       \\
+	$469762049$           & $7$   & $26$ & $3$       \\
+	$998244353$           & $119$ & $23$ & $3$       \\
+	$1004535809$          & $479$ & $21$ & $3$       \\
+	$2013265921$          & $15$  & $27$ & $31$      \\
+	$2281701377$          & $17$  & $27$ & $3$       \\
+	$3221225473$          & $3$   & $30$ & $5$       \\
+	$75161927681$         & $35$  & $31$ & $3$       \\
+	$77309411329$         & $9$   & $33$ & $7$       \\
+	$206158430209$        & $3$   & $36$ & $22$      \\
+	$2061584302081$       & $15$  & $37$ & $7$       \\
+	$2748779069441$       & $5$   & $39$ & $3$       \\
+	$6597069766657$       & $3$   & $41$ & $5$       \\
+	$39582418599937$      & $9$   & $42$ & $5$       \\
+	$79164837199873$      & $9$   & $43$ & $5$       \\
+	$263882790666241$     & $15$  & $44$ & $7$       \\
+	$1231453023109121$    & $35$  & $45$ & $3$       \\
+	$1337006139375617$    & $19$  & $46$ & $3$       \\
+	$3799912185593857$    & $27$  & $47$ & $5$       \\
+	$4222124650659841$    & $15$  & $48$ & $19$      \\
+	$7881299347898369$    & $7$   & $50$ & $6$       \\
+	$31525197391593473$   & $7$   & $52$ & $3$       \\
+	$180143985094819841$  & $5$   & $55$ & $6$       \\
+	$1945555039024054273$ & $27$  & $56$ & $5$       \\
+	$4179340454199820289$ & $29$  & $57$ & $3$       \\
+\end{tabular}
 
 \subsection{公式}
 
@@ -12842,7 +12662,7 @@ $n$ 个点 $k$ 个连通块的生成树方案 $n^{k-2}\prod\limits_{i=1}^k siz_i
 
 杜教筛 $g(1)S(n)=\sum\limits_{i=1}^n(f*g)(i)-\sum\limits_{j=2}^ng(j)S(\lfloor\frac nj\rfloor)$
 
-$(x,y)$ 曼哈顿距离 $\to$ $(x+y,x-y)$ 切比雪夫距离  
+$(x,y)$ 曼哈顿距离 $\to$ $(x+y,x-y)$ 切比雪夫距离
 $(x,y)$ 切比雪夫距离 $\to$ $(\dfrac{x+y}{2},\dfrac{x-y}{2})$ 曼哈顿距离
 
 错排数=$\lceil0.5+\frac{n!}{e}\rceil$
@@ -12853,7 +12673,7 @@ $\ln (1-x^V)=-\sum\limits_{i\ge1}\dfrac{x^{Vi}}{i}$
 
 $x^{\bar n}=\sum\limits_i S_1(n,i)x^i$
 
-$\begin{cases}x\equiv a_1\pmod {m_1}\\x\equiv a_2\pmod {m_2}\\\cdots\\x\equiv a_n\pmod {m_n}\end{cases}$ 
+$\begin{cases}x\equiv a_1\pmod {m_1}\\x\equiv a_2\pmod {m_2}\\\cdots\\x\equiv a_n\pmod {m_n}\end{cases}$
 
 $m_i$ 为不同的质数。设 $M=\prod\limits_{i=1}^nm_i$，$t_i\times \dfrac {M}{m_i}\equiv 1\pmod {m_i}$，则 $x\equiv \sum\limits_{i=1}^na_it_i\dfrac {M}{m_i}$。
 
@@ -12907,7 +12727,7 @@ Polya 定理：染色方案数为 $\sum\limits_{g\in G}\dfrac{m^{c(g)}}{|G|}$，
 $$\sum\limits_{a_1a_2\cdots a_c=a_{l-c+1}a_{l-c+2}\cdots a_l} n^c$$
 
 
- \newpage
+\newpage
 
 \section{语言基础}
 
@@ -14031,10 +13851,10 @@ int main(){
 
 3. $\nexists i,j\in[1,n],P_i=P_j$.
 
-   \textbf{连续段}：对于排列 $P$，定义连续段 $(P,[l,r])$ 表示一个区间 $[l,r]$，要求 $P_{l\sim r}$ 值域是连续的。说得更形式化一点，对于排列 $P$，连续段表示一个区间 $[l,r]$ 满足：
+\textbf{连续段}：对于排列 $P$，定义连续段 $(P,[l,r])$ 表示一个区间 $[l,r]$，要求 $P_{l\sim r}$ 值域是连续的。说得更形式化一点，对于排列 $P$，连续段表示一个区间 $[l,r]$ 满足：
 
 $$
-(\nexists\ x,z\in[l,r],y\notin[l,r],\ P_x<P_y<P_z)
+	(\nexists\ x,z\in[l,r],y\notin[l,r],\ P_x<P_y<P_z)
 $$
 
 特别地，当 $l>r$ 时，我们认为这是一个空的连续段，记作 $(P,\varnothing)$。
@@ -14130,13 +13950,13 @@ $$
 最后，我们考虑如何处理 $L_i$。事实上，一个连续段 $(P,[l,r])$ 等价于区间极差与区间长度 -1 相等。即
 
 $$
-\max_{l\le i\le r}P_i-\min_{l\le i\le r}P_i=r-l
+	\max_{l\le i\le r}P_i-\min_{l\le i\le r}P_i=r-l
 $$
 
 而且由于 P 是一个排列，因此对于任意的区间 $[l,r]$ 都有
 
 $$
-\max_{l\le i\le r}P_i-\min_{l\le i\le r}P_i\ge r-l
+	\max_{l\le i\le r}P_i-\min_{l\le i\le r}P_i\ge r-l
 $$
 
 于是我们就维护 $\max_{l\le i\le r}P_i-\min_{l\le i\le r}P_i-(r-l)$，那么要找到一个连续段相当于查询一个最小值！
@@ -14144,7 +13964,7 @@ $$
 有了上述思路，不难想到这样的算法。对于增量过程中的当前的 $i$，我们维护一个数组 $Q$ 表示区间 $[j,i]$ 的极差减长度。即
 
 $$
-Q_j=\max_{j\le k\le i}P_k-\min_{j\le k\le i}P_k-(i-j),\ \ 0<j<i
+	Q_j=\max_{j\le k\le i}P_k-\min_{j\le k\le i}P_k-(i-j),\ \ 0<j<i
 $$
 
 现在我们想知道在 $1\sim i-1$ 中是否存在一个最小的 $j$ 使得 $Q_j=0$。这等价于求 $Q_{1\sim i-1}$ 的最小值。求得最小的 $j$ 就是 $L_i$。如果没有，那么 $L_i=i$。
