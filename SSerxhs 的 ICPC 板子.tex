@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.4.0}
+\centerline{ver:3.4.4}
 
 \tableofcontents
 
@@ -1577,286 +1577,265 @@ sort(a+1,a+m+1);r[l[1]=1]=(m=unique(a+1,a+m+1)-a-1)-1;build(1);
 
 \subsection{Segmenttree Beats!}
 
-$O((n+q)\log n)\sim O(n+q\log^2 n)$，$O(n)$。
-
-\begin{itemize}
-
-	\item $\texttt{1 l r k}$：对于所有的 $i\in[l,r]$，将 $A_i$ 加上 $k$（$k$ 可以为负数）。
-	\item $\texttt{2 l r v}$：对于所有的 $i\in[l,r]$，将 $A_i$ 变成 $\min(A_i,v)$。
-	\item $\texttt{3 l r}$：求 $\sum_{i=l}^{r}A_i$。
-	\item $\texttt{4 l r}$：对于所有的 $i\in[l,r]$，求 $A_i$ 的最大值。
-	\item $\texttt{5 l r}$：对于所有的 $i\in[l,r]$，求 $B_i$ 的最大值。
-\end{itemize}
-
 \begin{lstlisting}
-typedef long long ll;d
+struct P
+{
+	ll tg,L,R;
+	P(ll a=0,ll b=-inf,ll c=inf):tg(a),L(b),R(c) { }
+	void operator+=(P o)
+	{
+		o.L-=tg; o.R-=tg; tg+=o.tg;
+		if (L>=o.R) L=R=o.R;
+		else if (R<=o.L) L=R=o.L;
+		else cmax(L,o.L),cmin(R,o.R);
+	}
+};
 struct Q
 {
-	ll mxp,mx,vp,v;
-	Q(ll a=0,ll b=0,ll c=0,ll d=0):mxp(a),mx(b),vp(c),v(d){}
-};
-const int N=5e5+2,M=2e6+2;
-const ll inf=-1e18;
-Q lz[M];
-ll mx[M],cnt[M],se[M],pmx[M],s[M],ans;
-int l[M],r[M],cd[M],a[N];
-int n,m,i,x,y,z,typ,dt;
-void pushup(int x)
-{
-	int lc=x<<1,rc=lc|1;
-	s[x]=s[lc]+s[rc];
-	pmx[x]=max(pmx[lc],pmx[rc]);
-	if (mx[lc]==mx[rc])
+	ll mx0,cmx,mx1,mn0,cmn,mn1,cnt,sum;
+	Q():mx0(-inf),cmx(0),mx1(-inf),mn0(inf),cmn(0),mn1(inf),cnt(0),sum(0) { }
+	Q(ll x):mx0(x),cmx(1),mx1(-inf),mn0(x),cmn(1),mn1(inf),cnt(1),sum(x) { }
+	bool operator+=(const P &o)
 	{
-		mx[x]=mx[lc];cnt[x]=cnt[lc]+cnt[rc];
-		se[x]=max(se[lc],se[rc]);
-	}
-	else if (mx[lc]<mx[rc]) mx[x]=mx[rc],cnt[x]=cnt[rc],se[x]=max(mx[lc],se[rc]);
-	else mx[x]=mx[lc],cnt[x]=cnt[lc],se[x]=max(mx[rc],se[lc]);
-}
-void build(int x)
-{
-	cd[x]=r[x]-l[x]+1;
-	if (l[x]==r[x]) return s[x]=mx[x]=pmx[x]=a[l[x]],se[x]=inf,cnt[x]=1,void();
-	int c=x<<1;
-	l[c]=l[x];r[c]=l[x]+r[x]>>1;
-	l[c|1]=r[c]+1;r[c|1]=r[x];
-	build(c);build(c|1);
-	pushup(x);
-}
-void upd(int x,Q o)
-{
-	lz[x]=Q(max(lz[x].mxp,lz[x].mx+o.mxp),lz[x].mx+o.mx,max(lz[x].vp,lz[x].v+o.vp),lz[x].v+o.v);
-	s[x]+=o.mx*cnt[x]+o.v*(cd[x]-cnt[x]);se[x]+=o.v;
-	pmx[x]=max(pmx[x],mx[x]+o.mxp);mx[x]+=o.mx;
-}
-void pushdown(int x)
-{
-	int c=x<<1;
-	ll mxx=max(mx[c],mx[c|1]);
-	if (mx[c]==mxx) upd(c,lz[x]); else upd(c,Q(lz[x].vp,lz[x].v,lz[x].vp,lz[x].v));
-	c|=1;
-	if (mx[c]==mxx) upd(c,lz[x]); else upd(c,Q(lz[x].vp,lz[x].v,lz[x].vp,lz[x].v));
-	lz[x]=Q();
-}
-void mdf1(int x)
-{
-	if (z<=l[x]&&r[x]<=y)
-	{
-		upd(x,Q(max(dt,0),dt,max(dt,0),dt));
-		return;
-	}
-	pushdown(x);
-	int c=x<<1;
-	if (z<=r[c]) mdf1(c);
-	if (y>r[c]) mdf1(c|1);
-	pushup(x);
-}
-void mdf2(int x)
-{
-	if (dt>=mx[x]) return;
-	if (z<=l[x]&&r[x]<=y)
-	{
-		if (dt<=se[x])
+		if (o.L==o.R)
 		{
-			pushdown(x);
-			mdf2(x<<1);mdf2(x<<1|1);
-			pushup(x);
+			ll c=cnt;
+			*this=Q(o.L+o.tg);
+			cnt=cmx=cmn=c;
+			sum=cnt*(o.L+o.tg);
+			return 1;
+		}
+		if (o.L>=mn1||o.R<=mx1) return 0;
+		if (mx0==mn0)
+		{
+			mn0=min(o.R,max(mx0,o.L));
+			sum+=cnt*(mn0-mx0);
+			mx0=mn0;
 		}
 		else
 		{
-			upd(x,Q(0,dt-mx[x],0,0));
+			if (o.L>mn0)
+			{
+				sum+=(o.L-mn0)*cmn;
+				mn0=o.L;
+				cmax(mx1,o.L);
+			}
+			if (o.R<mx0)
+			{
+				sum+=(o.R-mx0)*cmx;
+				mx0=o.R;
+				cmin(mn1,o.R);
+			}
 		}
-		return;
-	}
-	pushdown(x);
-	int c=x<<1;
-	if (z<=r[c]) mdf2(c);
-	if (y>r[c]) mdf2(c|1);
-	pushup(x);
-}
-void sol3(int x)
-{
-	if (z<=l[x]&&r[x]<=y) return ans+=s[x],void();
-	pushdown(x);
-	int c=x<<1;
-	if (z<=r[c]) sol3(c);
-	if (y>r[c]) sol3(c|1);
-}
-void sol4(int x)
-{
-	if (z<=l[x]&&r[x]<=y) return ans=max(ans,mx[x]),void();
-	pushdown(x);
-	int c=x<<1;
-	if (z<=r[c]) sol4(c);
-	if (y>r[c]) sol4(c|1);
-}
-void sol5(int x)
-{
-	if (z<=l[x]&&r[x]<=y) return ans=max(ans,pmx[x]),void();
-	pushdown(x);
-	int c=x<<1;
-	if (z<=r[c]) sol5(c);
-	if (y>r[c]) sol5(c|1);
-}
-int main()
-{
-	read(n);read(m);
-	for (i=1;i<=n;i++) read(a[i]);
-	r[l[1]=1]=n;build(1);
-	while (m--)
-	{
-		read(typ);read(z);read(y);
-		if (typ>=3)
+		if (o.tg)
 		{
-			ans=(typ==3)?0:inf;
-			if (typ==3) sol3(1); else if (typ==4) sol4(1); else sol5(1);
-			printf("%lld\n",ans);
+			sum+=o.tg*cnt;
+			mx0+=o.tg;
+			mx1+=o.tg;
+			mn0+=o.tg;
+			mn1+=o.tg;
 		}
-		else
-		{
-			read(dt);
-			if (typ==1) mdf1(1); else mdf2(1);
-		}
-	}
-} 
-\end{lstlisting}
-
-\subsection{$k$-d 树（二进制分组）}
-
-均摊 $O(\log ^2n)$ 插入，$O(\sqrt n)$ 矩形查询。
-
-\begin{lstlisting}
-#define tmpl template<typename T>
-typedef long long ll;
-tmpl struct P
-{
-	ll x,y;
-	T v;
-};
-tmpl struct Q
-{
-	ll x[2],y[2];
-	bool t;
-	T s;
-	Q() {}
-	Q(const P<T> &a)
-	{
-		x[0]=x[1]=a.x;
-		y[0]=y[1]=a.y;
-		s=a.v;
+		return 1;
 	}
 };
-tmpl bool cmp0(const P<T> &a,const P<T> &b) { return a.x<b.x; }
-tmpl bool cmp1(const P<T> &a,const P<T> &b) { return a.y<b.y; }
-tmpl struct kdt
+Q operator+(const Q &a,const Q &b)
 {
-	vector<P<T>> c;
-	vector<Q<T>> a;
-	ll m,u,d,l,r;
-	T ans;
+	Q res;
+	res.sum=a.sum+b.sum;
+	res.cnt=a.cnt+b.cnt;
+	res.mx0=max(a.mx0,b.mx0);
+	res.mx1=max(a.mx1,b.mx1);
+	if (res.mx0==a.mx0) res.cmx+=a.cmx; else cmax(res.mx1,a.mx0);
+	if (res.mx0==b.mx0) res.cmx+=b.cmx; else cmax(res.mx1,b.mx0);
+
+	res.mn0=min(a.mn0,b.mn0);
+	res.mn1=min(a.mn1,b.mn1);
+	if (res.mn0==a.mn0) res.cmn+=a.cmn; else cmin(res.mn1,a.mn0);
+	if (res.mn0==b.mn0) res.cmn+=b.cmn; else cmin(res.mn1,b.mn0);
+
+	return res;
+}
+template<class info,class tag> struct sgt
+{
+	int n,shift;
+	vector<info> s;
+	vector<tag> tg;
+	vector<char> lz;
+	template<class T> void build(T *a,int x,int l,int r)
+	{
+		if (l==r)
+		{
+			s[x]=a[l];
+			return;
+		}
+		int c=x*2,m=l+r>>1;
+		build(a,c,l,m); build(a,c+1,m+1,r);
+		s[x]=s[c]+s[c+1];
+	}
+	template<class T> sgt(T *b,int L,int R):n(R-L+1),shift(L-1),s(R-L+1<<2),tg(R-L+1<<2),lz(R-L+1<<2)
+	{
+		build(b+L-1,1,1,n);
+	}//[L,R]
+	int z,y;
+	info res;
+	tag dt;
 	bool fir;
-	void build(int x,P<T> *b,int n)
+private:
+	void pushdown(int x)
 	{
-		if (x==1)
+		int c=x*2;
+		if (lz[x])
 		{
-			a.resize(m=n<<1);
-			a[x].t=0;
-			c.resize(n);
-			for (int i=0; i<n; i++) c[i]=b[i];
+			if (lz[c]) tg[c]+=tg[x]; else tg[c]=tg[x];
+			lz[c]=1;
+			if (!(s[c]+=tg[x]))
+			{
+				pushdown(c);
+				s[c]=s[c*2]+s[c*2+1];
+			}
+			c^=1;
+			if (lz[c]) tg[c]+=tg[x]; else tg[c]=tg[x];
+			lz[c]=1;
+			if (!(s[c]+=tg[x]))
+			{
+				pushdown(c);
+				s[c]=s[c*2]+s[c*2+1];
+			}
+			c^=1;
+			lz[x]=0;
 		}
-		if (n==1)
+	}
+	void _modify(int x,int l,int r)
+	{
+		if (z<=l&&r<=y)
 		{
-			a[x]=Q<T>(b[0]);
+			if (lz[x]) tg[x]+=dt; else tg[x]=dt;
+			lz[x]=1;
+			if (!(s[x]+=dt))
+			{
+				pushdown(x);
+				s[x]=s[x*2]+s[x*2+1];
+			}
 			return;
 		}
-		int mid=n>>1,c=x<<1;
-		nth_element(b,b+mid,b+n,a[x].t?cmp1<T>:cmp0<T>);
-		a[c].t=a[c|1].t=a[x].t^1;
-		build(c,b,mid);
-		build(c|1,b+mid,n-mid);
-		a[x].s=a[c].s+a[c|1].s;
-		a[x].x[0]=min(a[c].x[0],a[c|1].x[0]);
-		a[x].x[1]=max(a[c].x[1],a[c|1].x[1]);
-		a[x].y[0]=min(a[c].y[0],a[c|1].y[0]);
-		a[x].y[1]=max(a[c].y[1],a[c|1].y[1]);
+		int c=x*2,m=l+r>>1;
+		pushdown(x);
+		if (z<=m) _modify(c,l,m);
+		if (m<y) _modify(c+1,m+1,r);
+		s[x]=s[c]+s[c+1];
 	}
-	void find(int x)
+	void ask(int x,int l,int r)
 	{
-		if (x>=m||a[x].x[1]<u||a[x].x[0]>d||a[x].y[1]<l||a[x].y[0]>r) return;
-		if (u<=a[x].x[0]&&a[x].x[1]<=d&&l<=a[x].y[0]&&a[x].y[1]<=r)
+		if (z<=l&&r<=y)
 		{
-			ans=fir?a[x].s:ans+a[x].s;
+			res=fir?s[x]:res+s[x];
 			fir=0;
 			return;
 		}
-		find(x<<1); find(x<<1|1);
+		int c=x*2,m=l+r>>1;
+		pushdown(x);
+		if (z<=m) ask(c,l,m);
+		if (m<y) ask(c+1,m+1,r);
 	}
-	pair<bool,T> find(ll x1,ll y1,ll x2,ll y2)
+	function<bool(info)> check;
+	void find_left_most(int x,int l,int r)
 	{
-		fir=1;
-		ans={};
-		u=x1; d=x2;
-		l=y1; r=y2;
-		find(1);
-		return {!fir,ans};
+		if (r<z||!check(s[x])) return;
+		if (l==r) { y=l; res=s[x]; return; }
+		int c=x*2,m=l+r>>1;
+		pushdown(x);
+		find_left_most(c,l,m);
+		if (y==n+1) find_left_most(c+1,m+1,r);
 	}
-};
-const int N=2e5+2,M=18;
-tmpl struct KDT
-{
-	kdt<T> s[M];
-	P<T> a[N];
-	int n,m,i;
-	KDT() { n=0; }
-	KDT(int N,ll *x,ll *y,T *w)//[0,n)
+	void find_right_most(int x,int l,int r)
 	{
-		n=N;
-		int i,j;
-		for (i=0; i<n; i++) a[i]={x[i],y[i],w[i]};
-		for (i=j=0; n>>i; i++) if (n>>i&1) s[i].build(1,a+j,1<<i),j+=1<<i;
+		if (l>y||!check(s[x])) return;
+		if (l==r) { z=l; res=s[x]; return; }
+		int c=x*2,m=l+r>>1;
+		pushdown(x);
+		find_right_most(c+1,m+1,r);
+		if (z==0) find_right_most(c,l,m);
 	}
-	void insert(ll x,ll y,T w)
+public:
+	void modify(int l,int r,const tag &x)//[l,r]
 	{
-		a[0]={x,y,w}; m=1;
-		for (i=0; n&1<<i; i++) for (auto u:s[i].c) a[m++]=u;
-		s[i].build(1,a,m);
-		++n;
+		z=l-shift; y=r-shift; dt=x;
+		// cerr<<"modify ["<<l<<','<<r<<"] "<<'\n';
+		assert(1<=z&&z<=y&&y<=n);
+		_modify(1,1,n);
 	}
-	pair<bool,T> ask(ll x,ll y,ll xx,ll yy)
+	void modify(int pos,const info &o)
 	{
-		T ans;
-		bool fir=1;
-		for (i=0; 1<<i<=n; i++) if (1<<i&n)
+		pos-=shift;
+		int l=1,r=n,m,c,x=1;
+		while (l<r)
 		{
-			auto [_,tmp]=s[i].find(x,y,xx,yy);
-			if (!_) continue;
-			ans=fir?tmp:ans+tmp;
-			fir=0;
+			c=x*2; m=l+r>>1;
+			pushdown(x);
+			if (pos<=m) x=c,r=m; else x=c+1,l=m+1;
 		}
-		return {!fir,ans};
+		s[x]=o;
+		while (x>>=1) s[x]=s[x*2]+s[x*2+1];
+	}
+	info ask(int l,int r)//[l,r]
+	{
+		z=l-shift; y=r-shift; fir=1;
+		// cerr<<"ask ["<<l<<','<<r<<"] "<<'\n';
+		assert(1<=z&&z<=y&&y<=n);
+		ask(1,1,n);
+		return res;
+	}
+	pair<int,info> find_left_most(int l,const function<bool(info)> &_check)//y=n+1 第二个参数是乱给的
+	{
+		check=_check;
+		z=l-shift; y=n+1;
+		assert(1<=z&&z<=n+1);
+		find_left_most(1,1,n);
+		return {y+shift,res};
+	}
+	pair<int,info> find_right_most(int r,const function<bool(info)> &_check)//z=0 第二个参数是乱给的
+	{
+		check=_check;
+		z=0; y=r-shift;
+		assert(0<=y&&y<=n);
+		find_right_most(1,1,n);
+		return {z+shift,res};
 	}
 };
-int x[N],y[N],w[N];
+//要求：具有 info+info，info+=tag，tag+=tag。info，tag 需要拥有默认构造，但不必拥有正确的值。
+//采用左闭右闭
+mt19937 rnd(345);
 int main()
 {
-	ios::sync_with_stdio(0); cin.tie(0); cout.tie(0);
+	ios::sync_with_stdio(0); cin.tie(0);
+	cout<<fixed<<setprecision(15);
 	int n,q,i;
 	cin>>n>>q;
-	for (i=0; i<n; i++) cin>>x[i]>>y[i]>>w[i];
-	KDT<ll> s(n,x,y,w);
+	vector<ll> a(n);
+	cin>>a;
+	sgt<Q,P> s(a.data(),0,n-1);
 	while (q--)
 	{
-		int op,x,y,w;
-		cin>>op>>x>>y>>w;
-		if (op==0) s.insert(x,y,w); else
+		int op,l,r;
+		cin>>op>>l>>r;
+		--r;
+		if (op==3)
 		{
-			cin>>op;
-			cout<<s.ask(x,y,w-1,op-1)<<'\n';
+			ll res=s.ask(l,r).sum;
+			cout<<res<<'\n';
+		}
+		else
+		{
+			ll b;
+			cin>>b;
+			if (op==0) s.modify(l,r,{0,-inf,b});
+			else if (op==1) s.modify(l,r,{0,b});
+			else s.modify(l,r,{b});
 		}
 	}
-	return 0;
 }
+
+	
 \end{lstlisting}
 
 \subsection{双端队列全局查询}
@@ -2260,7 +2239,7 @@ typedef sgt::set tree;
 
 \begin{lstlisting}
 
-	struct Bitset
+struct Bitset
 {
 	typedef unsigned int ui;
 	typedef unsigned long long ll;
@@ -2268,8 +2247,8 @@ typedef sgt::set tree;
 	const static ll B=-1llu;
 	vector<ll> a;
 	int n;
-	Bitset() {}
-	Bitset(int _n) :n(_n),a(_n+63>>6) {}
+	Bitset() { }
+	Bitset(int _n):n(_n),a(_n+63>>6) { }
 	bool operator[](int x) const { assert(x>=0&&x<n); return a[x>>6]>>(x&63)&1; }
 	void set(int x,bool y) { assert(x>=0&&x<n); a[x>>6]=(a[x>>6]&(B^1<<(x&63)))|((ll)y<<(x&63)); }
 	void set(int x) { assert(x>=0&&x<n); a[x>>6]|=1llu<<(x&63); }
@@ -2319,11 +2298,18 @@ typedef sgt::set tree;
 		assert(x>=0);
 		int y=x>>6;
 		x&=63;
+		if (x==0)
+		{
+			for (int i=(int)a.size()-1; i>=y; i--) a[i]=a[i-y]<<x;
+			if (n&63) a.back()&=(1llu<<1+(n-1&63))-1;
+			memset(a.data(),0,y*sizeof a[0]);
+			return *this;
+		}
 		for (int i=(int)a.size()-1; i>y; i--) a[i]=a[i-y]<<x|a[i-y-1]>>64-x;
 		a[y]=a[0]<<x;
 		memset(a.data(),0,y*sizeof a[0]);
 		// fill_n(a.begin(),y,0);
-		a.back()&=(1llu<<1+(n-1&63))-1;
+		if (n&63) a.back()&=(1llu<<1+(n-1&63))-1;
 		return *this;
 	}
 	Bitset operator<<(int x)
@@ -2344,7 +2330,7 @@ typedef sgt::set tree;
 		x&=63;
 		for (int i=0; i<R; i++) a[i]=a[i+y]>>x|a[i+y+1]<<64-x;
 		a[R]=a.back()>>x;
-		memset(a.data()+R+1,y*sizeof a[0]);
+		memset(a.data()+R+1,0,y*sizeof a[0]);
 		// fill(R+1+all(a),0);
 		return *this;
 	}
@@ -2398,7 +2384,7 @@ typedef sgt::set tree;
 		else range_reset(l,r);
 	}
 };
-
+	
 \end{lstlisting}
 
 
@@ -6195,6 +6181,38 @@ int main()
 \end{lstlisting}
 
 
+\subsection{高斯整数类}
+
+\begin{lstlisting}
+struct Q
+{
+	ll x,y;
+	Q operator~() const { return {x,-y}; }
+	ll len2() const { return x*x+y*y; }
+	Q operator+(const Q &o) const { return {x+o.x,y+o.y}; }
+	Q operator-(const Q &o) const { return {x-o.x,y-o.y}; }
+	Q operator*(const Q &o) const { return {x*o.x-y*o.y,x*o.y+y*o.x}; }
+	Q operator/(const Q &o) const
+	{
+		Q t=*this*~o;
+		ll l=o.len2();
+		return {roundiv(t.x,l),roundiv(t.y,l)};
+	}
+	Q operator%(const Q &o) const { return *this-*this/o*o; }
+};
+Q gcd(Q a,Q b)
+{
+	if (a.len2()>b.len2()) swap(a,b);
+	while (a.len2())
+	{
+		b=b%a;
+		swap(a,b);
+	}
+	return b;
+}
+
+\end{lstlisting}
+
 \newpage
 
 \section{字符串}
@@ -6269,7 +6287,7 @@ namespace sh
 				r1=(r1+s[i]*m1[i])%p1;
 				r2=(r2+s[i]*m2[i])%p2;
 				a[i+1]={r1,r2};
-			   }
+			}
 		}
 		str(const string &s)
 		{
@@ -6282,7 +6300,7 @@ namespace sh
 				r1=(r1+s[i]*m1[i])%p1;
 				r2=(r2+s[i]*m2[i])%p2;
 				a[i+1]={r1,r2};
-			   }
+			}
 		}
 		pa getv(int l,int r)//[l,r)
 		{
@@ -11418,8 +11436,8 @@ namespace HLD
 	{
 		while (top[u]!=top[v])
 		{
-			if (dep[top[u]]<dep[top[v]]) swap(u,v);
-			u=f[top[u]];
+			if (dep[top[u]]<dep[top[v]]) v=f[top[v]];
+			else u=f[top[u]];
 		}
 		if (dep[u]>dep[v]) swap(u,v);
 		return u;
@@ -12584,7 +12602,7 @@ Q stoq(const string &s)
 
 \subsection{质数，$\omega(n)$，$d(n)$，$\pi(n)$}
 
-\begin{tabular}{c|c|c|c|c}
+\begin{tabular}{c|c|c|c|c|c}
 	$n$       & $n$ 前第一个质数   & $n$ 后第一个质数   & $\max\{\omega (n)\}$ & $\max\{d(n)\}$ & $\pi(n)\le$         \\
 	\hline
 	$10^{1}$  & $10^{1}-3$   & $10^{1}+1$   & $2$                  & $4$            & $4$                 \\
