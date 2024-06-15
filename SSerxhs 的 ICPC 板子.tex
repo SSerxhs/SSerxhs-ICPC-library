@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.6.1}
+\centerline{ver:3.6.5}
 
 \tableofcontents
 
@@ -120,6 +120,7 @@ namespace chtholly_tree
 			erase(lt,rt); insert({l,r,v});
 		}
 		TT operator[](const int x) const { return prev(upper_bound({x}))->v; }
+		iter find(int x) const {return prev(upper_bound({x}));}
 	};
 }
 using chtholly_tree::Q,chtholly_tree::odt;
@@ -1901,6 +1902,143 @@ int main()
 	
 \end{lstlisting}
 
+\subsection{$k$-d 树（二进制分组）}
+
+均摊 $O(\log ^2n)$ 插入，$O(\sqrt n)$ 矩形查询。
+
+\begin{lstlisting}
+#define tmpl template<typename T>
+typedef long long ll;
+tmpl struct P
+{
+	ll x,y;
+	T v;
+};
+tmpl struct Q
+{
+	ll x[2],y[2];
+	bool t;
+	T s;
+	Q() {}
+	Q(const P<T> &a)
+	{
+		x[0]=x[1]=a.x;
+		y[0]=y[1]=a.y;
+		s=a.v;
+	}
+};
+tmpl bool cmp0(const P<T> &a,const P<T> &b) { return a.x<b.x; }
+tmpl bool cmp1(const P<T> &a,const P<T> &b) { return a.y<b.y; }
+tmpl struct kdt
+{
+	vector<P<T>> c;
+	vector<Q<T>> a;
+	ll m,u,d,l,r;
+	T ans;
+	bool fir;
+	void build(int x,P<T> *b,int n)
+	{
+		if (x==1)
+		{
+			a.resize(m=n<<1);
+			a[x].t=0;
+			c.resize(n);
+			for (int i=0; i<n; i++) c[i]=b[i];
+		}
+		if (n==1)
+		{
+			a[x]=Q<T>(b[0]);
+			return;
+		}
+		int mid=n>>1,c=x<<1;
+		nth_element(b,b+mid,b+n,a[x].t?cmp1<T>:cmp0<T>);
+		a[c].t=a[c|1].t=a[x].t^1;
+		build(c,b,mid);
+		build(c|1,b+mid,n-mid);
+		a[x].s=a[c].s+a[c|1].s;
+		a[x].x[0]=min(a[c].x[0],a[c|1].x[0]);
+		a[x].x[1]=max(a[c].x[1],a[c|1].x[1]);
+		a[x].y[0]=min(a[c].y[0],a[c|1].y[0]);
+		a[x].y[1]=max(a[c].y[1],a[c|1].y[1]);
+	}
+	void find(int x)
+	{
+		if (x>=m||a[x].x[1]<u||a[x].x[0]>d||a[x].y[1]<l||a[x].y[0]>r) return;
+		if (u<=a[x].x[0]&&a[x].x[1]<=d&&l<=a[x].y[0]&&a[x].y[1]<=r)
+		{
+			ans=fir?a[x].s:ans+a[x].s;
+			fir=0;
+			return;
+		}
+		find(x<<1); find(x<<1|1);
+	}
+	pair<bool,T> find(ll x1,ll y1,ll x2,ll y2)
+	{
+		fir=1;
+		ans={};
+		u=x1; d=x2;
+		l=y1; r=y2;
+		find(1);
+		return {!fir,ans};
+	}
+};
+const int N=2e5+2,M=18;
+tmpl struct KDT
+{
+	kdt<T> s[M];
+	P<T> a[N];
+	int n,m,i;
+	KDT() { n=0; }
+	KDT(int N,ll *x,ll *y,T *w)//[0,n)
+	{
+		n=N;
+		int i,j;
+		for (i=0; i<n; i++) a[i]={x[i],y[i],w[i]};
+		for (i=j=0; n>>i; i++) if (n>>i&1) s[i].build(1,a+j,1<<i),j+=1<<i;
+	}
+	void insert(ll x,ll y,T w)
+	{
+		a[0]={x,y,w}; m=1;
+		for (i=0; n&1<<i; i++) for (auto u:s[i].c) a[m++]=u;
+		s[i].build(1,a,m);
+		++n;
+	}
+	pair<bool,T> ask(ll x,ll y,ll xx,ll yy)
+	{
+		T ans;
+		bool fir=1;
+		for (i=0; 1<<i<=n; i++) if (1<<i&n)
+		{
+			auto [_,tmp]=s[i].find(x,y,xx,yy);
+			if (!_) continue;
+			ans=fir?tmp:ans+tmp;
+			fir=0;
+		}
+		return {!fir,ans};
+	}
+};
+int x[N],y[N],w[N];
+int main()
+{
+	ios::sync_with_stdio(0); cin.tie(0); cout.tie(0);
+	int n,q,i;
+	cin>>n>>q;
+	for (i=0; i<n; i++) cin>>x[i]>>y[i]>>w[i];
+	KDT<ll> s(n,x,y,w);
+	while (q--)
+	{
+		int op,x,y,w;
+		cin>>op>>x>>y>>w;
+		if (op==0) s.insert(x,y,w); else
+		{
+			cin>>op;
+			cout<<s.ask(x,y,w-1,op-1)<<'\n';
+		}
+	}
+	return 0;
+}
+\end{lstlisting}
+
 \subsection{双端队列全局查询}
 
 \begin{lstlisting}
@@ -2569,29 +2707,29 @@ int main()
 	ios::sync_with_stdio(0);cin.tie(0);
 	int i,j,k,n;
 	cin>>n;
-	for (i=1;i<=n;i++) for (j=1;j<=n;j++) cin>>a[i][j];
-	for (k=1;k<=n;k++)
+	for (i=0;i<n;i++) for (j=0;j<n;j++) cin>>a[i][j];
+	memset(ih,-1,sizeof ih);
+	memset(jh,-1,sizeof jh);
+	for (k=0;k<n;k++)
 	{//ih,jh要清空
-		for (i=k;i<=n;i++) if (!ih[k]) for (j=k;j<=n;j++) if (a[i][j])
+		for (i=k;i<n;i++) if (ih[k]==-1) for (j=k;j<n;j++) if (a[i][j])
 		{
-			ih[k]=i;jh[k]=j;break;
+			ih[k]=i;
+			jh[k]=j;
+			break;
 		}
-		if (!ih[k]) return cout<<"No Solution"<<endl,0;
-		for (j=1;j<=n;j++) swap(a[k][j],a[ih[k]][j]);
-		for (i=1;i<=n;i++) swap(a[i][k],a[i][jh[k]]);
+		if (ih[k]==-1) return cout<<"No Solution"<<endl,0;
+		for (j=0;j<n;j++) swap(a[k][j],a[ih[k]][j]);
+		for (i=0;i<n;i++) swap(a[i][k],a[i][jh[k]]);
 		if (!a[k][k]) return cout<<"No Solution"<<endl,0;inv(a[k][k]);
-		for (i=1;i<=n;i++) if (i!=k) a[k][i]=(ll)a[k][i]*a[k][k]%p;
-		for (i=1;i<=n;i++) if (i!=k) for (j=1;j<=n;j++) if (j!=k) a[i][j]=(a[i][j]+(ll)(p-a[i][k])*a[k][j])%p;
-		for (i=1;i<=n;i++) if (i!=k) a[i][k]=(ll)(p-a[i][k])*a[k][k]%p;	
+		for (i=0;i<n;i++) if (i!=k) a[k][i]=(ll)a[k][i]*a[k][k]%p;
+		for (i=0;i<n;i++) if (i!=k) for (j=0;j<n;j++) if (j!=k) a[i][j]=(a[i][j]+(ll)(p-a[i][k])*a[k][j])%p;
+		for (i=0;i<n;i++) if (i!=k) a[i][k]=(ll)(p-a[i][k])*a[k][k]%p;	
 	}
-	for (k=n;k;k--)
+	for (k=n-1;k>=0;k--)
 	{
-		for (j=1;j<=n;j++) swap(a[k][j],a[jh[k]][j]);
-		for (i=1;i<=n;i++) swap(a[i][k],a[i][ih[k]]);
-	}
-	for (i=1;i<=n;i++)
-	{
-		for (j=1;j<=n;j++) cout<<a[i][j]<<" \n"[j==n];
+		for (j=0;j<n;j++) swap(a[k][j],a[jh[k]][j]);
+		for (i=0;i<n;i++) swap(a[i][k],a[i][ih[k]]);
 	}
 }
 /*
@@ -3124,11 +3262,11 @@ pair<ll,ll> exgcd(ll a,ll b,ll c)//ax+by=c，{-1,-1} 无解，b=0 返回 {c/a,0}
 	b=abs(q/d);
 	x=x*(c/d)%b;
 	if (x<0) x+=b;
-	return {x,(c-p*x)/q};
+	return {x, (ll)((c-(lll)p*x)/q)};
 }
-ll fun(ll a,ll b,ll p)//ax=b(mod p)
+ll fun(ll a, ll b, ll p)//ax=b(mod p)
 {
-	return exgcd(-p,a,b).second%p;
+	return exgcd(a, -p, b).first%p;
 }
 \end{lstlisting}
 
@@ -4839,56 +4977,60 @@ ll solve(ll p, ll k, ll a)//p k y
 $O(n2^n)$，$O(2^n)$。
 
 \begin{lstlisting}
-void fwt_and(vector<ui> &A)//本质：母集和
+void fwt_and(vector<ll> &A)//本质：母集和
 {
-	ui n=A.size(),*a=A.data(),i,j,k,l,*f,*g;
-	for (i=1;i<n;i=l)
+	ll n=A.size(), *a=A.data(), i, j, k, l, *f, *g;
+	for (i=1; i<n; i=l)
 	{
 		l=i*2;
-		for (j=0;j<n;j+=l)
+		for (j=0; j<n; j+=l)
 		{
-			f=a+j;g=a+j+i;
-			for (k=0;k<i;k++) if ((f[k]+=g[k])>=p) f[k]-=p;
+			f=a+j; g=a+j+i;
+			for (k=0; k<i; k++) f[k]+=g[k];
 		}
+		if (l==n||i==1<<10) for (ll &x:A) x%=p;
 	}
 }
-void ifwt_and(vector<ui> &A)
+void ifwt_and(vector<ll> &A)
 {
-	ui n=A.size(),*a=A.data(),i,j,k,l,*f,*g;
-	for (i=1;i<n;i=l)
+	ll n=A.size(), *a=A.data(), i, j, k, l, *f, *g;
+	for (i=1; i<n; i=l)
 	{
 		l=i*2;
-		for (j=0;j<n;j+=l)
+		for (j=0; j<n; j+=l)
 		{
-			f=a+j;g=a+j+i;
-			for (k=0;k<i;k++) if ((f[k]-=g[k])>=p) f[k]+=p;//unsigned
+			f=a+j; g=a+j+i;
+			for (k=0; k<i; k++) f[k]+=p*i-g[k];
 		}
+		if (l==n||i==1<<10) for (ll &x:A) x%=p;
 	}
 }
-void fwt_or(vector<ui> &A)//本质：子集和
+void fwt_or(vector<ll> &A)//本质：子集和
 {
-	ui n=A.size(),*a=A.data(),i,j,k,l,*f,*g;
-	for (i=1;i<n;i=l)
+	ll n=A.size(), *a=A.data(), i, j, k, l, *f, *g;
+	for (i=1; i<n; i=l)
 	{
 		l=i*2;
-		for (j=0;j<n;j+=l)
+		for (j=0; j<n; j+=l)
 		{
-			f=a+j;g=a+j+i;
-			for (k=0;k<i;k++) if ((g[k]+=f[k])>=p) g[k]-=p;
+			f=a+j; g=a+j+i;
+			for (k=0; k<i; k++) g[k]+=f[k];
 		}
+		if (l==n||i==1<<10) for (ll &x:A) x%=p;
 	}
 }
-void ifwt_or(vector<ui> &A)
+void ifwt_or(vector<ll> &A)
 {
-	ui n=A.size(),*a=A.data(),i,j,k,l,*f,*g;
-	for (i=1;i<n;i=l)
+	ll n=A.size(), *a=A.data(), i, j, k, l, *f, *g;
+	for (i=1; i<n; i=l)
 	{
 		l=i*2;
-		for (j=0;j<n;j+=l)
+		for (j=0; j<n; j+=l)
 		{
-			f=a+j;g=a+j+i;
-			for (k=0;k<i;k++) if ((g[k]-=f[k])>=p) g[k]+=p;//unsigned
+			f=a+j; g=a+j+i;
+			for (k=0; k<i; k++) g[k]+=p*i-f[k];
 		}
+		if (l==n||i==1<<10) for (ll &x:A) x%=p;
 	}
 }
 void fwt_xor(vector<ui> &A)
@@ -5258,7 +5400,7 @@ vector<ui> fst(const vector<ui> &s,const vector<ui> &t)
 			Q h(n);
 			copy_n(g.begin()+l, nn, h.begin());
 			h*=cd[__lg(n)-1];
-			for (i=m; i<r; i++) (g[i]+=h[i-l])%p;
+			for (i=m; i<r; i++) (g[i]+=h[i-l])%=p;
 			cdq(f, g, m, r);
 		}
 		Q exp_cdq(Q f)
@@ -6592,6 +6734,11 @@ namespace sh
 			a[0]={0,0};
 			for (i=0; i<n; i++) a[i+1]=fma(a[i],b,s[i]=_[i]);
 		}
+		template<class T> str(const basic_string<T> &_):n(_.size()), a(n+1), s(n)
+		{
+			a[0]={0, 0};
+			for (i=0; i<n; i++) a[i+1]=fma(a[i], b, s[i]=_[i]);
+		}
 		ll getv(int l,int r)//[l,r)
 		{
 			auto [x,y]=fma(a[l],m[r-l],a[r]);
@@ -7166,8 +7313,179 @@ template<typename T> void min_order(T *a,int n)//[0,n)
 	rotate(a,a+j,a+n);
 }
 \end{lstlisting}
+\subsection{带通配符的字符串匹配}
+\begin{lstlisting}
+namespace NTT
+{
+	typedef unsigned ui;
+	typedef unsigned long long ll;
+	const int N=1<<22;
+	const ui p=998244353, g=3;
+	inline ui ksm(ui x, ui y)
+	{
+		ui ans=1;
+		while (y)
+		{
+			if (y&1) ans=1llu*ans*x%p;
+			y>>=1; x=1llu*x*x%p;
+		}
+		return ans;
+	}
+	ui r[N], w[N];
+	void ntt(vector <ui> &a)
+	{
+		int n=a.size(), i, j, k;
+		for (i=0; i<n; i++) if (i<r[i]) swap(a[i], a[r[i]]);
+		for (k=1; k<n; k<<=1)
+		{
+			for (i=0; i<n; i+=k<<1)
+			{
+				for (j=0; j<k; j++)
+				{
+					ui x=a[i+j], y=1llu*a[i+j+k]*w[j+k]%p;
+					a[i+j]=(x+y)%p; a[i+j+k]=(x+p-y)%p;
+				}
+			}
+		}
+	}
+	vector<ui> mul(vector <ui> a, vector <ui> b)
+	{
+		if (a.size()==0||b.size()==0) return { };
+		int m=a.size()+b.size()-1;
+		int n=1<<__lg(m*2-1);
+		int i, j, base=__lg(n)-1;
+		ui inv=ksm(n, p-2);
+		for (i=1; i<n; i++) r[i]=r[i>>1]>>1|(i&1)<<base;
+		for (j=1; j<n; j<<=1)
+		{
+			ui wn=ksm(3, (p-1)/(j<<1));
+			w[j]=1;
+			for (i=1; i<j; i++) w[j+i]=1llu*w[j+i-1]*wn%p;
+		}
+		a.resize(n); b.resize(n);
+		ntt(a); ntt(b);
+		for (i=0; i<n; i++) a[i]=1llu*a[i]*b[i]%p;
+		ntt(a); reverse(1+all(a)); a.resize(n=m);
+		for (i=0; i<n; i++) a[i]=1llu*a[i]*inv%p;
+		return a;
+	}
+}
+vector<int> match(const string &s, const string &t)
+{
+	using NTT::p, NTT::mul;
+	static mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
+	static array<ui, 256> c;
+	static bool inited=0;
+	if (!inited)
+	{
+		inited=1;
+		for (ui &x:c) x=rnd()%NTT::p;
+		c['*']=0;//通配符
+	}
+	int n=s.size(), m=t.size(), i, j;
+	if (n<m) return { };
+	vector<int> ans;
+	vector<ui> f(n), ff(n), fff(n), g(m), gg(m), ggg(m);
+	for (i=0; i<n; i++)
+	{
+		f[i]=c[s[i]];
+		ff[i]=1llu*f[i]*f[i]%p;
+		fff[i]=1llu*ff[i]*f[i]%p;
+	}
+	for (i=0; i<m; i++)
+	{
+		g[i]=c[t[m-i-1]];
+		gg[i]=1llu*g[i]*g[i]%p;
+		ggg[i]=1llu*gg[i]*g[i]%p;
+	}
+	auto fffg=mul(fff, g), ffgg=mul(ff, gg), fggg=mul(f, ggg);
+	for (i=0; i<=n-m; i++) if ((fffg[m-1+i]+fggg[m-1+i]+2*(NTT::p-ffgg[m-1+i]))%NTT::p==0) ans.push_back(i);
+	return ans;
+}
 
+\end{lstlisting}
+快一些的版本
+\begin{lstlisting}
 
+const int N=1<<22;
+const ui p=998244353, g=3;
+inline ui ksm(ui x, ui y)
+{
+	ui ans=1;
+	while (y)
+	{
+		if (y&1) ans=1llu*ans*x%p;
+		y>>=1; x=1llu*x*x%p;
+	}
+	return ans;
+}
+ui r[N], w[N];
+void ntt(vector <ui> &a)
+{
+	int n=a.size(), i, j, k;
+	for (k=1; k<n; k<<=1)
+	{
+		for (i=0; i<n; i+=k<<1)
+		{
+			for (j=0; j<k; j++)
+			{
+				ui x=a[i+j], y=1llu*a[i+j+k]*w[j+k]%p;
+				a[i+j]=(x+y)%p; a[i+j+k]=(x+p-y)%p;
+			}
+		}
+	}
+}\
+vector<int> match(string s, string t, char ch='*')
+{
+	static mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
+	static array<ui, 256> c;
+	static bool inited=0;
+	if (!inited)
+	{
+		inited=1;
+		for (ui &x:c) x=rnd()%p;
+		// for (int i=0; i<256; i++) c[i]=i-96;
+		c[ch]=0;//通配符
+	}
+	int n=s.size(), m=t.size(), i, j;
+	if (n<m) return { };
+	vector<int> ans;
+	int N=1<<__lg(n*2-1), base=__lg(N)-1;
+	vector<ui> f(N), ff(N), fff(N), g(N), gg(N), ggg(N);
+	reverse(all(t));
+	s.resize(N, ch), t.resize(N, ch);
+	for (i=0; i<N; i++)
+	{
+		r[i]=r[i>>1]>>1|(i&1)<<base;
+		if (i<r[i])
+		{
+			swap(s[i], s[r[i]]);
+			swap(t[i], t[r[i]]);
+		}
+	}
+	for (j=1; j<N; j<<=1)
+	{
+		ui wn=ksm(3, (p-1)/(j<<1));
+		w[j]=1;
+		for (i=1; i<j; i++) w[j+i]=1llu*w[j+i-1]*wn%p;
+	}
+	for (i=0; i<N; i++)
+	{
+		f[i]=c[s[i]];
+		ff[i]=1llu*f[i]*f[i]%p;
+		fff[i]=1llu*ff[i]*f[i]%p;
+		g[i]=c[t[i]];
+		gg[i]=1llu*g[i]*g[i]%p;
+		ggg[i]=1llu*gg[i]*g[i]%p;
+	}
+	ntt(f); ntt(ff); ntt(fff); ntt(g); ntt(gg); ntt(ggg);
+	for (i=0; i<N; i++) f[i]=(1llu*fff[i]*g[i]+1llu*f[i]*ggg[i]+2llu*(p-ff[i])*gg[i])%p;
+	for (i=0; i<N; i++) if (i<r[i]) swap(f[i], f[r[i]]);
+	ntt(f); reverse(1+all(f));
+	for (i=0; i<=n-m; i++) if (f[m+i-1]==0) ans.push_back(i);
+	return ans;
+}
+\end{lstlisting}
 \newpage
 
 \section{图论}
@@ -8710,64 +9028,75 @@ int main()
 \end{lstlisting}
 
 \subsection{双极分解}
-当且仅当图点双连通时存在。
+图点双连通时对任意 $s,t$ 存在。
 \begin{lstlisting}
-vector<int> bipolar_orientation(const vector<pair<int,int>> &edges,int n,int s,int t)//[0,n)
-{
-	vector e(n,vector<int>());
-	for (auto [u,v]:edges)
+	vector<int> bipolar_orientation(const vector<pair<int, int>> &edges, int n, int s, int t)//[0,n)
 	{
-		e[u].push_back(v);
-		e[v].push_back(u);
-	}
-	int cur=1;
-	vector<int> pre(n),low(n),p(n);
-	pre[s]=1;
-	vector<int> id;
-	function<void(int)> dfs=[&](int x)
+		assert(s!=t);
+		vector e(n, vector<int>());
+		for (auto [u, v]:edges)
 		{
-			pre[x]=++cur;
-			low[x]=x;
-			for (auto y:e[x])
+			e[u].push_back(v);
+			e[v].push_back(u);
+		}
+		int cur=1, i;
+		vector<int> pre(n), low(n), p(n);
+		pre[s]=1;
+		vector<int> id;
+		function<void(int)> dfs=[&](int x)
 			{
-				if (pre[y]==0)
+				pre[x]=++cur;
+				low[x]=x;
+				for (int y:e[x])
 				{
-					id.push_back(y);
-					dfs(y);
-					p[y]=x;
-					if (pre[low[y]]<pre[low[x]]) low[x]=low[y];
+					if (pre[y]==0)
+					{
+						id.push_back(y);
+						dfs(y);
+						p[y]=x;
+						if (pre[low[y]]<pre[low[x]]) low[x]=low[y];
+					}
+					else if (pre[y]!=0&&pre[y]<pre[low[x]]) low[x]=y;
 				}
-				else if (pre[y]!=0&&pre[y]<pre[low[x]]) low[x]=y;
+			};
+		dfs(t);
+		vector<int> sign(n, -1);
+		vector<int> l(n), r(n);
+		r[s]=t;
+		l[t]=s;
+		for (int v:id)
+		{
+			if (sign[low[v]]==-1)
+			{
+				l[v]=l[p[v]];
+				r[l[v]]=v;
+				l[p[v]]=v;
+				r[v]=p[v];
+				sign[p[v]]=1;
 			}
-		};
-	dfs(t);
-	vector<int> sign(n,-1);
-	vector<int> l(n),r(n);
-	r[s]=t;
-	l[t]=s;
-	for (auto v:id)
-	{
-		if (sign[low[v]]==-1)
-		{
-			l[v]=l[p[v]];
-			r[l[v]]=v;
-			l[p[v]]=v;
-			r[v]=p[v];
-			sign[p[v]]=1;
+			else
+			{
+				r[v]=r[p[v]];
+				l[r[v]]=v;
+				r[p[v]]=v;
+				l[v]=p[v];
+				sign[p[v]]=-1;
+			}
 		}
-		else
+		vector<int> a(n);
+		int x;
+		for (i=0, x=s; i<n; x=r[x], i++) a[i]=x;
+		vector<int> ia(n, -1), rd(n), cd(n);
+		for (i=0; i<n; i++) ia[a[i]]=i;
+		if (count(all(ia), -1)) return { };
+		for (auto [u, v]:edges)
 		{
-			r[v]=r[p[v]];
-			l[r[v]]=v;
-			r[p[v]]=v;
-			l[v]=p[v];
-			sign[p[v]]=-1;
+			if (ia[u]>ia[v]) swap(u, v);
+			++cd[u]; ++rd[v];
 		}
+		for (i=0; i<n; i++) if (i!=s&&i!=t&&(!cd[i]||!rd[i])) return { };
+		return a;
 	}
-	vector<int> a(n);
-	for (int i=0,x=s; i<n; x=r[x],i++) a[i]=x;
-	return a;
-}
 
 \end{lstlisting}
 
@@ -10827,27 +11156,34 @@ void dfs(int x)
 $O(n+\sum k\log n)$，$O(n)$。
 
 \begin{lstlisting}
-void ins(int x)
-{
-	if (tp==0)
+	vector<pair<int, int>> get_tree(vector<int> a)
 	{
-		st[tp=1]=x;
-		return;
+		vector<pair<int, int>> edges;
+		sort(all(a), [&](int u, int v) { return dfn[u]<dfn[v]; });
+		vector<int> st(a.size()+2);
+		int tp=0;
+		auto ins=[&](int u)
+			{
+				if (tp==0)
+				{
+					st[tp=1]=u;
+					return;
+				}
+				int v=lca(st[tp], u);
+				while (tp>1&&dep[v]<dep[st[tp-1]])
+				{
+					edges.emplace_back(st[tp-1], st[tp]);
+					--tp;
+				}
+				if (dep[v]<dep[st[tp]]) edges.emplace_back(v, st[tp--]);
+				if (!tp||st[tp]!=v) st[++tp]=v;
+				st[++tp]=u;
+			};
+		if (a[0]!=1) st[tp=1]=1;//先行添加根节点
+		for (int u:a) ins(u);
+		if (tp) while (--tp) edges.emplace_back(st[tp], st[tp+1]);//回溯
+		return edges;
 	}
-	ance=lca(st[tp],x);
-	while (tp>1&&dep[ance]<dep[st[tp-1]])
-	{
-		add(st[tp-1],st[tp]);
-		--tp;
-	}
-	if (dep[ance]<dep[st[tp]]) add(ance,st[tp--]);
-	if (!tp||st[tp]!=ance) st[++tp]=ance;
-	st[++tp]=x;
-}
-	sort(a+1,a+m+1,cmp);
-	if (a[1]!=1) st[tp=1]=1;//先行添加根节点
-	for (i=1;i<=m;i++) ins(a[i]);
-	if (tp) while (--tp) add(st[tp],st[tp+1]);//回溯
 \end{lstlisting}
 
 \subsection{圆方树}
@@ -11663,102 +11999,60 @@ $O(n^3)$，$O(n^2)$。
 以 $u$ 为起点的欧拉回路个数 $sum=T(u)\times \prod\limits_{v=1}^n(out(v)-1)!$，其中 $T(u)$ 是以 $u$ 为根的内向树个数（出度矩阵-邻接矩阵），$out(v)$ 是 $v$ 的出度。若允许循环同构（如 $1\to 2\to 1\to 3\to 1$ 与 $1\to 3\to 1\to 2\to 1$），还需多乘 $out(u)$。
 
 \begin{lstlisting}
-//https://blog.csdn.net/Jaihk662/article/details/79338437
-#include <bits/stdc++.h>
-using namespace std;
-typedef long long ll;
-const int N=102,M=4e5+2,p=1e6+3;
-int a[N][N],fac[M],cd[N],st[N],rd[N],f[N],b[N][N];
-int n,i,j,x,c,ans,t,tp;
-void read(int &x)
+ll eular_path_count(vector<vector<int>> a, int s, int t)
 {
-	c=getchar();
-	while ((c<48)||(c>57)) c=getchar();
-	x=c^48;c=getchar();
-	while ((c>=48)&&(c<=57))
+	int n=a.size(), i, j, k;
+	++a[t][s]; s=t;
+	vector<int> rd(n), cd(n);
+	for (i=0; i<n; i++) for (j=0; j<n; j++) cd[i]+=a[i][j], rd[j]+=a[i][j];
+	for (i=0; i<n; i++) if (cd[i]!=rd[i]) return 0;
+	vector<int> f(n);
+	iota(all(f), 0);
+	function<int(int)> getf=[&](int u) { return f[u]==u?u:f[u]=getf(f[u]); };
+	for (i=0; i<n; i++) for (j=0; j<n; j++) if (a[i][j]) f[getf(i)]=getf(j);
+	ll r=1;
+	vector<int> id;
+	for (i=0; i<n; i++) if (cd[i])
 	{
-		x=x*10+(c^48);
-		c=getchar();
+		if (getf(i)!=getf(s)) return 0;
+		r=r*fac[cd[i]-1]%p;
+		if (i!=s) id.push_back(i);
 	}
-}
-int ksm(int x,int y)
-{
-	int r=1;
-	while (y)
+	n=id.size();
+	vector b(n, vector<ll>(n));
+	for (i=0; i<n; i++)
 	{
-		if (y&1) r=(ll)r*x%p;
-		x=(ll)x*x%p;
-		y>>=1;
+		b[i][i]=cd[id[i]]-a[id[i]][id[i]];
+		for (j=0; j<n; j++) if (i!=j) b[i][j]=(p-a[id[i]][id[j]])%p;
+	}
+	for (i=0; i<n; i++)
+	{
+		for (j=i; j<n; j++) if (b[j][i]) break;
+		if (j==n) return 0;
+		swap(b[j], b[i]);
+		r=r*b[i][i]%p;
+		b[i][i]=ksm(b[i][i], p-2);
+		for (j=n-1; j>=i; j--) b[i][j]=b[i][j]*b[i][i]%p;
+		for (j=i+1; j<n; j++) for (k=n-1; k>=i; k--) b[j][k]=(b[j][k]+(p-b[j][i])*b[i][k])%p;
 	}
 	return r;
 }
-int GS()
+ll eular_path_count(vector<vector<int>> a)
 {
-	int i,j,k,r=1,xs;
-	int fh=0;
-	for (i=1;i<=n;i++)
+	int n=a.size(), i, j, s=-1, t=-1;
+	vector<int> rd(n), cd(n), d(n);
+	for (i=0; i<n; i++) for (j=0; j<n; j++) cd[i]+=a[i][j], rd[j]+=a[i][j];
+	if (count(all(cd), 0)==n) return 1;
+	for (i=0; i<n; i++) d[i]=cd[i]-rd[i];
+	s=max_element(all(d))-d.begin();
+	t=min_element(all(d))-d.begin();
+	ll r=0;
+	if (s==t)
 	{
-		k=0;
-		for (j=i;j<=n;j++) if (a[j][i])
-		{
-			k=j;break;
-		}
-		assert(k);
-		if (k==0) return 0;
-		if (j!=k) fh^=1;
-		for (j=i;j<=n;j++) swap(a[i][j],a[k][j]);
-		xs=ksm(a[i][i],p-2);
-		for (j=i+1;j<=n;j++) a[i][j]=(ll)a[i][j]*xs%p;
-		r=(ll)r*a[i][i]%p;
-		for (j=i+1;j<=n;j++)
-		{
-			xs=p-a[j][i];
-			for (k=i+1;k<=n;k++) a[j][k]=(a[j][k]+(ll)(p-a[j][i])*a[i][k])%p;
-		}
+		for (i=0; i<n; i++) if (cd[i]) r+=eular_path_count(a, i, i);
 	}
-	if (fh) return p-r; return r;
-}
-int getf(int x){if (f[x]==x) return x;return f[x]=getf(f[x]);}
-int main()
-{
-	fac[0]=1;
-	for (i=1;i<M;i++) fac[i]=(ll)fac[i-1]*i%p;
-	read(t);
-	while (t--)
-	{
-		read(n);
-		memset(cd,0,sizeof(cd));
-		memset(rd,0,sizeof(rd));
-		memset(b,0,sizeof(b));
-		for (i=1;i<=n;i++) f[i]=i;
-		for (i=1;i<=n;i++)
-		{
-			read(cd[i]);
-			for (j=1;j<=cd[i];j++)
-			{
-				read(x);--b[x][i];++b[i][i];++rd[x];
-				f[getf(x)]=getf(i);
-			}
-		}
-		for (i=1;i<=n;i++) if (rd[i]!=cd[i]) {puts("0");break;}
-		if (i<=n) continue;
-		tp=0;
-		for (i=2;i<=n;i++) if (rd[i])
-		{
-			if (getf(i)!=getf(1)) {puts("0");break;}
-			st[++tp]=i;
-		}
-		if (i<=n) continue;
-		ans=1;if (cd[1]>1) ans=(ll)ans*cd[1]%p;
-		for (i=1;i<=n;i++) if (cd[i]>2) ans=(ll)ans*fac[cd[i]-1]%p;
-		//if (!cd[1]) {puts("1");continue;}
-		for (i=1;i<=tp;i++) for (j=1;j<=tp;j++) a[i][j]=b[st[i]][st[j]];
-		n=tp;
-		for (i=1;i<=n;i++) for (j=1;j<=n;j++) if (a[i][j]<0) a[i][j]+=p;
-		ans=(ll)ans*GS()%p;
-		//if (1^n&1) ans=p-ans;
-		printf("%d\n",ans%p);
-	}
+	else r=eular_path_count(a, s, t);
+	return r%p;
 }
 \end{lstlisting}
 
@@ -13326,19 +13620,6 @@ int main()
 #include "ext/pb_ds/priority_queue.hpp" //priority_queue
 using namespace __gnu_pbds;
 using namespace std;
-inline char gc()
-{
-    static char buf[1048576], *p1, *p2;
-    return p1 == p2 && (p2 = (p1 = buf) + fread(buf, 1, 1048576, stdin),
-    p1 == p2) ? EOF : *p1++;
-}
-inline int read()
-{
-    char ch = gc(); int r = 0, w = 1;
-    for (; ch < '0' || ch > '9'; ch = gc()) if (ch == '-') w = -1;
-    for (; '0' <= ch && ch <= '9'; ch = gc()) r = r * 10 + (ch - '0');
-    return r * w;
-}
 typedef tree<int,null_type,less<int>,rb_tree_tag,tree_order_statistics_node_update> rbtree;
 cc_hash_table<string,int>mp1;//拉链法
 gp_hash_table<string,int>mp2;//查探法
@@ -13357,12 +13638,166 @@ __gnu_pbds::priority_queue<int,greater<int>,pairing_heap_tag> pq;
 //join(priority_queue &other)  //合并两个堆,other会被清空
 //split(Pred prd,priority_queue &other)  //分离出两个堆
 //modify(point_iterator it,const key)  //修改一个节点的值
+inline char gc()
+{
+    static char buf[1048576], *p1, *p2;
+    return p1 == p2 && (p2 = (p1 = buf) + fread(buf, 1, 1048576, stdin),
+    p1 == p2) ? EOF : *p1++;
+}
+inline int read()
+{
+    char ch = gc(); int r = 0, w = 1;
+    for (; ch < '0' || ch > '9'; ch = gc()) if (ch == '-') w = -1;
+    for (; '0' <= ch && ch <= '9'; ch = gc()) r = r * 10 + (ch - '0');
+    return r * w;
+}
+struct my_bit
+{
+	// ll v[Len];
+	__m256i V[Len/4];
+	void reset()
+	{
+
+		V[0]=_mm256_set_epi64x(0, 0, 0, 0);
+		V[1]=_mm256_set_epi64x(0, 0, 0, 0);
+		V[2]=_mm256_set_epi64x(0, 0, 0, 0);
+		V[3]=_mm256_set_epi64x(0, 0, 0, 0);
+		V[4]=_mm256_set_epi64x(0, 0, 0, 0);
+		V[5]=_mm256_set_epi64x(0, 0, 0, 0);
+		V[6]=_mm256_set_epi64x(0, 0, 0, 0);
+		V[7]=_mm256_set_epi64x(0, 0, 0, 0);
+		V[8]=_mm256_set_epi64x(0, 0, 0, 0);
+		V[9]=_mm256_set_epi64x(0, 0, 0, 0);
+		V[10]|=_mm256_set_epi64x(0, 0, 0, 0);
+		V[11]|=_mm256_set_epi64x(0, 0, 0, 0);
+		V[12]|=_mm256_set_epi64x(0, 0, 0, 0);
+		V[13]|=_mm256_set_epi64x(0, 0, 0, 0);
+	}
+	void set(int u)
+	{
+		switch (u>>6&3)
+		{
+		case 0:
+			V[u>>8]|=_mm256_set_epi64x(1ull<<(u&63), 0, 0, 0);
+			break;
+		case 1:
+			V[u>>8]|=_mm256_set_epi64x(0, 1ull<<(u&63), 0, 0);
+			break;
+		case 2:
+			V[u>>8]|=_mm256_set_epi64x(0, 0, 1ull<<(u&63), 0);
+			break;
+		case 3:
+			V[u>>8]|=_mm256_set_epi64x(0, 0, 0, 1ull<<(u&63));
+			break;
+		}
+			// v[u>>6]|=(1ull<<(u&63));
+	}
+	void operator |= (const my_bit &B)
+	{
+		V[0]|=B.V[0];
+		V[1]|=B.V[1];
+		V[2]|=B.V[2];
+		V[3]|=B.V[3];
+		V[4]|=B.V[4];
+		V[5]|=B.V[5];
+		V[6]|=B.V[6];
+		V[7]|=B.V[7];
+		V[8]|=B.V[8];
+		V[9]|=B.V[9];
+		V[10]|=B.V[10];
+		V[11]|=B.V[11];
+		V[12]|=B.V[12];
+		V[13]|=B.V[13];
+		// V[6]|=B.V[6];
+		// V[7]|=B.V[7];
+		// V[8]|=B.V[8];
+		// V[9]|=B.V[9];
+		// V[10]|=B.V[10];
+		// V[11]|=B.V[11];
+		// V[12]|=B.V[12];
+		// V[13]|=B.V[13];
+		// V[14]|=B.V[14];
+		// V[15]|=B.V[15];
+		// V[16]|=B.V[16];
+		// V[17]|=B.V[17];
+		// V[18]|=B.V[18];
+		// V[19]|=B.V[19];
+		// V[20]|=B.V[20];
+		// V[21]|=B.V[21];
+		// V[22]|=B.V[22];
+		// V[23]|=B.V[23];
+	}
+	int count()
+	{
+		return
+			__builtin_popcountll(((ll *)&(V[0]))[0])+__builtin_popcountll(((ll *)&(V[0]))[1])
+			+__builtin_popcountll(((ll *)&(V[0]))[2])+__builtin_popcountll(((ll *)&(V[0]))[3])
+			+__builtin_popcountll(((ll *)&(V[1]))[0])+__builtin_popcountll(((ll *)&(V[1]))[1])
+			+__builtin_popcountll(((ll *)&(V[1]))[2])+__builtin_popcountll(((ll *)&(V[1]))[3])
+			+__builtin_popcountll(((ll *)&(V[2]))[0])+__builtin_popcountll(((ll *)&(V[2]))[1])
+			+__builtin_popcountll(((ll *)&(V[2]))[2])+__builtin_popcountll(((ll *)&(V[2]))[3])
+			+__builtin_popcountll(((ll *)&(V[3]))[0])+__builtin_popcountll(((ll *)&(V[3]))[1])
+			+__builtin_popcountll(((ll *)&(V[3]))[2])+__builtin_popcountll(((ll *)&(V[3]))[3])
+			+__builtin_popcountll(((ll *)&(V[4]))[0])+__builtin_popcountll(((ll *)&(V[4]))[1])
+			+__builtin_popcountll(((ll *)&(V[4]))[2])+__builtin_popcountll(((ll *)&(V[4]))[3])
+			+__builtin_popcountll(((ll *)&(V[5]))[0])+__builtin_popcountll(((ll *)&(V[5]))[1])
+			+__builtin_popcountll(((ll *)&(V[5]))[2])+__builtin_popcountll(((ll *)&(V[5]))[3])
+			+__builtin_popcountll(((ll *)&(V[6]))[0])+__builtin_popcountll(((ll *)&(V[6]))[1])
+			+__builtin_popcountll(((ll *)&(V[6]))[2])+__builtin_popcountll(((ll *)&(V[6]))[3])
+			+__builtin_popcountll(((ll *)&(V[7]))[0])+__builtin_popcountll(((ll *)&(V[7]))[1])
+			+__builtin_popcountll(((ll *)&(V[7]))[2])+__builtin_popcountll(((ll *)&(V[7]))[3])
+			+__builtin_popcountll(((ll *)&(V[8]))[0])+__builtin_popcountll(((ll *)&(V[8]))[1])
+			+__builtin_popcountll(((ll *)&(V[8]))[2])+__builtin_popcountll(((ll *)&(V[8]))[3])
+			+__builtin_popcountll(((ll *)&(V[9]))[0])+__builtin_popcountll(((ll *)&(V[9]))[1])
+			+__builtin_popcountll(((ll *)&(V[9]))[2])+__builtin_popcountll(((ll *)&(V[9]))[3])
+			+__builtin_popcountll(((ll *)&(V[10]))[0])+__builtin_popcountll(((ll *)&(V[10]))[1])
+			+__builtin_popcountll(((ll *)&(V[10]))[2])+__builtin_popcountll(((ll *)&(V[10]))[3])
+			+__builtin_popcountll(((ll *)&(V[11]))[0])+__builtin_popcountll(((ll *)&(V[11]))[1])
+			+__builtin_popcountll(((ll *)&(V[11]))[2])+__builtin_popcountll(((ll *)&(V[11]))[3])
+			+__builtin_popcountll(((ll *)&(V[12]))[0])+__builtin_popcountll(((ll *)&(V[12]))[1])
+			+__builtin_popcountll(((ll *)&(V[12]))[2])+__builtin_popcountll(((ll *)&(V[12]))[3])
+			+__builtin_popcountll(((ll *)&(V[13]))[0])+__builtin_popcountll(((ll *)&(V[13]))[1])
+			+__builtin_popcountll(((ll *)&(V[13]))[2])+__builtin_popcountll(((ll *)&(V[13]))[3]);
+		// int ans=0;
+		// return __builtin_popcountll(v[0])
+		// 	+__builtin_popcountll(v[1])
+		// 	+__builtin_popcountll(v[2])
+		// 	+__builtin_popcountll(v[3])
+		// 	+__builtin_popcountll(v[4])
+		// 	+__builtin_popcountll(v[5])
+		// 	+__builtin_popcountll(v[6])
+		// 	+__builtin_popcountll(v[7])
+		// 	+__builtin_popcountll(v[8])
+		// 	+__builtin_popcountll(v[9])
+		// 	+__builtin_popcountll(v[10])
+		// 	+__builtin_popcountll(v[11])
+		// 	+__builtin_popcountll(v[12])
+		// 	+__builtin_popcountll(v[13])
+		// 	+__builtin_popcountll(v[14])
+		// 	+__builtin_popcountll(v[15])
+		// 	+__builtin_popcountll(v[16])
+		// 	+__builtin_popcountll(v[17])
+		// 	+__builtin_popcountll(v[18])
+		// 	+__builtin_popcountll(v[19])
+		// 	+__builtin_popcountll(v[20])
+		// 	+__builtin_popcountll(v[21])
+		// 	+__builtin_popcountll(v[22])
+		// 	+__builtin_popcountll(v[23]);
+			// return ans;
+	}
+}r[N];
 int main()
 {
 	ios::sync_with_stdio(0);cin.tie(0);
 	mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
     cout<<setiosflags(ios::fixed)<<setprecision(15);
 	rbtree::iterator it;
+	string s="abc",t="dabce";
+	boyer_moore_horspool_searcher S(all(s));
+	if (search(all(t),S)!=t.end())
+	{
+		cout<<"find\n";
+	}
     uniform_real_distribution<> a(1,2);
 	numeric_limits<int>::max();
 	for (int i=1;i<=10;i++) s1.insert(i*2);
