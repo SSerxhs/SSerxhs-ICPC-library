@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.6.5}
+\centerline{ver:3.8.1}
 
 \tableofcontents
 
@@ -44,59 +44,63 @@ language=c++,
 \section{数据结构}
 
 \subsection{哈希表}
-
+支持如同 map 一样使用 [] 访问。default 指的是未赋值情形的值。
 \begin{lstlisting}
-template<int N,typename T,typename TT> struct ht//个数，定义域，值域
+template<class Tx,class Ty> struct hashtable //定义域，值域
 {
-	const static int p=1e6+7,M=p+2;
-	TT a[N];
-	T v[N];
-	int fir[p+2],nxt[N],st[p+2];//和模数相适应
-	int tp,ds;//自定义模数
-	ht(){memset(fir,0,sizeof fir);tp=ds=0;}
-	void mdf(T x,TT z)//位置，值
+	const static int N=2e6+5,p=1e6+7;//元素个数，模数
+	Tx X[N];
+	Ty Y[N],default;
+	int fir[p],nxt[N],sz;
+	ht(Ty default=Ty{}):val(default):sz(0),{memset(fir,-1,sizeof fir);}
+	Ty &operator[](T x)
 	{
-		int y=x%p;
-		if (y<0) y+=p;
-		for (int i=fir[y];i;i=nxt[i]) if (v[i]==x) return a[i]=z,void();//若不可能重复不需要 for
-		v[++ds]=x;a[ds]=z;
-		if (!fir[y]) st[++tp]=y;
-		nxt[ds]=fir[y];fir[y]=ds;
-	}
-	TT find(T x)
-	{
-		int y=x%p;
-		if (y<0) y+=p;
-		int i;
-		for (i=fir[y];i;i=nxt[i]) if (v[i]==x) return a[i];
-		return 0;//返回值和是否判断依据要求决定
+		int index=(x%p+p)%p;
+		for (int i=fir[index];i!=-1;i=nxt[i]) if (X[i]==x) return Y[i];//若 x 不重复，可以省略这个 for
+		X[cnt]=x;
+		Y[cnt]=default;
+		nxt[cnt]=fir[index];
+		fir[index]=cnt++;
+		return Y[cnt-1];
 	}
 	void clear()
 	{
-		++tp;
-		while (--tp) fir[st[tp]]=0;
-		ds=0;
+		cnt=0;
+		while (sz) fir[((X[--sz])%p+p)%p]=0;
+	}
+	void iterate()//遍历。用于自行修改
+	{
+		for (int i=0;i<sz;i++)
+		{
+			T x=X[i];
+			TT y=Y[i];
+			//(x,y)
+		}
 	}
 };
 \end{lstlisting}
 
 \subsection{珂朵莉树}
+支持区间赋值、单点访问。维护每个连续段的范围和值。
 
+如果希望维护所有连续段的整体信息（如长度的最大值），修改 add 和 del 函数即可，分别表示连续段被加入和被删去。
+
+特别注意一开始 insert 的不会触发 add，只有 modify 会触发。
 \begin{lstlisting}
 namespace chtholly_tree
 {
-	typedef int TT;
-	struct Q
+	using T=int;//可以把 T 修改为任意想要的类型。
+	struct node
 	{
 		int l;
 		mutable int r;
-		mutable TT v;
+		mutable T v;
 		int len() const { return r-l+1; }
-		bool operator<(const Q &x) const { return l<x.l; }
+		bool operator<(const node &x) const { return l<x.l; }
 	};
-	void add(const Q &a) {}
-	void del(const Q &a) {}
-	class odt: public set<Q>
+	void add(const node &a) {}
+	void del(const node &a) {}
+	class odt: public set<node>
 	{
 	public:
 		typedef odt::iterator iter;
@@ -104,12 +108,12 @@ namespace chtholly_tree
 		{
 			iter it=lower_bound({x});
 			if (it!=end()&&it->l==x) return it;
-			Q t=*--it,a={t.l,x-1,t.v},b={x,t.r,t.v};
+			node t=*--it,a={t.l,x-1,t.v},b={x,t.r,t.v};
 			del(*it); add(a); add(b);
 			erase(it); insert(a);
 			return insert(b).first;
 		}
-		void modify(int l,int r,TT v)//[l,r]
+		void modify(int l,int r,T v)//[l,r]
 		{
 			iter lt,rt,it;
 			rt=r==rbegin()->r?end():split(r+1); lt=split(l);//[lt,rt)
@@ -119,49 +123,148 @@ namespace chtholly_tree
 			add({l,r,v});
 			erase(lt,rt); insert({l,r,v});
 		}
-		TT operator[](const int x) const { return prev(upper_bound({x}))->v; }
-		iter find(int x) const {return prev(upper_bound({x}));}
+		T operator[](const int x) const { return prev(upper_bound({x}))->v; }//直接访问单点
+		iter find(int x) const {return prev(upper_bound({x}));}//找到对应的线段
 	};
 }
-using chtholly_tree::Q,chtholly_tree::odt;
+using chtholly_tree::node,chtholly_tree::odt;
 typedef odt::iterator iter;
+int main()
+{
+	odt s;
+	s.insert({0,5,1}); 	// 先 insert({L,R,x}) 表示整个下标范围和初始值。 左闭右闭。
+						// s={1,1,1,1,1,1}
+	s.modify(2,3,2); 	// 左闭右闭。s={1,1,2,2,1,1}
+	for (auto [l,r,v]:s)
+	{
+		//(l,r,v)=(0,1,1)
+		//(l,r,v)=(2,3,2)
+		//(l,r,v)=(4,5,1)
+	}
+}
 \end{lstlisting}
+
 
 \subsection{带删堆}
 
+本质是额外维护一个堆 q 表示要被删除的元素，当 p 的最值和 q 一样时删除。
+
+需要保证每次 pop 的元素都存在于堆中。
+
+本代码的用法和 priority queue 一致。
+
 \begin{lstlisting}
-template<typename T> struct heap//大根堆
+template<typename T, typename T1=vector<T>, typename T2=less<T>> struct heap
 {
-	priority_queue<T> p,q;
+private:
+	priority_queue<T, T1, T2> p, q;
+public:
 	void push(const T &x)
 	{
 		if (!q.empty()&&q.top()==x)
 		{
 			q.pop();
-			while (!q.empty()&&q.top()==p.top()) p.pop(),q.pop();
-		} else p.push(x);
+			while (!q.empty()&&q.top()==p.top()) p.pop(), q.pop();
+		}
+		else p.push(x);
 	}
 	void pop()
 	{
 		p.pop();
-		while (!q.empty()&&p.top()==q.top()) p.pop(),q.pop(); 
+		while (!q.empty()&&p.top()==q.top()) p.pop(), q.pop();
 	}
 	void pop(const T &x)
 	{
 		if (p.top()==x)
 		{
 			p.pop();
-			while (!q.empty()&&p.top()==q.top()) p.pop(),q.pop(); 
-		} else q.push(x);
+			while (!q.empty()&&p.top()==q.top()) p.pop(), q.pop();
+		}
+		else q.push(x);
 	}
-	T top() {return p.top();}
-	bool empty() {return p.empty();}
+	T top() const { return p.top(); }
+	int size() const { return p.size()-q.size(); }
+	bool empty() const { return p.empty(); }
+	vector<T> to_vector() const
+	{
+		vector<T> a;
+		auto P=p, Q=q;
+		while (P.size())
+		{
+			a.push_back(P.top()); P.pop();
+			while (Q.size()&&P.top()==Q.top()) P.pop(), Q.pop();
+		}
+		return a;
+	}
 };
+
+\end{lstlisting}
+\subsection{前 $k$ 大的和}
+
+本质是用小根堆维护前 $k$ 大的数，用大根堆维护其余数。
+
+如果需要支持删除，结合前面一个使用，或者直接用 multiset 进行 erase。
+
+为了方便起见，直接给出支持删除的版本，并且使用 long long。如果不需要支持删除，类型改为优先队列并去掉 pop 函数即可。
+
+注意：复杂度为 $O(k-k')$，其中 $k'$ 是上一次询问的 $k$。也就是说，多组询问时询问的 k 的差值应该尽可能小。
+
+其用法与 priority queue 保持一致，可以用同样的方法改写成前 k 小。
+
+\begin{lstlisting}
+using ll=long long;
+template<typename T, typename T1=vector<T>, typename T2=less<T>> struct ksum_pop
+{
+private:
+	struct __cmp
+	{
+		bool operator()(const T &x, const T &y) const
+		{
+			return x!=y&&!T2()(x, y);
+		}
+	};
+	heap<T, T1, __cmp> p;
+	heap<T, T1, T2> q;
+	ll cur;
+public:
+	ksum_pop():cur(0) { }
+	void push(const T &x)
+	{
+		if (!q.size()||!T2()(x, q.top())) p.push(x), cur+=x; else q.push(x);
+	}
+	int size() const { return p.size()+q.size(); }
+	void pop(const T &x)
+	{
+		if (q.size()&&!T2()(q.top(), x)) q.pop(x);
+		else p.pop(x), cur-=x;
+	}
+	ll sum(int k)
+	{
+		while (p.size()<k)
+		{
+			cur+=q.top();
+			p.push(q.top());
+			q.pop();
+		}
+		while (p.size()>k)
+		{
+			cur-=p.top();
+			q.push(p.top());
+			p.pop();
+		}
+		return cur;
+	}
+};
+
+
+
 \end{lstlisting}
 
 
 
 \subsection{可持久化数组}
+
+历史遗留产物，无意义，仅作留存，不会更新。
 
 $O((n+q)\log(n))$，$O((n+q)\log (n))$。
 
@@ -214,6 +317,8 @@ struct arr
 \end{lstlisting}
 
 \subsection{左偏树/可并堆}
+
+建议不要使用。pbds 可以替代这个功能。我完全没有使用过这个板子。
 
 $O((n+q)\log n)$，$O(n)$。
 
@@ -282,7 +387,13 @@ struct left_tree//小根堆，大根堆需要改的地方注释了
 };
 \end{lstlisting}
 
-\subsection{树状数组区间修改区间求和}
+\subsection{树状数组区间加区间求和}
+
+本质：$a_n$ 区间加等价于差分数组 $d_n$ 的单点加。
+
+$\sum\limits_{i=1}^ma_i =\sum\limits_{i=1}^m\sum\limits_{j=1}^id_j=\sum\limits_{j=1}^md_j(m-j+1)=((m+1)\sum\limits_{j=1}^md_j)-(\sum\limits_{j=1}^mjd_j)$。
+
+分别维护 $d_j$ 和 $jd_j$ 的前缀和。
 
 $O(n)\sim O(q\log n)$，$O(n)$。
 
@@ -335,7 +446,9 @@ struct bit
 };
 \end{lstlisting}
 
-\subsection{二维树状数组矩形修改矩形求和}
+\subsection{二维树状数组矩形加矩形求和}
+
+本质还是差分，只不过这次要维护 $d_{i,j},d_{i,j}i,d_{i,j}j,d_{i,j}ij$。
 
 $O(n^2)\sim O(q\log^2n)$，$O(n^2)$
 
@@ -410,6 +523,10 @@ struct bit2
 
 \subsection{带修莫队（功能：区间数有多少种不同的数字）}
 
+按照 $n^{\frac{2}{3}}$ 分块，排序关键字是 l,r,t 所在的块（t 是版本号，每次修改都会增加一个版本），可以奇偶分块优化。
+
+相比于传统莫队多了一个 modify。
+
 $O(n^{\frac {5}{3}})$，$O(n)$。
 
 \begin{lstlisting}
@@ -435,9 +552,9 @@ struct Q
 };
 Q b[N];
 P d[N];
-inline void add(const int &x) {sum+=!(cnt[a[x]]++);}
-inline void del(const int &x) {sum-=!(--cnt[a[x]]);}
-inline void mdf(const int &x)
+void add(const int &x) {sum+=!(cnt[a[x]]++);}
+void del(const int &x) {sum-=!(--cnt[a[x]]);}
+void mdf(const int &x)
 {
 	auto &[p,v]=d[x];
 	if (z<=p&&p<=y) del(p);
@@ -479,6 +596,8 @@ int main()
 \end{lstlisting}
 
 \subsection{二次离线莫队}
+
+直接摘录题解，用途不大。
 
 $O(n\sqrt n)$，$O(n)$。
 
@@ -591,6 +710,12 @@ int main()
 
 \subsection{回滚莫队}
 
+不删除的莫队，比如求 $\max$。
+
+做法：块内询问暴力。对于 $l$ 所在块相同的询问，按照 $r$ 升序排序，并且将左指针固定在 $l$ 所在块的最右侧。（由于块内询问暴力，这不会导致左指针更大）
+
+回答每个询问的时候，先右端点右移到 $r$，然后左端点左移到 $l$。询问完成后，把左端点移回去。移回去的过程虽然涉及删除，但不需要维护答案变成什么了（因为在左端点左移之前已经求过了）。换句话说，相当于“撤销”而不是删除，完全可以记录移动过程中的所有变化来撤销。
+
 $O(n\sqrt n)$，$O(n)$。
 
 \begin{lstlisting}
@@ -683,9 +808,9 @@ int main()
 
 \subsection{李超树}
 
-题意：插入线段，查询某个 x 的最大 y（输出最小编号）
+题意：插入线段，查询某个 $x$ 的最大 $y$（输出最小编号）
 
-算法核心：seg 每个点维护在中点取值最大的线段，显然只会向一边递归
+算法核心：修改时，线段树每个点只维护在中点取值最大的线段，中点取值较小的线段只会在至多一侧有用，递归下去插入，复杂度 $O(\log^2)$。查询时询问线段树上 $\log$ 个点的线段中最大的。
 
 \begin{lstlisting}
 struct Q
@@ -786,7 +911,6 @@ int main()
 \end{lstlisting}
 
 \subsection{李超树（动态开点）}
-
 \begin{lstlisting}
 struct Q
 {
@@ -1105,11 +1229,11 @@ int main()
 $O((n+q)\log a)$，$O(n\log a)$。
 
 \begin{lstlisting}
-	template<class T,int M=sizeof(T)*8> struct base
+	template<class T,int M=sizeof(T)*8> struct base//线性基
 	{
 		array<T,M> a;
 		base():a{ } { }
-		bool insert(T x)
+		bool insert(T x)//线性基插入
 		{
 			if (x==0) return 0;
 			for (int i=__lg(x); x; i=__lg(x))
@@ -1123,13 +1247,13 @@ $O((n+q)\log a)$，$O(n\log a)$。
 			}
 			return 0;
 		}
-		base &operator+=(const base &o)
+		base &operator+=(const base &o)//合并线性基
 		{
 			for (ll x:o.a) if (x) insert(x);
 			return *this;
 		}
-		base operator+(base o) const { return o+=*this; }
-		bool contains(T x) const
+		base operator+(base o) const { return o+=*this; }//合并线性基
+		bool contains(T x) const//查询是否能 xor 出 x
 		{
 			if (x==0) return 1;
 			for (int i=__lg(x); x; i=__lg(x))
@@ -1139,7 +1263,7 @@ $O((n+q)\log a)$，$O(n\log a)$。
 			}
 			return 1;
 		}
-		T max(T x=0) const
+		T max(T x=0) const//查询子集 xor 的最大值。若有传入参数 x，表示子集 xor x 的最大值。 
 		{
 			for (int i=M-1; i>=0; i--) if (1^x>>i&1) x^=a[i];
 			return x;
@@ -1149,8 +1273,8 @@ $O((n+q)\log a)$，$O(n\log a)$。
 	{
 		vector<array<pair<T,int>,M>> a;
 		rangebase():a{{ }} { }
-		rangebase(const vector<T> &b):a{{ }} { for (T x:b) insert(x); }
-		void insert(T x)
+		rangebase(const vector<T> &b):a{{ }} { for (T x:b) insert(x); }//直接用一个 vector 构造
+		void push_back(T x)//在最后插入 x
 		{
 			int n=a.size()-1;
 			a.push_back(a.back());
@@ -1175,7 +1299,7 @@ $O((n+q)\log a)$，$O(n\log a)$。
 				}
 			}
 		}
-		base<T,M> ask(int l,int r)
+		base<T,M> ask(int l,int r)//查询 $[l,r)$ 元素构成的线性基。下标从 0 开始（同 vector）
 		{
 			assert(0<=l&&l<=r&&r<=a.size());
 			base<T,M> res;
@@ -1417,6 +1541,8 @@ struct P
 
 \subsection{第 $k$ 大线性基}
 
+注意数字大于 $2^50$ 时可能要修改循环范围。
+
 $O((n+q)\log a)$，$O(\log a)$。
 
 \begin{lstlisting}
@@ -1430,7 +1556,7 @@ void ins(ll x)
 	}
 	if (!x) con=1;
 }
-ll kmax(ll x)//若有初始值改 r 即可
+ll kmax(ll x)//查询第 k 大（本质不同，不允许空集）的 xor 结果，若有初始值改 r 即可
 {
 	ll r=0;
 	int m=0,i;
@@ -1440,7 +1566,7 @@ ll kmax(ll x)//若有初始值改 r 即可
 	for (i=1;i<=m;i++) if ((x>>m-i^r>>a[i])&1) r^=ji[a[i]];
 	return r;
 }
-ll kmin(ll x)//若有初始值改 r 即可
+ll kmin(ll x)//查询第 k 小（本质不同，不允许空集）的 xor 结果，若有初始值改 r 即可
 {
 	ll r=0;
 	int m=0,i;
@@ -1451,9 +1577,10 @@ ll kmin(ll x)//若有初始值改 r 即可
 	return r;
 }
 
- \end{lstlisting}
+\end{lstlisting}
 
 \subsection{fhq-treap}
+洛谷模板：普通平衡树。
 
 $O((n+q)\log n)$，$O(n)$。
 
@@ -1495,44 +1622,49 @@ int main()
 	while (m--)
 	{
 		read(y);read(x);x^=la;
-		if (y==4)
+		if (y==4)//找到第 x 小的
 		{
 			kth=x;split_kth(rt,p,q);x=p;
 			while (c[x][1]) x=c[x][1];
 			ans^=(la=v[x]);rt=merge(p,q);
 			continue;
 		}
-		val=x;
-		if (y==1)
+		val=x;//注意这一步
+		if (y==1)//插入 x
 		{
 			v[++ds]=x;w[ds]=rand();s[ds]=1;
 			split_val(rt,p,q);rt=merge(merge(p,ds),q);
 			continue;
 		}
-		if (y==2)
+		if (y==2)//删除一个 x
 		{
 			split_val(rt,p,q);kth=1;split_kth(q,i,z);
 			rt=merge(p,z);continue;
 		}
-		if (y==3)
+		if (y==3)//询问 x 的排名（比 x 小的数字个数 +1）
 		{
 			split_val(rt,p,q);ans^=(la=s[p]+1);
 			rt=merge(p,q);continue;
 		}
-		if (y==5)
+		if (y==5)//询问比 x 小的最大值
 		{
 			split_val(rt,p,q);x=p;
 			while (c[x][1]) x=c[x][1];ans^=(la=v[x]);
 			rt=merge(p,q);continue;
 		}
-		++val;split_val(rt,p,q);x=q;
+		++val;split_val(rt,p,q);x=q;//询问比 x 大的最小值
 		while (c[x][0]) x=c[x][0];
 		ans^=(la=v[x]);rt=merge(p,q);
-	}printf("%d",ans);
+	}
+	printf("%d",ans);
 }
 \end{lstlisting}
 
-\subsection{笛卡尔树}
+\subsection{笛卡尔树的线性建树}
+
+$p[1,2,\ldots,n]$ 是原序列，c 表示子结点。
+
+笛卡尔树满足堆性质（权值小于等于子结点权值），并且中序遍历是原序列。
 
 $O(n)$，$O(n)$。
 
@@ -1557,90 +1689,137 @@ int main()
 
 \subsection{扫描线}
 
+求矩形并的面积和周长（包括内周长）
+
 $O((n+q)\log n)$，$O(n+q)$。
 
 \begin{lstlisting}
-const int N=2e5+2,M=8e5+2;//2倍N
-struct Q
-{
-	int l,r,h,typ;
-	Q(int a=0,int b=0,int c=0,int d=0):l(a),r(b),h(c),typ(d){}
-	bool operator<(const Q &o) const {return h<o.h;}
-};
-ll ans;
-Q q[N];
-int l[M],r[M],s[M][2],lz[M];
-int xx[N>>1][2],yy[N>>1][2],a[N];
-int n,i,j,x,y,z,dt,m,len;
-void pushup(int x)
-{
-	int c=x<<1;
-	if (s[c][0]==s[c|1][0]) s[x][0]=s[c][0],s[x][1]=s[c][1]+s[c|1][1];
-	else
+	using T=ll;
+	vector<T> fun(vector<tuple<T, T, T, T>> &a)
 	{
-		if (s[c][0]>s[c|1][0]) c|=1; 
-		s[x][0]=s[c][0];s[x][1]=s[c][1];
+		vector<T> x;
+		for (auto [x1, y1, x2, y2]:a)
+		{
+			x.push_back(x1);
+			x.push_back(x2);
+		}
+		sort(all(x)); x.resize(unique(all(x))-x.begin());
+		for (auto &[x1, y1, x2, y2]:a)
+		{
+			x1=lower_bound(all(x), x1)-x.begin();
+			x2=lower_bound(all(x), x2)-x.begin();
+		}
+		return x;
 	}
-}
-void pushdown(int x)
-{
-	if (lz[x])
+	struct sgt
 	{
-		int c=x<<1;
-		lz[c]+=lz[x];s[c][0]+=lz[x];c|=1;
-		lz[c]+=lz[x];s[c][0]+=lz[x];lz[x]=0;
+		int n, z, y, d;
+		vector<T> cnt, &p;
+		vector<int> mn, lz;
+		void build(int x, int l, int r)
+		{
+			cnt[x]=p[min(r, n-1)]-p[l];
+			if (l+1==r) return;
+			int c=x*2, m=l+r>>1;
+			build(c, l, m); build(c+1, m, r);
+		}
+		sgt(vector<T> &p):n(p.size()), p(p), cnt(n*4), mn(n*4), lz(n*4) { build(1, 0, n); }
+		void dfs(int x, int l, int r)
+		{
+			if (z<=l&&r<=y)
+			{
+				mn[x]+=d;
+				lz[x]+=d;
+				return;
+			}
+			int c=x*2, m=l+r>>1;
+			if (lz[x])
+			{
+				lz[c]+=lz[x]; lz[c+1]+=lz[x];
+				mn[c]+=lz[x]; mn[c+1]+=lz[x];
+				lz[x]=0;
+			}
+			if (z<m) dfs(c, l, m);
+			if (m<y) dfs(c+1, m, r);
+			mn[x]=min(mn[c], mn[c+1]);
+			cnt[x]=cnt[c]*(mn[x]==mn[c])+cnt[c+1]*(mn[x]==mn[c+1]);
+		}
+		void modify(int l, int r, int dt)
+		{
+			z=l;
+			y=r;
+			d=dt;
+			dfs(1, 0, n);
+		}
+	};
+	T area(vector<tuple<T, T, T, T>> a)//[x1,y1,x2,y2], x1<y1, x2<y2
+	{
+		int n=a.size(), i;
+		auto X=fun(a);
+		vector<tuple<T, int, T, T>> b(n*2);
+		for (i=0; i<n; i++)
+		{
+			auto [x1, y1, x2, y2]=a[i];
+			b[i]={y1, -1, x1, x2};
+			b[i+n]={y2, 1, x1, x2};
+		}
+		sort(all(b), greater<>());
+		sgt s(X);
+		T lst=0, ans=0;
+		for (auto [y, d, l, r]:b)
+		{
+			ans+=(lst-y)*(X.back()-X[0]-s.cnt[1]);
+			s.modify(l, r, d);
+			lst=y;
+		}
+		return ans;
 	}
-}
-void build(int x)
-{
-	if (l[x]==r[x]) return s[x][1]=a[l[x]+1]-a[l[x]],void();
-	int c=x<<1;
-	l[c]=l[x];r[c]=l[x]+r[x]>>1;
-	l[c|1]=r[c]+1;r[c|1]=r[x];
-	build(c);build(c|1);
-	pushup(x);
-}
-void mdf(int x)
-{
-	if (z<=l[x]&&r[x]<=y)
+	T perimeter_x(vector<tuple<T, T, T, T>> a)
 	{
-		lz[x]+=dt;s[x][0]+=dt;return;
+		int n=a.size(), i;
+		auto X=fun(a);
+		vector<tuple<T, int, T, T>> b(n*2);
+		for (i=0; i<n; i++)
+		{
+			auto [x1, y1, x2, y2]=a[i];
+			b[i]={y1, -1, x1, x2};
+			b[i+n]={y2, 1, x1, x2};
+		}
+		sort(all(b), greater<>());
+		sgt s(X);
+		T lst=s.cnt[1], ans=0;
+		for (auto [y, d, l, r]:b)
+		{
+			s.modify(l, r, d);
+			T cur=s.cnt[1];
+			ans+=abs(lst-cur);
+			lst=cur;
+		}
+		return ans;
 	}
-	pushdown(x);
-	int c=x<<1;
-	if (z<=r[c]) mdf(c);
-	if (y>r[c]) mdf(c|1);
-	pushup(x);
-}
-int main()
-{
-	read(n);
-	for (i=1;i<=n;i++)
+	T perimeter(vector<tuple<T, T, T, T>> a)//[x1,y1,x2,y2], x1<y1, x2<y2
 	{
-		read(xx[i][0]);read(yy[i][0]);
-		read(xx[i][1]);read(yy[i][1]);
-		a[++m]=xx[i][0],a[++m]=xx[i][1];
+		T ansx=perimeter_x(a);
+		for (auto &[x1, y1, x2, y2]:a)
+		{
+			swap(x1, y1);
+			swap(x2, y2);
+		}
+		T ansy=perimeter_x(a);
+		return ansx+ansy;
 	}
-sort(a+1,a+m+1);r[l[1]=1]=(m=unique(a+1,a+m+1)-a-1)-1;build(1);
-	for (i=1;i<=n;i++)
-	{
-		xx[i][0]=lower_bound(a+1,a+m+1,xx[i][0])-a;
-		xx[i][1]=lower_bound(a+1,a+m+1,xx[i][1])-a;
-		q[i]=Q(xx[i][0],xx[i][1],yy[i][0],1);
-		q[i+n]=Q(xx[i][0],xx[i][1],yy[i][1],-1);
-	}m=n<<1;len=a[m]-a[1];
-	sort(q+1,q+m+1);
-	for (i=1;i<=m;i++)
-	{
-		z=q[i].l;y=q[i].r-1;dt=q[i].typ;mdf(1);
-		ans+=(ll)(s[1][0]?len:len-s[1][1])*(q[i+1].h-q[i].h);
-	}
-	printf("%lld\n",ans);
-}
 \end{lstlisting}
 
 \subsection{Segmenttree Beats!}
+核心是 P（tag） 和 Q（info） 的维护。线段树部分是套的模板，并非全都有用。
+\begin{enumerate}
+	\item $l,r,k$：对于所有的 $i\in[l,r]$，将 $A_i$ 加上 $k$（$k$ 可以为负数）。
+	\item $l,r,v$：对于所有的 $i\in[l,r]$，将 $A_i$ 变成 $\min(A_i,v)$。
+	\item $l,r$：求 $\sum\limits_{i=l}^{r}A_i$。
+	\item $l,r$：对于所有的 $i\in[l,r]$，求 $A_i$ 的最大值。
+	\item $l,r$：对于所有的 $i\in[l,r]$，求 $B_i$ 的最大值。
 
+\end{enumerate}
 \begin{lstlisting}
 struct P
 {
@@ -1996,14 +2175,14 @@ tmpl struct KDT
 		for (i=0; i<n; i++) a[i]={x[i],y[i],w[i]};
 		for (i=j=0; n>>i; i++) if (n>>i&1) s[i].build(1,a+j,1<<i),j+=1<<i;
 	}
-	void insert(ll x,ll y,T w)
+	void insert(ll x,ll y,T w)//插入 (x,y) 的一个数 w
 	{
 		a[0]={x,y,w}; m=1;
 		for (i=0; n&1<<i; i++) for (auto u:s[i].c) a[m++]=u;
 		s[i].build(1,a,m);
 		++n;
 	}
-	pair<bool,T> ask(ll x,ll y,ll xx,ll yy)
+	pair<bool,T> ask(ll x,ll y,ll xx,ll yy)//查询 [x,xx]*[y,yy] 的和
 	{
 		T ans;
 		bool fir=1;
@@ -2040,6 +2219,8 @@ int main()
 \end{lstlisting}
 
 \subsection{双端队列全局查询}
+
+对一个支持结合律的信息 T，维护 deque 内信息的和。总复杂度线性。
 
 \begin{lstlisting}
 
@@ -2436,7 +2617,7 @@ namespace sgt
 typedef sgt::set tree;
 \end{lstlisting}
 
-\subsection{bitset（手写，未验）}
+\subsection{bitset（手写，未验证）}
 
 \begin{lstlisting}
 
@@ -2649,7 +2830,7 @@ template<class T> struct mode//[0,n)
 \section{数学}
 
 \subsection{单情况矩阵 (+)}
-
+没啥用。特殊的 ddp 有用。
 \begin{lstlisting}
 
 template<typename T,int n> struct matrix
@@ -2950,12 +3131,11 @@ namespace online_inv
 {
 	typedef unsigned int ui;
 	typedef unsigned long long ll;
-	const ui p=1e9+7;
-	const ui n=1010,m=n*n,N=m+2;
+	const ll p=1e9+7,n=1010,m=n*n,N=m+2;
 	int l[N],r[N];
-	ui y[N];
+	ll y[N];
 	bool s[N];
-	ui _inv[N*2],i,j,k;
+	ll _inv[N*2],i,j,k;
 	void init_inv()
 	{
 		assert(n*n*n>p);
@@ -2963,7 +3143,7 @@ namespace online_inv
 		for (i=2;i<m*2;i++)
 		{
 			j=p/i;
-			_inv[i]=(ll)(p-j)*_inv[p-i*j]%p;
+			_inv[i]=(p-j)*_inv[p-i*j]%p;
 		}
 		s[0]=y[0]=1;
 		for (i=1;i<n;i++) for (j=i;j<n;j++) if (!s[k=i*m/j])
@@ -2977,13 +3157,13 @@ namespace online_inv
 		for (i=m-1;~i;i--) r[i]=s[i]?y[i]:r[i+1];
 		for (i=0;i<=m;i++) y[i]=min(l[i],r[i]);
 	}
-	inline ui inv(const ui &x)
+	inline ll inv(const ll &x)
 	{
 		assert(x&&x<p);
 		if (x<m*2) return _inv[x];
-		k=(ll)x*m/p;
-		j=(ll)y[k]*x%p;
-		return (j<m*2?_inv[j]:p-_inv[p-j])*(ll)y[k]%p;
+		k=x*m/p;
+		j=y[k]*x%p;
+		return (j<m*2?_inv[j]:p-_inv[p-j])*y[k]%p;
 	}
 }
 using online_inv::init_inv,online_inv::inv,online_inv::p;
@@ -11992,13 +12172,30 @@ optional<vector<int>> directed_euler_trail(int n,const vector<pair<int,int>> &ed
 }
 \end{lstlisting}
 
-\subsection{有向图欧拉回路计数（BEST 定理）}
+\subsection{有向图欧拉回路计数（BEST 定理）/生成树计数}
 
 $O(n^3)$，$O(n^2)$。
 
 以 $u$ 为起点的欧拉回路个数 $sum=T(u)\times \prod\limits_{v=1}^n(out(v)-1)!$，其中 $T(u)$ 是以 $u$ 为根的内向树个数（出度矩阵-邻接矩阵），$out(v)$ 是 $v$ 的出度。若允许循环同构（如 $1\to 2\to 1\to 3\to 1$ 与 $1\to 3\to 1\to 2\to 1$），还需多乘 $out(u)$。
 
 \begin{lstlisting}
+	ll det(vector<vector<ll>> b)
+{
+	ll r=1;
+	int n=b.size(), i, j, k;
+	for (i=0; i<n; i++)
+	{
+		for (j=i; j<n; j++) if (b[j][i]) break;
+		if (j==n) return 0;
+		swap(b[j], b[i]);
+		if (j!=i) r=(p-r)%p;
+		r=r*b[i][i]%p;
+		b[i][i]=ksm(b[i][i], p-2);
+		for (j=n-1; j>=i; j--) b[i][j]=b[i][j]*b[i][i]%p;
+		for (j=i+1; j<n; j++) for (k=n-1; k>=i; k--) b[j][k]=(b[j][k]+(p-b[j][i])*b[i][k])%p;
+	}
+	return r;
+}
 ll eular_path_count(vector<vector<int>> a, int s, int t)
 {
 	int n=a.size(), i, j, k;
@@ -12025,17 +12222,7 @@ ll eular_path_count(vector<vector<int>> a, int s, int t)
 		b[i][i]=cd[id[i]]-a[id[i]][id[i]];
 		for (j=0; j<n; j++) if (i!=j) b[i][j]=(p-a[id[i]][id[j]])%p;
 	}
-	for (i=0; i<n; i++)
-	{
-		for (j=i; j<n; j++) if (b[j][i]) break;
-		if (j==n) return 0;
-		swap(b[j], b[i]);
-		r=r*b[i][i]%p;
-		b[i][i]=ksm(b[i][i], p-2);
-		for (j=n-1; j>=i; j--) b[i][j]=b[i][j]*b[i][i]%p;
-		for (j=i+1; j<n; j++) for (k=n-1; k>=i; k--) b[j][k]=(b[j][k]+(p-b[j][i])*b[i][k])%p;
-	}
-	return r;
+	return r*det(b)%p;
 }
 ll eular_path_count(vector<vector<int>> a)
 {
@@ -12053,6 +12240,31 @@ ll eular_path_count(vector<vector<int>> a)
 	}
 	else r=eular_path_count(a, s, t);
 	return r%p;
+}
+ll eular_circuit_count(vector<vector<int>> a)
+{
+	int n=a.size(), i, j;
+	for (i=0; i<n; i++) for (j=0; j<n; j++) if (a[i][j]) return eular_path_count(a, i, i)*ksm(accumulate(all(a[i]), 0llu)%p, p-2)%p;
+	return 1;
+}
+ll directed_spanning_tree_count(vector<vector<int>> a, int s)
+{
+	int n=a.size(), i, j;
+	vector b(n-1, vector<ll>(n-1));
+	for (i=0; i<n; i++) a[i][i]=0;
+	for (i=0; i<n; i++) if (i!=s) for (j=0; j<n; j++) if (j!=s&&i!=j) b[i-(i>s)][j-(j>s)]=(p-a[i][j])%p;
+	for (i=0; i<n; i++) if (i!=s) for (j=0; j<n; j++) (b[i-(i>s)][i-(i>s)]+=a[j][i])%=p;
+	return det(b);
+}//外向
+ll undirected_spanning_tree_count(vector<vector<int>> a)
+{
+	int n=a.size(), i, j;
+	--n;
+	vector b(n, vector<ll>(n));
+	for (i=0; i<n; i++) a[i][i]=0;
+	for (i=0; i<n; i++) for (j=0; j<n; j++) if (i!=j) b[i][j]=(p-a[i][j])%p;
+	for (i=0; i<n; i++) b[i][i]=reduce(all(a[i]), 0llu)%p;
+	return det(b);
 }
 \end{lstlisting}
 
@@ -12307,364 +12519,423 @@ db sim(db l,db r)
 \subsection{板子}
 
 \begin{lstlisting}
-namespace geometry//不要用 int！
-{
+	namespace geometry//不要用 int！
+	{
 	#define tmpl template<typename T>
-	typedef long long ll;
-	typedef long double db;
-	const db eps=1e-6;
+		typedef long long ll;
+		typedef long double db;
+		const db eps=1e-6;
 	#define all(x) (x).begin(),(x).end()
-	inline int sgn(const ll &x)
-	{
-		if (x<0) return -1;
-		return x>0;
-	}
-	inline int sgn(const db &x)
-	{
-		if (fabs(x)<eps) return 0;
-		return x>0?1:-1;
-	}
-	tmpl struct point//* 为叉乘，& 为点乘，只允许使用 double 和 ll
-	{
-		T x,y;
-		point(){}
-		point(T a,T b):x(a),y(b){}
-		operator point<ll>() const {return point<ll>(x,y);}
-		operator point<db>() const {return point<db>(x,y);}
-		point<T> operator+(const point<T> &o) const {return point(x+o.x,y+o.y);}
-		point<T> operator-(const point<T> &o) const {return point(x-o.x,y-o.y);}
-		point<T> operator*(const T &k) const {return point(x*k,y*k);}
-		point<T> operator/(const T &k) const {return point(x/k,y/k);}
-		T operator*(const point<T> &o) const {return x*o.y-y*o.x;}
-		T operator&(const point<T> &o) const {return x*o.x+y*o.y;}
-		void operator+=(const point<T> &o) {x+=o.x;y+=o.y;}
-		void operator-=(const point<T> &o) {x-=o.x;y-=o.y;}
-		void operator*=(const T &k) {x*=k;y*=k;}
-		void operator/=(const T &k) {x/=k;y/=k;}
-		bool operator==(const point<T> &o) const {return x==o.x&&y==o.y;}
-		bool operator!=(const point<T> &o) const {return x!=o.x||y!=o.y;}
-		db len() const {return sqrt(len2());}//模长
-		T len2() const {return x*x+y*y;}
-	};
-	const point<db> npos=point<db>(514e194,9810e191),apos=point<db>(145e174,999e180);
-	const int DS[4]={1,2,4,3};
-	tmpl int quad(const point<T> &o)//坐标轴归右上象限，返回值 [1,4]
-	{
-		return DS[(sgn(o.y)<0)*2+(sgn(o.x)<0)];
-	}
-	tmpl bool angle_cmp(const point<T> &a,const point<T> &b)
-	{
-		int c=quad(a),d=quad(b);
-		if (c!=d) return c<d;
-		return a*b>0;
-	}
-	tmpl db dis(const point<T> &a,const point<T> &b) {return (a-b).len();}
-	tmpl T dis2(const point<T> &a,const point<T> &b) {return (a-b).len2();}
-	tmpl point<T> operator*(const T &k,const point<T> &o) {return point<T>(k*o.x,k*o.y);}
-	tmpl bool operator<(const point<T> &a,const point<T> &b)
-	{
-		int s=sgn(a*b);
-		return s>0||s==0&&sgn(a.len2()-b.len2())<0;
-	}
-	istream & operator>>(istream &cin,point<ll> &o) {return cin>>o.x>>o.y;}
-	istream & operator>>(istream &cin,point<db> &o)
-	{
-		string s;
-		cin>>s;
-		o.x=stod(s);
-		cin>>s;
-		o.y=stod(s);
-		return cin;
-	}
-	tmpl ostream & operator<<(ostream &cout,const point<T> &o) 
-	{
-		if ((point<db>)o==apos) return cout<<"all position";
-		if ((point<db>)o==npos) return cout<<"no position";
-		return cout<<'('<<o.x<<','<<o.y<<')';
-	}
-	tmpl struct line
-	{
-		point<T> o,d;
-		line(){}
-		line(const point<T> &a,const point<T> &b,int twopoint);
-		bool operator!=(const line<T> &m) {return !(*this==m);}
-	};
-	template<> line<ll>::line(const point<ll> &a,const point<ll> &b,int twopoint)
-	{
-		o=a;
-		d=twopoint?b-a:b;
-		ll tmp=gcd(d.x,d.y);
-		assert(tmp);
-		if (d.x<0||d.x==0&&d.y<0) tmp=-tmp;
-		d.x/=tmp;d.y/=tmp;
-	}
-	template<> line<db>::line(const point<db> &a,const point<db> &b,int twopoint)
-	{
-		o=a;
-		d=twopoint?b-a:b;
-		int s=sgn(d.x);
-		if (s<0||!s&&d.y<0) d.x=-d.x,d.y=-d.y;
-	}
-	tmpl line<T> rotate_90(const line<T> &m) {return line(m.o,point(m.d.y,-m.d.x),0);}
-	tmpl line<db> rotate(const line<T> &m,db angle)
-	{
-		return {(point<db>)m.o,{m.d.x*cos(angle)-m.d.y*sin(angle),m.d.x*sin(angle)+m.d.y*cos(angle)},0};
-	}
-	tmpl db get_angle(const line<T> &m,const line<T> &n) {return asin((m.d*n.d)/(m.d.len()*n.d.len()));}
-	tmpl bool operator<(const line<T> &m,const line<T> &n)
-	{
-		int s=sgn(m.d*n.d);
-		return s?s>0:m.d*m.o<n.d*n.o;
-	}
-	bool operator==(const line<ll> &m,const line<ll> &n) {return m.d==n.d&&(m.o-n.o)*m.d==0;}
-	bool operator==(const line<db> &m,const line<db> &n) {return fabs(m.d*n.d)<eps&&fabs((n.o-m.o)*m.d)<eps;}
-	tmpl ostream & operator<<(ostream &cout,const line<T> &o) {return cout<<'('<<o.d.x<<" k + "<<o.o.x<<" , "<<o.d.y<<" k + "<<o.o.y<<")";}
-	tmpl point<db> intersect(const line<T> &m,const line<T> &n)
-	{
-		if (!sgn(m.d*n.d))
+		inline int sgn(const ll &x)
 		{
-			if (!sgn(m.d*(n.o-m.o))) return apos;
-			return npos;
+			if (x<0) return -1;
+			return x>0;
 		}
-		return (point<db>)m.o+(n.o-m.o)*n.d/(db)(m.d*n.d)*(point<db>)m.d;
-	}
-	tmpl db dis(const line<T> &m,const point<T> &o) {return abs(m.d*(o-m.o)/m.d.len());}
-	tmpl db dis(const point<T> &o,const line<T> &m) {return abs(m.d*(o-m.o)/m.d.len());}
-	struct circle
-	{
-		point<db> o;
-		db r;
-		circle(){}
-		circle(const point<db> &O,const db &R=0):o(point<db>((db)O.x,(db)O.y)),r(R){}//圆心半径构造
-		circle(const point<db> &a,const point<db> &b)//直径构造
+		inline int sgn(const db &x)
 		{
-			o=(a+b)*0.5;
-			r=dis(b,o);
+			if (fabs(x)<eps) return 0;
+			return x>0?1:-1;
 		}
-		circle(const point<db> &a,const point<db> &b,const point<db> &c)//三点构造外接圆（非最小圆）
+		tmpl struct point//* 为叉乘，& 为点乘，只允许使用 double 和 ll
 		{
-			auto A=(b+c)*0.5,B=(a+c)*0.5;
-			o=intersect(rotate_90(line(A,c,1)),rotate_90(line(B,c,1)));
-			r=dis(o,c);
+			T x, y;
+			point() { }
+			point(T a, T b):x(a), y(b) { }
+			operator point<ll>() const { return point<ll>(x, y); }
+			operator point<db>() const { return point<db>(x, y); }
+			point<T> operator+(const point<T> &o) const { return point(x+o.x, y+o.y); }
+			point<T> operator-(const point<T> &o) const { return point(x-o.x, y-o.y); }
+			point<T> operator*(const T &k) const { return point(x*k, y*k); }
+			point<T> operator/(const T &k) const { return point(x/k, y/k); }
+			T operator*(const point<T> &o) const { return x*o.y-y*o.x; }
+			T operator&(const point<T> &o) const { return x*o.x+y*o.y; }
+			void operator+=(const point<T> &o) { x+=o.x; y+=o.y; }
+			void operator-=(const point<T> &o) { x-=o.x; y-=o.y; }
+			void operator*=(const T &k) { x*=k; y*=k; }
+			void operator/=(const T &k) { x/=k; y/=k; }
+			bool operator==(const point<T> &o) const { return x==o.x&&y==o.y; }
+			bool operator!=(const point<T> &o) const { return x!=o.x||y!=o.y; }
+			db len() const { return sqrt(len2()); }//模长
+			T len2() const { return x*x+y*y; }
+		};
+		const point<db> npos=point<db>(514e194, 9810e191), apos=point<db>(145e174, 999e180);
+		const int DS[4]={1, 2, 4, 3};
+		tmpl int quad(const point<T> &o)//坐标轴归右上象限，返回值 [1,4]
+		{
+			return DS[(sgn(o.y)<0)*2+(sgn(o.x)<0)];
 		}
-		circle(vector<point<db>> a)
+		tmpl bool angle_cmp(const point<T> &a, const point<T> &b)
 		{
-			int n=a.size(),i,j,k;
-			mt19937 rnd(75643);
-			shuffle(all(a),rnd);
-			*this=circle(a[0]);
-			for (i=1;i<n;i++) if (!cover(a[i]))
+			int c=quad(a), d=quad(b);
+			if (c!=d) return c<d;
+			return a*b>0;
+		}
+		tmpl db dis(const point<T> &a, const point<T> &b) { return (a-b).len(); }
+		tmpl T dis2(const point<T> &a, const point<T> &b) { return (a-b).len2(); }
+		tmpl point<T> operator*(const T &k, const point<T> &o) { return point<T>(k*o.x, k*o.y); }
+		tmpl bool operator<(const point<T> &a, const point<T> &b)
+		{
+			int s=sgn(a*b);
+			return s>0||s==0&&sgn(a.len2()-b.len2())<0;
+		}
+		istream &operator>>(istream &cin, point<ll> &o) { return cin>>o.x>>o.y; }
+		istream &operator>>(istream &cin, point<db> &o)
+		{
+			string s;
+			cin>>s;
+			o.x=stod(s);
+			cin>>s;
+			o.y=stod(s);
+			return cin;
+		}
+		tmpl ostream &operator<<(ostream &cout, const point<T> &o)
+		{
+			if ((point<db>)o==apos) return cout<<"all position";
+			if ((point<db>)o==npos) return cout<<"no position";
+			return cout<<'('<<o.x<<','<<o.y<<')';
+		}
+		tmpl struct line
+		{
+			point<T> o, d;
+			line() { }
+			line(const point<T> &a, const point<T> &b, int twopoint);
+			bool operator!=(const line<T> &m) { return !(*this==m); }
+		};
+		template<> line<ll>::line(const point<ll> &a, const point<ll> &b, int twopoint)
+		{
+			o=a;
+			d=twopoint?b-a:b;
+			ll tmp=gcd(d.x, d.y);
+			assert(tmp);
+			if (d.x<0||d.x==0&&d.y<0) tmp=-tmp;
+			d.x/=tmp; d.y/=tmp;
+		}
+		template<> line<db>::line(const point<db> &a, const point<db> &b, int twopoint)
+		{
+			o=a;
+			d=twopoint?b-a:b;
+			int s=sgn(d.x);
+			if (s<0||!s&&d.y<0) d.x=-d.x, d.y=-d.y;
+		}
+		tmpl line<T> rotate_90(const line<T> &m) { return line(m.o, point(m.d.y, -m.d.x), 0); }
+		tmpl line<db> rotate(const line<T> &m, db angle)
+		{
+			return {(point<db>)m.o, {m.d.x*cos(angle)-m.d.y*sin(angle), m.d.x*sin(angle)+m.d.y*cos(angle)}, 0};
+		}
+		tmpl db get_angle(const line<T> &m, const line<T> &n) { return asin((m.d*n.d)/(m.d.len()*n.d.len())); }
+		tmpl bool operator<(const line<T> &m, const line<T> &n)
+		{
+			int s=sgn(m.d*n.d);
+			return s?s>0:m.d*m.o<n.d*n.o;
+		}
+		bool operator==(const line<ll> &m, const line<ll> &n) { return m.d==n.d&&(m.o-n.o)*m.d==0; }
+		bool operator==(const line<db> &m, const line<db> &n) { return fabs(m.d*n.d)<eps&&fabs((n.o-m.o)*m.d)<eps; }
+		tmpl ostream &operator<<(ostream &cout, const line<T> &o) { return cout<<'('<<o.d.x<<" k + "<<o.o.x<<" , "<<o.d.y<<" k + "<<o.o.y<<")"; }
+		tmpl point<db> intersect(const line<T> &m, const line<T> &n)
+		{
+			if (!sgn(m.d*n.d))
 			{
-				*this=circle(a[i]);
-				for (j=0;j<i;j++) if (!cover(a[j]))
+				if (!sgn(m.d*(n.o-m.o))) return apos;
+				return npos;
+			}
+			return (point<db>)m.o+(n.o-m.o)*n.d/(db)(m.d*n.d)*(point<db>)m.d;
+		}
+		tmpl db dis(const line<T> &m, const point<T> &o) { return abs(m.d*(o-m.o)/m.d.len()); }
+		tmpl db dis(const point<T> &o, const line<T> &m) { return abs(m.d*(o-m.o)/m.d.len()); }
+		struct circle
+		{
+			point<db> o;
+			db r;
+			circle() { }
+			circle(const point<db> &O, const db &R=0):o(point<db>((db)O.x, (db)O.y)), r(R) { }//圆心半径构造
+			circle(const point<db> &a, const point<db> &b)//直径构造
+			{
+				o=(a+b)*0.5;
+				r=dis(b, o);
+			}
+			circle(const point<db> &a, const point<db> &b, const point<db> &c)//三点构造外接圆（非最小圆）
+			{
+				auto A=(b+c)*0.5, B=(a+c)*0.5;
+				o=intersect(rotate_90(line(A, c, 1)), rotate_90(line(B, c, 1)));
+				r=dis(o, c);
+			}
+			circle(vector<point<db>> a)
+			{
+				int n=a.size(), i, j, k;
+				mt19937 rnd(75643);
+				shuffle(all(a), rnd);
+				*this=circle(a[0]);
+				for (i=1; i<n; i++) if (!cover(a[i]))
 				{
-					*this=circle(a[i],a[j]);
-					for (k=0;k<j;k++) if (!cover(a[k])) *this=circle(a[i],a[j],a[k]);
+					*this=circle(a[i]);
+					for (j=0; j<i; j++) if (!cover(a[j]))
+					{
+						*this=circle(a[i], a[j]);
+						for (k=0; k<j; k++) if (!cover(a[k])) *this=circle(a[i], a[j], a[k]);
+					}
 				}
 			}
-		}
-		circle(const vector<point<ll>> &b)
-		{
-			vector<point<db>> a(b.size());
-			int n=a.size(),i,j,k;
-			for (i=0;i<a.size();i++) a[i]=(point<db>)b[i];
-			*this=circle(a);
-		}
-		tmpl bool cover(const point<T> &a) {return sgn(dis((point<db>)a,o)-r)<=0;}
-	};
-	tmpl struct segment
-	{
-		point<T> a,b;
-		segment(){}
-		segment(point<T> o,point<T> p)
-		{
-			int s=sgn(o.x-p.x);
-			if (s>0||!s&&o.y>p.y) swap(o,p);
-			a=o;b=p;
-		}
-	};
-	tmpl bool intersect(const segment<T> &m,const segment<T> &n)
-	{
-		auto a=n.b-n.a,b=m.b-m.a;
-		auto d=n.a-m.a;
-		if (sgn(n.b.x-m.a.x)<0||sgn(m.b.x-n.a.x)<0) return 0;
-		if (sgn(max(n.a.y,n.b.y)-min(m.a.y,m.b.y))<0||sgn(max(m.a.y,m.b.y)-min(n.a.y,n.b.y))<0) return 0;
-		return sgn(b*d)*sgn((n.b-m.a)*b)>=0&&sgn(a*d)*sgn((m.b-n.a)*a)<=0;
-	}
-	tmpl struct convex
-	{
-		vector<point<T>> p;
-		convex(vector<point<T>> a);
-		db peri()//周长
-		{
-			int i,n=p.size();
-			db C=(p[n-1]-p[0]).len();
-			for (i=1;i<n;i++) C+=(p[i-1]-p[i]).len();
-			return C;
-		}
-		db area(){return area2()*0.5;}//面积
-		T area2()//两倍面积
-		{
-			int i,n=p.size();
-			T S=p[n-1]*p[0];
-			for (i=1;i<n;i++) S+=p[i-1]*p[i];
-			return abs(S);
-		}
-		db diam() {return sqrt(diam2());}
-		T diam2()//直径平方
-		{
-			T r=0;
-			int n=p.size(),i,j;
-			if (n<=2)
+			circle(const vector<point<ll>> &b)
 			{
-				for (i=0;i<n;i++) for (j=i+1;j<n;j++) r=max(r,dis2(p[i],p[j]));
+				vector<point<db>> a(b.size());
+				int n=a.size(), i, j, k;
+				for (i=0; i<a.size(); i++) a[i]=(point<db>)b[i];
+				*this=circle(a);
+			}
+			tmpl bool cover(const point<T> &a) { return sgn(dis((point<db>)a, o)-r)<=0; }
+		};
+		tmpl struct segment
+		{
+			point<T> a, b;
+			segment() { }
+			segment(point<T> o, point<T> p)
+			{
+				int s=sgn(o.x-p.x);
+				if (s>0||!s&&o.y>p.y) swap(o, p);
+				a=o; b=p;
+			}
+		};
+		tmpl bool intersect(const segment<T> &m, const segment<T> &n)
+		{
+			auto a=n.b-n.a, b=m.b-m.a;
+			auto d=n.a-m.a;
+			if (sgn(n.b.x-m.a.x)<0||sgn(m.b.x-n.a.x)<0) return 0;
+			if (sgn(max(n.a.y, n.b.y)-min(m.a.y, m.b.y))<0||sgn(max(m.a.y, m.b.y)-min(n.a.y, n.b.y))<0) return 0;
+			return sgn(b*d)*sgn((n.b-m.a)*b)>=0&&sgn(a*d)*sgn((m.b-n.a)*a)<=0;
+		}
+		tmpl struct convex
+		{
+			vector<point<T>> p;
+			convex(vector<point<T>> a);
+			db peri()//周长
+			{
+				int i, n=p.size();
+				db C=(p[n-1]-p[0]).len();
+				for (i=1; i<n; i++) C+=(p[i-1]-p[i]).len();
+				return C;
+			}
+			db area() { return area2()*0.5; }//面积
+			T area2()//两倍面积
+			{
+				int i, n=p.size();
+				T S=p[n-1]*p[0];
+				for (i=1; i<n; i++) S+=p[i-1]*p[i];
+				return abs(S);
+			}
+			db diam() { return sqrt(diam2()); }
+			T diam2()//直径平方
+			{
+				T r=0;
+				int n=p.size(), i, j;
+				if (n<=2)
+				{
+					for (i=0; i<n; i++) for (j=i+1; j<n; j++) r=max(r, dis2(p[i], p[j]));
+					return r;
+				}
+				p.push_back(p[0]);
+				for (i=0, j=1; i<n; i++)
+				{
+					while ((p[i+1]-p[i])*(p[j]-p[i])<=(p[i+1]-p[i])*(p[j+1]-p[i])) if (++j==n) j=0;
+					r=max({r, dis2(p[i], p[j]), dis2(p[i+1], p[j])});
+				}
+				p.pop_back();
 				return r;
 			}
-			p.push_back(p[0]);
-			for (i=0,j=1;i<n;i++)
+			bool cover(const point<T> &o) const//点是否在凸包内
 			{
-				while ((p[i+1]-p[i])*(p[j]-p[i])<=(p[i+1]-p[i])*(p[j+1]-p[i])) if (++j==n) j=0;
-				r=max({r,dis2(p[i],p[j]),dis2(p[i+1],p[j])});
+				if (o.x<p[0].x||o.x==p[0].x&&o.y<p[0].y) return 0;
+				if (o==p[0]) return 1;
+				if (p.size()==1) return 0;
+				ll tmp=(o-p[0])*(p.back()-p[0]);
+				if (tmp==0) return dis2(o, p[0])<=dis2(p.back(), p[0]);
+				if (tmp<0||p.size()==2) return 0;
+				int x=upper_bound(1+all(p), o, [&](const point<T> &a, const point<T> &b) { return (a-p[0])*(b-p[0])>0; })-p.begin()-1;
+				return (o-p[x])*(p[x+1]-p[x])<=0;
 			}
-			p.pop_back();
-			return r;
+			convex<T> operator+(const convex<T> &A) const
+			{
+				int n=p.size(), m=A.p.size(), i, j;
+				vector<point<T>> c;
+				if (min(n, m)<=2)
+				{
+					c.reserve(n*m);
+					for (i=0; i<n; i++) for (j=0; j<m; j++) c.push_back(p[i]+A.p[j]);
+					return convex<T>(c);
+				}
+				point<T> a[n], b[m];
+				for (i=0; i+1<n; i++) a[i]=p[i+1]-p[i];
+				a[n-1]=p[0]-p[n-1];
+				for (i=0; i+1<m; i++) b[i]=A.p[i+1]-A.p[i];
+				b[m-1]=A.p[0]-A.p[m-1];
+				c.reserve(n+m);
+				c.push_back(p[0]+A.p[0]);
+				for (i=j=0; i<n&&j<m;) c.push_back(c.back()+(a[i]*b[j]>0?a[i++]:b[j++]));
+				while (i<n-1) c.push_back(c.back()+a[i++]);
+				while (j<m-1) c.push_back(c.back()+b[j++]);
+				return convex<T>(c);
+			}
+			void operator+=(const convex &a) { *this=*this+a; }
+		};
+		tmpl convex<T>::convex(vector<point<T>> a)
+		{
+			int n=a.size(), i;
+			if (!n) return;
+			p=a;
+			for (i=1; i<n; i++) if (p[i].x<p[0].x||p[i].x==p[0].x&&p[i].y<p[0].y) swap(p[0], p[i]);
+			a.resize(0); a.reserve(n);
+			for (i=1; i<n; i++) if (p[i]!=p[0]) a.push_back(p[i]-p[0]);
+			sort(all(a));
+			for (i=0; i<a.size(); i++) a[i]+=p[0];
+			point<T> *st=p.data()-1;
+			int tp=1;
+			for (auto &v:a)
+			{
+				while (tp>1&&sgn((st[tp]-st[tp-1])*(v-st[tp-1]))<=0) --tp;
+				st[++tp]=v;
+			}
+			p.resize(tp);
 		}
-		bool cover(const point<T> &o) const//点是否在凸包内
+		template<> bool convex<db>::cover(const point<db> &o) const//点是否在凸包内
 		{
 			if (o.x<p[0].x||o.x==p[0].x&&o.y<p[0].y) return 0;
 			if (o==p[0]) return 1;
 			if (p.size()==1) return 0;
 			ll tmp=(o-p[0])*(p.back()-p[0]);
-			if (tmp==0) return dis2(o,p[0])<=dis2(p.back(),p[0]);
+			if (tmp==0) return dis2(o, p[0])<=dis2(p.back(), p[0]);
 			if (tmp<0||p.size()==2) return 0;
-			int x=upper_bound(1+all(p),o,[&](const point<T> &a,const point<T> &b){return (a-p[0])*(b-p[0])>0;})-p.begin()-1;
+			int x=upper_bound(1+all(p), o, [&](const point<db> &a, const point<db> &b) { return (a-p[0])*(b-p[0])>eps; })-p.begin()-1;
 			return (o-p[x])*(p[x+1]-p[x])<=0;
 		}
-		convex<T> operator+(const convex<T> &A) const
+		tmpl struct half_plane//默认左侧
 		{
-			int n=p.size(),m=A.p.size(),i,j;
-			vector<point<T>> c;
-			if (min(n,m)<=2)
+			point<T> o, d;
+			operator half_plane<ll>() const { return {(point<ll>)o, (point<ll>)d, 0}; }
+			operator half_plane<db>() const { return {(point<db>)o, (point<db>)d, 0}; }
+			half_plane() { }
+			half_plane(const point<T> &a, const point<T> &b, bool twopoint)
 			{
-				c.reserve(n*m);
-				for (i=0;i<n;i++) for (j=0;j<m;j++) c.push_back(p[i]+A.p[j]);
-				return convex<T>(c);
+				o=a;
+				d=twopoint?b-a:b;
 			}
-			point<T> a[n],b[m];
-			for (i=0;i+1<n;i++) a[i]=p[i+1]-p[i];
-			a[n-1]=p[0]-p[n-1];
-			for (i=0;i+1<m;i++) b[i]=A.p[i+1]-A.p[i];
-			b[m-1]=A.p[0]-A.p[m-1];
-			c.reserve(n+m);
-			c.push_back(p[0]+A.p[0]);
-			for (i=j=0;i<n&&j<m;) c.push_back(c.back()+(a[i]*b[j]>0?a[i++]:b[j++]));
-			while (i<n-1) c.push_back(c.back()+a[i++]);
-			while (j<m-1) c.push_back(c.back()+b[j++]);
-			return convex<T>(c);
-		}
-		void operator+=(const convex &a) {*this=*this+a;}
-	};
-	tmpl convex<T>::convex(vector<point<T>> a)
-	{
-		int n=a.size(),i;
-		if (!n) return;
-		p=a;
-		for (i=1;i<n;i++) if (p[i].x<p[0].x||p[i].x==p[0].x&&p[i].y<p[0].y) swap(p[0],p[i]);
-		a.resize(0);a.reserve(n);
-		for (i=1;i<n;i++) if (p[i]!=p[0]) a.push_back(p[i]-p[0]);
-		sort(all(a));
-		for (i=0;i<a.size();i++) a[i]+=p[0];
-		point<T>* st=p.data()-1;
-		int tp=1;
-		for (auto &v:a)
+			bool operator<(const half_plane<T> &a) const
+			{
+				int p=quad(d), q=quad(a.d);
+				if (p!=q) return p<q;
+				p=sgn(d*a.d);
+				if (p) return p>0;
+				return sgn(d*(a.o-o))>0;
+			}
+		};
+		tmpl ostream &operator<<(ostream &cout, half_plane<T> &m) { return cout<<m.o<<" | "<<m.d; }
+		tmpl point<db> intersect(const half_plane<T> &m, const half_plane<T> &n)
 		{
-			while (tp>1&&sgn((st[tp]-st[tp-1])*(v-st[tp-1]))<=0) --tp;
-			st[++tp]=v;
+			if (!sgn(m.d*n.d))
+			{
+				if (!sgn(m.d*(n.o-m.o))) return apos;
+				return npos;
+			}
+			return (point<db>)m.o+(n.o-m.o)*n.d/(db)(m.d*n.d)*(point<db>)m.d;
 		}
-		p.resize(tp);
-	}
-	template<> bool convex<db>::cover(const point<db> &o) const//点是否在凸包内
-	{
-		if (o.x<p[0].x||o.x==p[0].x&&o.y<p[0].y) return 0;
-		if (o==p[0]) return 1;
-		if (p.size()==1) return 0;
-		ll tmp=(o-p[0])*(p.back()-p[0]);
-		if (tmp==0) return dis2(o,p[0])<=dis2(p.back(),p[0]);
-		if (tmp<0||p.size()==2) return 0;
-		int x=upper_bound(1+all(p),o,[&](const point<db> &a,const point<db> &b){return (a-p[0])*(b-p[0])>eps;})-p.begin()-1;
-		return (o-p[x])*(p[x+1]-p[x])<=0;
-	}
-	tmpl struct half_plane//默认左侧
-	{
-		point<T> o,d;
-		operator half_plane<ll>() const {return {(point<ll>)o,(point<ll>)d,0};}
-		operator half_plane<db>() const {return {(point<db>)o,(point<db>)d,0};}
-		half_plane(){}
-		half_plane(const point<T> &a,const point<T> &b,bool twopoint)
+		const db inf=1e9;
+		tmpl convex<db> intersect(vector<half_plane<T>> a)
 		{
-			o=a;
-			d=twopoint?b-a:b;
+			T I=inf;
+			a.push_back({{-I, -I}, {I, -I}, 1});
+			a.push_back({{I, -I}, {I, I}, 1});
+			a.push_back({{I, I}, {-I, I}, 1});
+			a.push_back({{-I, I}, {-I, -I}, 1});
+			sort(all(a));
+			int n=a.size(), i, h=0, t=-1;
+			half_plane<db> q[n];
+			point<db> p[n];
+			vector<point<db>> r;
+			for (i=0; i<n; i++) if (i==n-1||sgn(a[i].d*a[i+1].d))
+			{
+				auto x=(half_plane<db>)a[i];
+				while (h<t&&sgn((p[t-1]-x.o)*x.d)>=0) --t;
+				while (h<t&&sgn((p[h]-x.o)*x.d)>=0) ++h;
+				q[++t]=x;
+				if (h<t) p[t-1]=intersect(q[t-1], q[t]);
+			}
+			while (h<t&&sgn((p[t-1]-q[h].o)*q[h].d)>=0) --t;
+			if (h==t) return convex<db>(vector<point<db>>(0));
+			p[t]=intersect(q[h], q[t]);
+			return convex<db>(vector<point<db>>(p+h, p+t+1));
 		}
-		bool operator<(const half_plane<T> &a) const 
+		tmpl db dis(const point<db> &o, const segment<T> &l)
 		{
-			int p=quad(d),q=quad(a.d);
-			if (p!=q) return p<q;
-			p=sgn(d*a.d);
-			if (p) return p>0;
-			return sgn(d*(a.o-o))>0;
+			if ((l.b-l.a&o-l.a)<0||(l.a-l.b&o-l.b)<0) return min(dis(o, l.a), dis(o, l.b));
+			return dis(o, line(l.a, l.b, 1));
 		}
-	};
-	tmpl ostream & operator<<(ostream &cout,half_plane<T> &m) {return cout<<m.o<<" | "<<m.d;}
-	tmpl point<db> intersect(const half_plane<T> &m,const half_plane<T> &n)
-	{
-		if (!sgn(m.d*n.d))
+		tmpl db dis(const segment<T> &l, const point<db> &o)
 		{
-			if (!sgn(m.d*(n.o-m.o))) return apos;
-			return npos;
+			if ((l.b-l.a&o-l.a)<0||(l.a-l.b&o-l.b)<0) return min(dis(o, l.a), dis(o, l.b));
+			return dis(o, line(l.a, l.b, 1));
 		}
-		return (point<db>)m.o+(n.o-m.o)*n.d/(db)(m.d*n.d)*(point<db>)m.d;
-	}
-	const db inf=1e9;
-	tmpl convex<db> intersect(vector<half_plane<T>> a)
-	{
-		T I=inf;
-		a.push_back({{-I,-I},{I,-I},1});
-		a.push_back({{I,-I},{I,I},1});
-		a.push_back({{I,I},{-I,I},1});
-		a.push_back({{-I,I},{-I,-I},1});
-		sort(all(a));
-		int n=a.size(),i,h=0,t=-1;
-		half_plane<db> q[n];
-		point<db> p[n];
-		vector<point<db>> r;
-		for (i=0;i<n;i++) if (i==n-1||sgn(a[i].d*a[i+1].d))
+		pair<ll, ll> __sqrt(ll x)
 		{
-			auto x=(half_plane<db>)a[i];
-			while (h<t&&sgn((p[t-1]-x.o)*x.d)>=0) --t;
-			while (h<t&&sgn((p[h]-x.o)*x.d)>=0) ++h;
-			q[++t]=x;
-			if (h<t) p[t-1]=intersect(q[t-1],q[t]);
+			ll y=sqrtl(x);
+			while (y*y>x) --y;
+			while ((y+1)*(y+1)<=x) ++y;
+			return {y, y+(y*y<x)};
 		}
-		while (h<t&&sgn((p[t-1]-q[h].o)*q[h].d)>=0) --t;
-		if (h==t) return convex<db>(vector<point<db>>(0));
-		p[t]=intersect(q[h],q[t]);
-		return convex<db>(vector<point<db>>(p+h,p+t+1));
-	}
-	tmpl db dis(const point<db> &o,const segment<T> &l)
-	{
-		if ((l.b-l.a&o-l.a)<0||(l.a-l.b&o-l.b)<0) return min(dis(o,l.a),dis(o,l.b));
-		return dis(o,line(l.a,l.b,1));
-	}
-	tmpl db dis(const segment<T> &l,const point<db> &o)
-	{
-		if ((l.b-l.a&o-l.a)<0||(l.a-l.b&o-l.b)<0) return min(dis(o,l.a),dis(o,l.b));
-		return dis(o,line(l.a,l.b,1));
-	}
+		pair<int, int> closest_pair(const vector<point<ll>> &a)
+		{
+			int n=a.size(), i, j;
+			assert(n>=2);
+			auto b=a;
+			sort(all(b), [&](auto p, auto q)
+				{
+					return p.x==q.x?p.y<q.y:p.x<q.x;
+				});
+			tuple<ll, int, int> ans={dis2(b[0], b[1]), 0, 1};
+			set<pair<ll, int>> s;
+			for (i=j=0; i<n; i++)
+			{
+				auto [x, y]=b[i];
+				ll d=__sqrt(get<0>(ans)).first;
+				if (d==0) break;
+				for (auto it=s.lower_bound({y-d, 0}); it!=s.end(); ++it)
+				{
+					auto [q, k]=*it;
+					cmin(ans, tuple{dis2(b[k], b[i]), i, k});
+				}
+				s.emplace(y, i);
+				while (b[j].x<x-d) s.erase({b[j].y, j}), ++j;
+			}
+			auto [_, j1, j2]=ans;
+			int i1, i2;
+			for (i1=0; i1<n; i1++) if (a[i1]==b[j1]) break;
+			for (i2=0; i2<n; i2++) if (i2!=i1&&a[i2]==b[j2]) break;
+			return {i1, i2};
+		}
+		pair<int, int> furthest_pair(const vector<point<ll>> &a)
+		{
+			int n=a.size(), i, j;
+			assert(n>=2);
+			auto b=convex(a).p;
+			int m=b.size();
+			if (m==1) return {0, 1};
+			b.push_back(b[0]);
+			tuple<ll, int, int> ans{dis2(b[0], b[1]), 0, 1};
+			for (i=0, j=1; i<m; i++)
+			{
+				while (abs((b[i+1]-b[i])*(b[j]-b[i]))<abs((b[i+1]-b[i])*(b[(j+1)%m]-b[i]))) j=(j+1)%m;
+				cmax(ans, tuple{dis2(b[i], b[j]), i, j});
+				cmax(ans, tuple{dis2(b[i+1], b[j]), i+1, j});
+			}
+			auto [_, j1, j2]=ans;
+			int i1, i2;
+			for (i1=0; i1<n; i1++) if (a[i1]==b[j1]) break;
+			for (i2=0; i2<n; i2++) if (i2!=i1&&a[i2]==b[j2]) break;
+			return {i1, i2};
+	
+		}
 	#undef tmpl
-}
-using geometry::point,geometry::line,geometry::circle,geometry::convex,geometry::half_plane;
-using geometry::db,geometry::sgn,geometry::eps,geometry::segment;
-using geometry::intersect,geometry::dis;
+	}
+	using geometry::point, geometry::line, geometry::circle, geometry::convex, geometry::half_plane;
+	using geometry::db, geometry::sgn, geometry::eps, geometry::segment;
+	using geometry::intersect, geometry::dis;
 \end{lstlisting}
 
 
@@ -12707,6 +12978,38 @@ template <class T> vector<T> min_plus_convolution(const vector<T> &a,const vecto
 	dfs(0,n+m-2,0,n-1);
 	return c;
 }
+
+\end{lstlisting}
+
+\subsection{所有区间 GCD}
+\begin{lstlisting}
+	template<typename T> struct GCD
+{
+	vector<pair<int, T>> res;
+	GCD(const vector<T> &a):res(n)
+	{
+		int n=a.size(), i, j;
+		vector<ll> v(n);
+		vector<int> l(n);
+		vector<vector<pair<int, T>> res(n);
+		for (i=0; i<n; i++)
+		{
+			for (v[i]=a[i], j=l[i]=i; j>=0; j=l[j]-1)
+			{
+				v[j]=fun(v[j], a[i]);
+				while (l[j]&&fun(a[i], v[l[j]-1])==fun(a[i], v[j])) l[j]=l[l[j]-1];
+				//[l[j]..j,i]区间内的值求fun均为v[j]
+			}
+			for (j=i; j>=0; j=l[j]) res[i].push_back({l[j], v[j]});
+			reverse(all(res[i]));
+		}
+	}
+	T ask(int l, int r)//[l,r]
+	{
+		return res[r].prev(upper_bound(l))->second;
+	}
+};
+//需要自定义 fun，如 gcd，and，or。
 
 \end{lstlisting}
 \subsection{整体二分（区间 $k$-th）}
