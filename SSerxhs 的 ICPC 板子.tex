@@ -35,7 +35,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver:3.8.1}
+\centerline{ver:3.8.3}
 
 \tableofcontents
 
@@ -44,7 +44,7 @@ language=c++,
 \section{数据结构}
 
 \subsection{哈希表}
-支持如同 map 一样使用 [] 访问。default 指的是未赋值情形的值。
+支持如同 map 一样使用 [] 访问。default 指的是未赋值情形的值。新版本未验证。
 \begin{lstlisting}
 template<class Tx,class Ty> struct hashtable //定义域，值域
 {
@@ -2864,7 +2864,9 @@ template<typename T,int n> struct matrix
 
 \subsection{矩阵求逆（要求质数）}
 
-$O(n^3)$，$O(n^2)$。
+一种原地算法，总体效率更高。
+
+$O(n^3)$，$O(n)$。
 
 \begin{lstlisting}
 #include <bits/stdc++.h>
@@ -3082,9 +3084,190 @@ int main()
 */
 \end{lstlisting}
 
+\subsection{矩阵类（较新）}
+
+\begin{lstlisting}
+typedef unsigned long long ll;
+const ll p=998244353;
+ll ksm(ll x, ll y)
+{
+	ll r=1;
+	while (y)
+	{
+		if (y&1) r=r*x%p;
+		x=x*x%p; y>>=1;
+	}
+	return r;
+}
+struct matrix:vector<vector<ll>>
+{
+	explicit matrix(int n=0, int m=0):vector(n, vector<ll>(m)) { }
+	pair<int, int> sz() const { if (size()) return {size(), back().size()}; return {0, 0}; }
+	int rank() const//秩
+	{
+		vector<vector<ll>> a=*this;
+		auto [n, m]=sz();
+		int i, j, k, l, r=0;
+		for (i=0, j=0; i<n&&j<m; j++)
+		{
+			for (k=i; k<n; k++) if (a[k][j]) break;
+			if (k==n) continue;
+			::swap(a[i], a[k]);
+			ll iv=ksm(a[i][j], p-2);
+			for (k=j; k<m; k++) a[i][k]=a[i][k]*iv%p;
+			for (k=i+1; k<n; k++) for (l=j+1; l<m; l++) a[k][l]=(a[k][l]+(p-a[k][j])*a[i][l])%p;
+			++i; ++r;
+		}
+		return r;
+	}
+	vector<ll> poly()//特征多项式
+	{
+		auto [n, m]=sz();
+		vector<vector<ll>> a=*this;
+		assert(n==m);
+		int i, j, k;
+		for (i=1; i<n; i++)
+		{
+			for (j=i; j<n&&!a[j][i-1]; j++);
+			if (j==n) continue;
+			if (j>i)
+			{
+				::swap(a[i], a[j]);
+				for (k=0; k<n; k++) ::swap(a[k][j], a[k][i]);
+			}
+			ll r=a[i][i-1];
+			for (j=0; j<n; j++) a[j][i]=a[j][i]*r%p;
+			r=ksm(r, p-2);
+			for (j=i-1; j<n; j++) a[i][j]=a[i][j]*r%p;
+			for (j=i+1; j<n; j++)
+			{
+				r=a[j][i-1];
+				for (k=0; k<n; k++) a[k][i]=(a[k][i]+a[k][j]*r)%p;
+				r=p-r;
+				for (k=i-1; k<n; k++) a[j][k]=(a[j][k]+a[i][k]*r)%p;
+			}
+		}
+		vector g(n+1, vector<ll>(n+1));
+		g[0][0]=1;
+		for (i=0; i<n; i++)
+		{
+			ll r=p-1, rr;
+			for (j=i; j>=0; j--)//第 j 行选第 n 列
+			{
+				rr=r*a[j][i]%p;
+				for (k=0; k<=j; k++) g[i+1][k]=(g[i+1][k]+rr*g[j][k])%p;
+				if (j) r=r*a[j][j-1]%p;
+			}
+			for (k=1; k<=i+1; k++) (g[i+1][k]+=g[i][k-1])%=p;
+		}
+		auto f=g[n];
+		//if (n&1) for (i=0;i<=n;i++) if (f[i]) f[i]=p-f[i];//若注释掉则为 |kE-A|
+		return f;
+	}
+};
+istream &operator>>(istream &cin, matrix &r) { for (auto &v:r) for (ll &x:v) cin>>x; return cin; }
+ostream &operator<<(ostream &cout, const matrix &r) { auto [n, m]=r.sz(); for (int i=0; i<n; i++) for (int j=0; j<m; j++) cout<<r[i][j]<<" \n"[j+1==m]; return cout; }
+matrix &operator+=(matrix &a, const matrix &b)
+{
+	assert(a.size()==b.size());
+	auto [n, m]=a.sz();
+	for (int i=0; i<n; i++) for (int j=0; j<m; j++) (a[i][j]+=b[i][j])%=p;
+	return a;
+}
+matrix &operator-=(matrix &a, const matrix &b)
+{
+	assert(a.size()==b.size());
+	auto [n, m]=a.sz();
+	for (int i=0; i<n; i++) for (int j=0; j<m; j++) (a[i][j]+=p-b[i][j])%=p;
+	return a;
+}
+matrix operator*(const matrix &a, const matrix &b)
+{
+	auto [n, m]=a.sz();
+	auto [_, q]=b.sz();
+	assert(m==_);
+	int i, j, k;
+	matrix c(n, q);
+	for (k=0; k<m; k++)
+	{
+		for (i=0; i<n; i++) for (j=0; j<q; j++) c[i][j]+=a[i][k]*b[k][j];
+		if (!((k^q-1)&15)) for (auto &v:c) for (ll &x:v) x%=p;
+	}
+	return c;
+}
+matrix operator+(matrix a, const matrix &b) { return a+=b; }
+matrix operator-(matrix a, const matrix &b) { return a-=b; }
+matrix &operator*=(matrix &a, const matrix &b) { return a=a*b; }
+matrix &operator*=(matrix &a, ll k) { for (auto &v:a) for (ll &x:v) x=x*k%p; return a; }
+matrix operator*(matrix a, ll k) { return a*=k; }
+matrix E(int n) { matrix r(n, n); for (int i=0; i<n; i++) r[i][i]=1; return r; }
+matrix pow(matrix a, long long k)//普通的快速幂
+{
+	assert(k>=0);
+	auto [n, m]=a.sz();
+	assert(n==m);
+	matrix r=k&1?a:E(n);
+	k>>=1;
+	while (k)
+	{
+		a*=a;
+		if (k&1) r*=a;
+		k>>=1;
+	}
+	return r;
+}
+matrix pow2(matrix a, long long k)//较快的快速幂。运用了一些技巧。
+{
+	vector<ll> f=a.poly();
+	int n=f.size()-1, i, j;
+	if (!n) return matrix();
+	if (n==1) return E(1)*ksm(a[0][0], k);
+	assert(f[n]==1);
+	vector<ll> r(n), x(n), t(n*2);
+	r[0]=x[1]=1;
+	for (ll &x:f) x=(p-x)%p;
+	reverse(all(f));
+	fill(all(t), 0);
+	if (k&1)
+	{
+		for (i=0; i<n; i++) for (j=0; j<n; j++) t[i+j]=(t[i+j]+r[i]*x[j])%p;
+		for (i=n*2-2; i>=n; i--) for (j=1; j<=n; j++) t[i-j]=(t[i-j]+f[j]*t[i])%p;
+		for (i=0; i<n; i++) r[i]=t[i];
+	}
+	k>>=1;
+	while (k)
+	{
+		fill(all(t), 0);
+		for (i=0; i<n; i++) for (j=0; j<n; j++) t[i+j]=(t[i+j]+x[i]*x[j])%p;
+		for (i=n*2-2; i>=n; i--) for (j=1; j<=n; j++) t[i-j]=(t[i-j]+f[j]*t[i])%p;
+		for (i=0; i<n; i++) x[i]=t[i];
+		if (k&1)
+		{
+			fill(all(t), 0);
+			for (i=0; i<n; i++) for (j=0; j<n; j++) t[i+j]=(t[i+j]+r[i]*x[j])%p;
+			for (i=n*2-2; i>=n; i--) for (j=1; j<=n; j++) t[i-j]=(t[i-j]+f[j]*t[i])%p;
+			for (i=0; i<n; i++) r[i]=t[i];
+		}
+		k>>=1;
+	}
+	matrix res(n, n);
+	int b=ceil(sqrt(n));
+	vector<matrix> s(b+1);
+	s[0]=E(n); s[1]=a;
+	for (i=2; i<=b; i++) s[i]=s[i-1]*a;
+	for (i=b-1; i>=0; i--)
+	{
+		res*=s[b];
+		for (j=min(n, (i+1)*b)-1; j>=i*b; j--) res+=s[j-i*b]*r[j];
+	}
+	return res;
+}
+
+\end{lstlisting}
+
 \subsection{最短递推式（BM 算法）}
 
-$\sum_{j=0}^{m-1} a_{i-j-1}r_j=a_i$。
+给定 $\{a\}$，求最短的 $\{r\}$ 满足 $\sum\limits_{j=0}^{m-1} a_{i-j-1}r_j=a_i$。
 
 \begin{lstlisting}
 vector<ui> bm(const vector<ui> &a)
@@ -3171,7 +3354,7 @@ using online_inv::init_inv,online_inv::inv,online_inv::p;
 
 \subsection{Strassen 矩阵乘法}
 
-$O(n^{\log_27})$。
+没用，不如卡常。$O(n^{\log_27})$。
 
 \begin{lstlisting}
 #include <bits/stdc++.h>
@@ -3275,7 +3458,7 @@ int main()
 
 \subsection{扩展欧拉定理}
 
-$a\uparrow\uparrow b \bmod c$
+求 $a\uparrow\uparrow b \bmod c$。前面的 Prime 类只是求 phi 用的。
 
 \begin{lstlisting}
 namespace Prime
@@ -3414,6 +3597,8 @@ int main()
 
 $O(\log p)$，$O(\log p)$。
 
+递归版：
+
 \begin{lstlisting}
 int exgcd(int a,int b,int c)//ax+by=c,return x
 {
@@ -3421,6 +3606,8 @@ int exgcd(int a,int b,int c)//ax+by=c,return x
 	return (c-(ll)b*exgcd(b%a,a,c))/a%b;
 }
 \end{lstlisting}
+
+递推重构版：
 
 \begin{lstlisting}
 pair<ll,ll> exgcd(ll a,ll b,ll c)//ax+by=c，{-1,-1} 无解，b=0 返回 {c/a,0}，否则返回最小非负 x
@@ -3451,6 +3638,8 @@ ll fun(ll a, ll b, ll p)//ax=b(mod p)
 \end{lstlisting}
 
 \subsection{exCRT}
+
+实现了一个类 Q，表示一条方程，支持合并。
 
 \begin{lstlisting}
 namespace CRT
@@ -3495,7 +3684,7 @@ using CRT::Q;
 
 \subsection{exBSGS}
 
-$O(\sqrt n)$。
+$O(\sqrt n)$。哈希表 ht 可以用 map 代替。
 
 \begin{lstlisting}
 namespace BSGS
@@ -3586,6 +3775,8 @@ using BSGS::bsgs,BSGS::exbsgs;
 \end{lstlisting}
 
 \subsection{exLucas}
+
+求组合数。包含多个不同的版本，按需使用。
 
 \begin{lstlisting}
 namespace exlucas
@@ -3697,6 +3888,13 @@ namespace exlucas
 
 \subsection{杜教筛}
 
+求 $\varphi(n)$ 的前缀和。
+
+核心：构造 $g$ 满足 $h(n)=\sum\limits_{d|n}f(d)g(\dfrac{n}{d})$ 容易计算，
+则有 $\sum\limits_{i=1}^n h(i)=\sum\limits_{i=1}^n g(i)\sum\limits_{j=1}^{\lfloor n/i\rfloor}f(j)$，
+故 $g(1)\sum\limits_{j=1}^n f(j)=\sum\limits_{i=1}^n h(i)-\sum\limits_{i=2}^n g(i)\sum\limits_{j=1}^{\lfloor n/i\rfloor}f(j)$，
+则 $f$ 前缀和可以递归求解。
+
 \begin{lstlisting}
 namespace du_seive
 {
@@ -3750,7 +3948,7 @@ using du_seive::init,du_seive::get_phi_sum;
 \end{lstlisting}
 
 \subsection{线性规划}
-
+用法：构造函数指明目标函数系数，add 函数增加限制。额外的限制是 $x_i\ge 0$。
 \begin{lstlisting}
 typedef long double db;//__float128
 struct linear
@@ -3760,7 +3958,7 @@ struct linear
 	int col[N],row[N];
 	const db eps=1e-10,inf=1e9;//1e-17
 	int n,m;
-	template<typename T> linear(const vector<T> &a)//target: \sum a(i-1)xi
+	template<typename T> linear(const vector<T> &a)//target: maximize \sum a(i-1)xi
 	{
 		memset(r,0,sizeof r);
 		memset(col,0,sizeof col);
@@ -3855,6 +4053,8 @@ struct linear
 
 
 \subsection{斐波那契数列}
+
+使用生日攻击的方法寻找循环节，一种更通用的方法是 bsgs。
 
 \begin{lstlisting}
 const int NN=3e7+2,M=4e5,N=1e6+10;
@@ -4182,32 +4382,6 @@ int main()
 		getrt(n,d);
 	}
 }
-\end{lstlisting}
-
-
-
-\subsection{圆上整点}
-
-\begin{lstlisting}
-	while (n&1^1) n>>=1;//n是半径
-	for (i=3;i<=sqrt(n);i++) if (n%i==0)
-	{
-		if (i%4==3)
-		{
-			while (n%i==0) n/=i;
-		}
-		else
-		{
-			k=0;
-			while (n%i==0)
-			{
-				n/=i;++k;
-			}
-			ans*=k<<1|1;
-		}
-	}
-	if ((n>1)&&(n%4==1)) ans*=3;
-	printf("%d",ans<<2);
 \end{lstlisting}
 
 \subsection{高斯消元（通解）}
@@ -4758,7 +4932,7 @@ namespace cipolla
 		ll x,y;
 		Q operator*(const Q &o) const {return {(x*o.x+y*o.y%p*w)%p,(x*o.y+y*o.x)%p};}
 	};
-	ui ksm(ll x,int y)
+	ui ksm(ll x,ui y)
 	{
 		ll r=1;
 		while (y)
@@ -4768,7 +4942,7 @@ namespace cipolla
 		}
 		return r;
 	}
-	Q ksm(Q x,int y)
+	Q ksm(Q x,ui y)
 	{
 		Q r={1,0};
 		while (y)
@@ -4778,7 +4952,7 @@ namespace cipolla
 		}
 		return r;
 	}
-	int mosqrt(ui x,ui P)//0<=x<P
+	ui mosqrt(ui x,ui P)//0<=x<P
 	{
 		if (x==0||P==2) return x;
 		p=P;
@@ -6811,6 +6985,10 @@ int main()
 \subsection{高斯整数类}
 
 \begin{lstlisting}
+ll roundiv(ll x,ll y)
+{
+	return x>=0?(x+y/2)/y:(x-y/2)/y;
+}
 struct Q
 {
 	ll x,y;
@@ -13512,6 +13690,240 @@ if (a[j][p]<b[j+1][q]) b[j][len[j]]=a[j][p],c[j][len[j]][0]=p++,c[j][len[j]++][1
 }
 \end{lstlisting}
 
+\subsection{圆上整点（二平方和定理）}
+
+$x^2+y^2=n$ 的整数解的数目的四分之一 $f(n)$ 是积性数论函数，且对于{\bf{素数幂}}有：
+$f(p^k)=\begin{cases}
+		1            & p=2               \\
+		k+1          & p\equiv 1 \pmod 4 \\
+		(k+1)\bmod 2 & p\equiv 3 \pmod 4
+	\end{cases}$
+
+以下代码给出所有的非负整数解。注意非负整数解个数不等于 $f(n)$。
+
+时间复杂度为 $O(n^{\dfrac{1}{4}}+f(n))$，其中 $O(n^{\dfrac{1}{4}})$ 是 pollard-rho 的复杂度。
+
+$f(n)$ 的量级不好分析，但不会超过约数个数 $O(d(n))\approx O(n^{\dfrac{1}{3}})$，且可以推测不能达到。
+
+\begin{lstlisting}
+namespace pr
+{
+	typedef long long ll;
+	typedef __int128 lll;
+	typedef pair<ll, int> pa;
+	ll ksm(ll x, ll y, const ll p)
+	{
+		ll r=1;
+		while (y)
+		{
+			if (y&1) r=(lll)r*x%p;
+			x=(lll)x*x%p; y>>=1;
+		}
+		return r;
+	}
+	namespace miller
+	{
+		const int p[7]={2, 3, 5, 7, 11, 61, 24251};
+		ll s, t;
+		bool test(ll n, int p)
+		{
+			if (p>=n) return 1;
+			ll r=ksm(p, t, n), w;
+			for (int j=0; j<s&&r!=1; j++)
+			{
+				w=(lll)r*r%n;
+				if (w==1&&r!=n-1) return 0;
+				r=w;
+			}
+			return r==1;
+		}
+		bool prime(ll n)
+		{
+			if (n<2||n==46'856'248'255'981ll) return 0;
+			for (int i=0; i<7; ++i) if (n%p[i]==0) return n==p[i];
+			s=__builtin_ctz(n-1); t=n-1>>s;
+			for (int i=0; i<7; ++i) if (!test(n, p[i])) return 0;
+			return 1;
+		}
+	}
+	using miller::prime;
+	mt19937_64 rnd(chrono::steady_clock::now().time_since_epoch().count());
+	namespace rho
+	{
+		void nxt(ll &x, ll &y, ll &p) { x=((lll)x*x+y)%p; }
+		ll find(ll n, ll C)
+		{
+			ll l, r, d, p=1;
+			l=rnd()%(n-2)+2, r=l;
+			nxt(r, C, n);
+			int cnt=0;
+			while (l^r)
+			{
+				p=(lll)p*llabs(l-r)%n;
+				if (!p) return gcd(n, llabs(l-r));
+				++cnt;
+				if (cnt==127)
+				{
+					cnt=0;
+					d=gcd(llabs(l-r), n);
+					if (d>1) return d;
+				}
+				nxt(l, C, n); nxt(r, C, n); nxt(r, C, n);
+			}
+			return gcd(n, p);
+		}
+		vector<pa> w;
+		vector<ll> d;
+		void dfs(ll n, int cnt)
+		{
+			if (n==1) return;
+			if (prime(n)) return w.emplace_back(n, cnt), void();
+			ll p=n, C=rnd()%(n-1)+1;
+			while (p==1||p==n) p=find(n, C++);
+			int r=1; n/=p;
+			while (n%p==0) n/=p, ++r;
+			dfs(p, r*cnt); dfs(n, cnt);
+		}
+		vector<pa> getw(ll n)
+		{
+			w=vector<pa>(0); dfs(n, 1);
+			if (n==1) return w;
+			sort(w.begin(), w.end());
+			int i, j;
+			for (i=1, j=0; i<w.size(); i++) if (w[i].first==w[j].first) w[j].second+=w[i].second; else w[++j]=w[i];
+			w.resize(j+1);
+			return w;
+		}
+		void dfss(int x, ll n)
+		{
+			if (x==w.size()) return d.push_back(n), void();
+			dfss(x+1, n);
+			for (int i=1; i<=w[x].second; i++) dfss(x+1, n*=w[x].first);
+		}
+		vector<ll> getd(ll n)
+		{
+			getw(n); d=vector<ll>(0); dfss(0, 1);
+			sort(d.begin(), d.end());
+			return d;
+		}
+	}
+	using rho::getw, rho::getd;
+	using miller::prime;
+}
+using pr::getw, pr::getd, pr::prime;
+lll roundiv(lll x, lll y)
+{
+	return x>=0?(x+y/2)/y:(x-y/2)/y;
+}
+struct G
+{
+	lll x, y;
+	G operator~() const { return {x, -y}; }
+	lll len2() const { return x*x+y*y; }
+	G operator+(const G &o) const { return {x+o.x, y+o.y}; }
+	G operator-(const G &o) const { return {x-o.x, y-o.y}; }
+	G operator*(const G &o) const { return {x*o.x-y*o.y, x*o.y+y*o.x}; }
+	G operator/(const G &o) const
+	{
+		G t=*this*~o;
+		lll l=o.len2();
+		return {roundiv(t.x, l), roundiv(t.y, l)};
+	}
+	G operator%(const G &o) const { return *this-*this/o*o; }
+};
+G gcd(G a, G b)
+{
+	if (a.len2()>b.len2()) swap(a, b);
+	while (a.len2())
+	{
+		b=b%a;
+		swap(a, b);
+	}
+	return b;
+}
+namespace cipolla
+{
+	typedef unsigned long long ui;
+	typedef __uint128_t ll;
+	ui p, w;
+	struct Q
+	{
+		ll x, y;
+		Q operator*(const Q &o) const { return {(x*o.x+y*o.y%p*w)%p, (x*o.y+y*o.x)%p}; }
+	};
+	ui ksm(ll x, ui y)
+	{
+		ll r=1;
+		while (y)
+		{
+			if (y&1) r=r*x%p;
+			x=x*x%p; y>>=1;
+		}
+		return r;
+	}
+	Q ksm(Q x, ui y)
+	{
+		Q r={1, 0};
+		while (y)
+		{
+			if (y&1) r=r*x;
+			x=x*x; y>>=1;
+		}
+		return r;
+	}
+	ui mosqrt(ui x, ui P)//0<=x<P
+	{
+		if (x==0||P==2) return x;
+		p=P;
+		if (ksm(x, p-1>>1)!=1) return -1;
+		ui y;
+		mt19937_64 rnd(chrono::steady_clock::now().time_since_epoch().count());
+		do y=rnd()%p, w=((ll)y*y+p-x)%p; while (ksm(w, p-1>>1)<=1);//not for p=2
+		y=ksm({y, 1}, p+1>>1).x;
+		if (y*2>p) y=p-y;//两解取小
+		return y;
+	}
+}
+using cipolla::mosqrt;
+vector<pair<ll, ll>> two_sqr_sum(ll n)//只会返回非负解，按照字典序排序
+{
+	if (n<0) return { };
+	if (n==0) return {{0, 0}};
+	ll m=__lg(n&-n), d=1<<m/2, i;
+	n>>=m;
+	auto w=getw(n);
+	vector<G> r((m&1)?vector{G{1, 1}}:vector{G{0, 1}, G{1, 0}});
+	for (auto [p, k]:w) if (p%4==1)
+	{
+		vector<G> pw(k+1);
+		pw[0]={1, 0};
+		pw[1]=gcd(G(p, 0), G(mosqrt(p-1, p), 1));
+		assert(pw[1].len2()==p);
+		for (i=2; i<=k; i++) pw[i]=pw[i-1]*pw[1];
+		vector<G> rr; rr.reserve(r.size()*(k+1));
+		for (i=0; i<=k; i++)
+		{
+			G x=pw[i]*~pw[k-i];
+			for (G y:r) rr.push_back(x*y);
+		}
+		swap(r, rr);
+	}
+	else
+	{
+		if (k%2) return { };
+		k/=2;
+		while (k--) d*=p;
+	}
+	vector<pair<ll, ll>> ans;
+	ans.reserve(r.size());
+	for (auto [x, y]:r) ans.push_back({abs((ll)x*d), abs((ll)y*d)});
+	sort(all(ans));
+	ans.resize(unique(all(ans))-ans.begin());
+	return ans;
+}
+\end{lstlisting}
+
+
 \subsection{模意义真分数还原}
 
 $q\equiv \dfrac{x}{a}\pmod p$，$|a|\le A$。
@@ -13774,6 +14186,7 @@ $(x,y)$ 切比雪夫距离 $\to$ $(\dfrac{x+y}{2},\dfrac{x-y}{2})$ 曼哈顿距�
 
 错排数=$\lceil0.5+\frac{n!}{e}\rceil$
 
+
 Kummer's Theorem: $\tbinom{n+m}{n}$ 含 $p~(p\in \text {prime})$ 的次数是 $n+m$ 在 $p$ 进制下的进位数
 
 $\ln (1-x^V)=-\sum\limits_{i\ge1}\dfrac{x^{Vi}}{i}$
@@ -13907,7 +14320,7 @@ int main()
 0000100101
 \end{verbatim}
 
-\subsection{pb\_ds}
+\subsection{pb\_ds 和一些奇怪的用法}
 
 \begin{lstlisting}
 #pragma GCC optimize("Ofast")
