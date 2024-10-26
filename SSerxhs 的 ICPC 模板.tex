@@ -44,7 +44,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver: 3.9.5}
+\centerline{ver: 3.9.8}
 
 \tableofcontents
 
@@ -96,6 +96,8 @@ template<class typC> void read(typC &x)
 
 支持单点修改、求前缀和、二分前缀和大于等于 x 的第一个位置。
 
+二分这部分没有验证过。
+
 \begin{lstlisting}
 template<typename typC> struct bit
 {
@@ -140,11 +142,13 @@ template<typename typC> struct bit
 
 \subsection{线段树}
 
-包含标记的线段树，支持线段树上二分。但只支持求左侧第一个符合条件的下标。
+包含标记的线段树，支持线段树上二分，采用左闭右闭。但只支持求左侧第一个符合条件的下标。
+
+要求：具有 \verb|info+info|，\verb|info+=tag|，\verb|tag+=tag|。\verb|info|，\verb|tag| 需要有默认构造，但不必有正确的值。
 
 \begin{lstlisting}
 	
-template<typename info, typename tag> struct sgt
+template<class info, class tag> struct sgt
 {
 	int n, shift;
 	info *a;
@@ -291,7 +295,7 @@ public:
 		ask(1, 1, n);
 		return res;
 	}
-	pair<int, info> find_left_most(int l, const function<bool(info)> &_check)//y=n+1 第二个参数是乱给的
+	pair<int, info> find_left_most(int l, const function<bool(info)> &_check)
 	{
 		check=_check;
 		z=l-shift; y=n+1;
@@ -299,7 +303,7 @@ public:
 		find_left_most(1, 1, n);
 		return {y+shift, res};
 	}
-	pair<int, info> find_right_most(int r, const function<bool(info)> &_check)//z=0 第二个参数是乱给的
+	pair<int, info> find_right_most(int r, const function<bool(info)> &_check)
 	{
 		check=_check;
 		z=0; y=r-shift;
@@ -308,8 +312,6 @@ public:
 		return {z+shift, res};
 	}
 };
-//要求：具有 info+info，info+=tag，tag+=tag。info，tag 需要拥有默认构造，但不必拥有正确的值。
-//采用左闭右闭
 \end{lstlisting}
 
 \subsection{哈希表}
@@ -1231,6 +1233,8 @@ int seg::c[seg::M][2],seg::id;
 
 \subsection{splay}
 
+没啥用。
+
 $O(n)$，$O((n+q)\log n)$。
 
 \begin{lstlisting}
@@ -1900,7 +1904,7 @@ int main()
 
 \subsection{笛卡尔树的线性建树}
 
-$p[1,2,\ldots,n]$ 是原序列，c 表示子结点。
+$p[1,2,\ldots,n]$ 是原序列，\verb|c| 表示子结点。
 
 笛卡尔树满足堆性质（权值小于等于子结点权值），并且中序遍历是原序列。
 
@@ -2056,8 +2060,8 @@ $O((n+q)\log n)$，$O(n+q)$。
 	\item $l,r$：求 $\sum\limits_{i=l}^{r}A_i$。
 	\item $l,r$：对于所有的 $i\in[l,r]$，求 $A_i$ 的最大值。
 	\item $l,r$：对于所有的 $i\in[l,r]$，求 $B_i$ 的最大值。
-
 \end{enumerate}
+其中 $B_i$ 是 $A_i$ 的历史最大值。
 \begin{lstlisting}
 struct P
 {
@@ -3571,7 +3575,7 @@ vector<ui> bm(const vector<ui> &a)
 
 \subsection{在线 $O(1)$ 逆元}
 
-预处理复杂度为 $O(p^{\dfrac{2}{3}})$。
+预处理复杂度为 $O(p^{\frac{2}{3}})$。
 
 \begin{lstlisting}
 namespace online_inv
@@ -4421,24 +4425,46 @@ int main()
 $O(m)$，$O(m)$。
 
 \begin{lstlisting}
-int f(int *a,int n,int m)//这种写法不包含0处取值，n是值，m-1是次数，至少需要 m 项。换而言之，f(1,2,...,m)=a[1],a[2],...,a[m]
+ll interpolation(vector<ll> a, ll n)
 {
-	if (n<=m) return a[n];
-	static int inv[N],l[N],r[N],ifac[N]; 
-	int i;
-	ifac[0]=inv[1]=1;
-	for (i=2;i<=m;i++) inv[i]=p-(ll)p/i*inv[p%i]%p;
-	for (i=1;i<=m;i++) ifac[i]=(ll)ifac[i-1]*inv[i]%p;//以上可以预跑
-	int ans=0,rr=0;
-	l[0]=1;r[m+1]=1;
-	for (i=1;i<m;i++) l[i]=(ll)l[i-1]*(n-i)%p;
-	for (i=m;i;i--) r[i]=(ll)r[i+1]*(n-i)%p;
-	for (i=1;i<=m;i++)
+	int m = a.size(), i;
+	vector<ll> ans(2);
+	n %= p;
+	if (n < m) return a[n];
+	ll k = ifac[m - 1];
+	for (i = m - 1;i >= 0;i--)
 	{
-		if ((m^i)&1) rr=p-a[i]; else rr=a[i];
-		ans=(ans+(ll)rr*ifac[i-1]%p*ifac[m-i]%p*l[i-1]%p*r[i+1])%p;
+		(a[i] *= k) %= p;
+		(k *= n - i) %= p;
 	}
-	return ans;
+	k = 1;
+	for (i = 0;i < m;i++)
+	{
+		(ans[(m ^ i) & 1] += a[i] * k) %= p;
+		k = k * inv[i + 1] % p * (n - i) % p * (m - i - 1) % p;
+	}
+	return (ans[1] + p - ans[0]) % p;
+}
+ll sum_of_kth_power(ll n, ll k)
+{
+	if (n == 0) return 0;
+	ll m = min(n + 1, k + 2);
+	int i;
+	vector<ll> s(m);
+	vector<int> pr, ed(m);pr.reserve(m / 4);
+	s[1] = 1;
+	for (i = 2;i < m;i++)
+	{
+		if (!ed[i]) s[i] = ksm(i, k);
+		for (int j : pr) if (i * j < m)
+		{
+			s[i * j] = s[i] * s[j] % p;
+			if (i % j == 0) break;
+		}
+		else break;
+	}
+	for (i = 1;i < m;i++) (s[i] += s[i - 1]) %= p;
+	return interpolation(s, n);
 }
 \end{lstlisting}
 
@@ -5139,7 +5165,7 @@ $k\text{-th}\max\{S\}=\sum\limits_{T\subseteq S}(-1)^{|T|-k}\tbinom{|T|-1}{k-1}\
 
 $O(n2^n)$，$O(2^n)$。
 
-原理：让模数变为 $p2^n$，就可以正常做除法了。 
+原理：让模数变为 $p2^n$，就可以正常做除法了。
 
 \begin{lstlisting}
 const int N=1<<20,M=21;
@@ -8231,31 +8257,32 @@ vector<int> Z(const string &s)
 
 \subsection{最小表示法}
 
-找到一个串的循环同构串中字典序最小的那个，将这个串直接变过去。常见应用：环哈希。
+找到一个串的循环同构串中字典序最小的那个，将这个串直接变过去。常见应用：环哈希（基环树哈希）。
 
-如果只需要找到起点下标，在 rotate 前返回 j 即可。
+如果只需要找到起点下标，在 \verb|rotate| 前返回 $\min\{i,j\}$ 即可。
 
 $O(n)$，$O(1)$。
 
 \begin{lstlisting}
-template<class T> void min_order(T *a,int n)//[0,n)
+template<class T> void min_order(vector<T>& a)
 {
-	int i,j,k;
-	T x,y;
-	i=k=0;j=1;
-	while (i<n&&j<n&&k<n)
+	int n = a.size(), i, j, k;
+	a.resize(n * 2);
+	for (i = 0;i < n;i++) a[i + n] = a[i];
+	i = k = 0;j = 1;
+	while (i < n && j < n && k < n)
 	{
-		x=a[(i+k)%n];y=a[(j+k)%n];
-		if (x==y) ++k; else
+		T x = a[i + k], y = a[j + k];
+		if (x == y) ++k; else
 		{
-			if (x>y) i+=k+1; else j+=k+1;
-			if (i==j) ++j;
-			k=0;
+			(x > y ? i : j) += k + 1;
+			j += (i == j);
+			k = 0;
 		}
 	}
-	if (j>i) j=i;
-	//[j,n)+[0,j)
-	rotate(a,a+j,a+n);
+	a.resize(n);
+	//[min(i,j),n)+[0,min(i,j))
+	rotate(a.begin(), min(i, j) + all(a));
 }
 \end{lstlisting}
 \subsection{带通配符的字符串匹配}
@@ -10251,227 +10278,126 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{树哈希}
+\subsection{（基环）树哈希}
+
+有根树返回每个子树的哈希值，无根树返回树的哈希值（长度至多为 $2$ 的 \verb|vector|），基环树返回图的哈希值（长度等于环长的 \verb|vector|）。
 
 \begin{lstlisting}
-vector<int> tree_hash(const vector<pair<int,int>> &edges,int root)//[0,n)
+vector<int> tree_hash(const vector<vector<int>>& e, int root)//[0,n)
 {
-	int n=edges.size()+1;
-	vector e(n,vector<int>());
-	for (auto [u,v]:edges)
-	{
-		e[u].push_back(v);
-		e[v].push_back(u);
-	}
-	map<vector<int>,int> mp;
-	vector<int> h(n),ed(n);
-	int id=0;
-	function<void(int)> dfs=[&](int u)
+	int n = e.size();
+	static map<vector<int>, int> mp;
+	static int id = 0;
+	vector<int> h(n), ed(n);
+	function<void(int)> dfs = [&](int u)
 		{
-			ed[u]=1;
+			ed[u] = 1;
 			vector<int> c;
-			for (int v:e[u]) if (!ed[v])
+			for (int v : e[u]) if (!ed[v])
 			{
 				dfs(v);
 				c.push_back(h[v]);
 			}
 			sort(all(c));
-			if (!mp.count(c)) mp[c]=id++;
-			h[u]=mp[c];
+			if (!mp.count(c)) mp[c] = id++;
+			h[u] = mp[c];
 		};
 	dfs(root);
 	return h;
 }
-\end{lstlisting}
-
-\subsection{（基环）树哈希}
-
-这是带模数版本的，不建议使用。建议使用树哈希进行简单改造。
-
-原理：首先找到环，然后找到环上挂着的每个树的哈希值，然后用最小表示法做环哈希。
-
-\begin{lstlisting}
-#include <bits/stdc++.h>
-using namespace std;
-namespace tree_hash
+vector<int> tree_hash(const vector<vector<int>>& e)//[0,n)
 {
-	typedef unsigned int ui;
-	typedef unsigned long long ll;
-	const int N=1e6+2;
-    const ui p1=2034452107,p2=2013074419,B=(1ll<<32)-1;
-	mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
-	ui bas1[N],bas2[N],lst;
-	ui uni1,uni2;
-	vector<int> e[N];
-	vector<ll> rt;
-	ll g[N];
-	int siz[N],h[N],f[N],num[N*2];
-	int n,m;
-	void init()
-	{
-		uni1=rnd()%(p1/2)+p1/2;uni2=rnd()%(p2/2)+p2/2;
-		lst=0;
-	}
-	void dfs1(int u)
-	{
-		siz[u]=1;
-		int mx=0;
-		for (auto &v:e[u]) if (v!=f[u])
+	int n = e.size();
+	if (n == 0) return { };
+	vector<int> sz(n), mx(n);
+	function<void(int)> dfs = [&](int u)
 		{
-			f[v]=u;dfs1(v);siz[u]+=siz[v];
-			mx=max(mx,siz[v]);
-		}
-		mx=max(mx,n-siz[u]);
-		if (mx*2<=n) rt.push_back(u);
-	}
-	void dfs2(int u)
-	{
-		for (auto &v:e[u]) if (v!=f[u]) f[v]=u,dfs2(v),h[u]=max(h[u],h[v]);
-		++h[u];
-		int n=0;
-		static ll a[N];
-		for (auto &v:e[u]) if (v!=f[u]) a[n++]=g[v];
-		sort(a,a+n);
-		ll r1=0,r2=0;
-		a[n++]=1ll<<32|1;
-		for (int i=0;i<n;i++) r1=(r1*bas1[h[u]]+(a[i]>>32))%p1,r2=(r2*bas2[h[u]]+(a[i]&B))%p2;
-		g[u]=r1<<32|r2;
-	}
-	void get_e(vector<pair<int,int>> &E)
-	{
-		int i;
-		n=E.size()+1;m=0;
-		for (auto &[u,v]:E) num[m++]=u,num[m++]=v;
-		sort(num,num+m);m=unique(num,num+m)-num;
-		for (i=0;i<m;i++) e[num[i]].clear();
-		for (auto &[u,v]:E) e[u].push_back(v),e[v].push_back(u);
-		while (lst<n) bas1[++lst]=rnd()%(p1/2)+p1/2,bas2[lst]=rnd()%(p2/2)+p2/2;
-	}
-	ll rooted_tree_hash(int u)
-	{
-		if (n==1) return 1ll<<32|1;
-		for (int i=0;i<m;i++) f[num[i]]=0,h[num[i]]=0;
-		dfs2(u);
-		return g[u];
-	}
-	ll t_h(vector<pair<int,int>> &E)
-	{
-		int i;
-		get_e(E);
-		for (i=0;i<m;i++) f[num[i]]=0;
-		rt.clear();dfs1(1);
-		ll r1=0,r2=0;
-		for (auto &u:rt) u=rooted_tree_hash(u);
-		sort(rt.begin(),rt.end());
-		for (auto &u:rt) r1=(r1*uni1+(u>>32))%p1,r2=(r2*uni2+(u&B))%p2;
-		return r1<<32|r2;
-	}
+			sz[u] = 1;
+			for (int v : e[u]) if (!sz[v])
+			{
+				dfs(v);
+				sz[u] += sz[v];
+				cmax(mx[u], sz[v]);
+			}
+			cmax(mx[u], n - sz[u]);
+		};
+	dfs(0);
+	int m = *min_element(all(mx)), i;
+	vector<int> rt;
+	for (i = 0;i < n;i++) if (mx[i] == m) rt.push_back(i);
+	for (int& u : rt) u = tree_hash(e, u)[u];
+	sort(all(rt));
+	return rt;
 }
-using tree_hash::get_e;
-using tree_hash::rooted_tree_hash;
-using tree_hash::t_h;
-typedef pair<int,int> pa;
-typedef unsigned int ui;
-typedef unsigned long long ull;
-const ui mod1=2034452107,mod2=2013074419,B=(1ll<<32)-1;
-ui b1,b2;
-const int N=1e6+2;
-vector<int> e[N];
-int f[N];
-vector<int> lp;
-int getf(int u) {return f[u]==u?u:f[u]=getf(f[u]);}
-void dfs1(int u)
+template<class T> void min_order(vector<T>& a)
 {
-	for (auto &v:e[u]) if (v!=f[u]) f[v]=u,dfs1(v);
-}
-bool ed[N];
-void dfs2(int u,vector<pa> &E)
-{
-	for (auto &v:e[u]) if (!ed[v]) ed[v]=1,E.emplace_back(u,v),dfs2(v,E);
-}
-void min_order(ull *a,int n)
-{
-	int i,j,k;
-	ull x,y;
-	i=k=0;j=1;
-	while ((i<n)&&(j<n)&&(k<n))
+	int n = a.size(), i, j, k;
+	a.resize(n * 2);
+	for (i = 0;i < n;i++) a[i + n] = a[i];
+	i = k = 0;j = 1;
+	while (i < n && j < n && k < n)
 	{
-		x=a[(i+k)%n];y=a[(j+k)%n];
-		if (x==y) ++k; else
+		T x = a[i + k], y = a[j + k];
+		if (x == y) ++k; else
 		{
-			if (x>y) i+=k+1;  else j+=k+1;
-			if (i==j) ++j;
-			k=0;
+			(x > y ? i : j) += k + 1;
+			j += (i == j);
+			k = 0;
 		}
 	}
-	if (j>i) j=i;
-	//[j,n)+[0,j)
-	rotate(a,a+j,a+n);
+	a.resize(n);
+	//[min(i,j),n)+[0,min(i,j))
+	rotate(a.begin(), min(i, j) + all(a));
 }
-int cal()
+vector<int> pseudotree_hash(const vector<vector<int>>& e)//[0,n)
 {
-	int n,m,p1,p2;
-	cin>>m;
-	vector<pair<ull,ull>> a(m);
-	for (auto &V:a)
+	int n = e.size();
+	static map<vector<int>, int> mp;
+	static int id = 0;
+	vector<int> f(n), ed(n), h(n);
+	pair lp{-1, -1};
+	function<void(int)> dfs = [&](int u)
+		{
+			ed[u] = 1;
+			for (int v : e[u]) if (!ed[v])
+			{
+				f[v] = u;
+				dfs(v);
+			}
+			else if (v != f[u]) lp = {u, v};
+		};
+	dfs(0);
+	auto [x, y] = lp;
+	vector<int> node = {y};
+	do node.push_back(y = f[y]); while (y != x);
+	fill(all(ed), 0);
+	for (int u : node) ed[u] = 1;
+	dfs = [&](int u)
+		{
+			ed[u] = 1;
+			vector<int> c;
+			for (int v : e[u]) if (!ed[v])
+			{
+				dfs(v);
+				c.push_back(h[v]);
+			}
+			sort(all(c));
+			if (!mp.count(c)) mp[c] = id++;
+			h[u] = mp[c];
+		};
+	vector<int> r0;
+	for (int u : node)
 	{
-		int i;
-		cin>>n;
-		for (i=1;i<=n;i++) e[i].clear();
-		iota(f+1,f+n+1,1);
-		for (i=1;i<=n;i++)
-		{
-			int u,v;
-			cin>>u>>v;
-			if (getf(u)==getf(v)) {p1=u;p2=v;continue;}
-			e[u].push_back(v);
-			e[v].push_back(u);
-			f[f[u]]=f[v];
-		}
-		memset(f+1,0,n*sizeof f[0]);
-		dfs1(p1);
-		static int st[N];
-		memset(ed+1,0,n*sizeof ed[0]);
-		int tp=1;st[1]=p2;
-		while (p2!=p1) st[++tp]=p2=f[p2];
-		for (i=1;i<=tp;i++) ed[st[i]]=1;
-		vector<pa> E;
-		static ull ans[N];
-		E.reserve(n);
-		for (i=1;i<=tp;i++)
-		{
-			dfs2(st[i],E);
-			get_e(E);
-			ans[i]=rooted_tree_hash(st[i]);
-			E.clear();
-		}
-		min_order(ans+1,tp);
-		ull r1=0,r2=0,r,rr;
-		for (int i=1;i<=tp;i++) r1=(r1*b1+(ans[i]>>32))%mod1,r2=(r2*b2+(ans[i]&B))%mod2;
-		r=r1<<32|r2;
-		reverse(ans+1,ans+tp+1);
-		min_order(ans+1,tp);r1=r2=0;
-		for (int i=1;i<=tp;i++) r1=(r1*b1+(ans[i]>>32))%mod1,r2=(r2*b2+(ans[i]&B))%mod2;
-		rr=r1<<32|r2;
-		if (r>rr) swap(r,rr);
-		V=make_pair(r,rr);
+		dfs(u);
+		r0.push_back(h[u]);
 	}
-	sort(a.begin(),a.end());
-	return unique(a.begin(),a.end())-a.begin();
-}
-int main()
-{
-	b1=tree_hash::rnd()%(mod1/2)+mod1/2;
-	b2=tree_hash::rnd()%(mod2/2)+mod2/2;
-	tree_hash::init();
-	ios::sync_with_stdio(0);cin.tie(0);
-	int n,T;
-	cin>>T;
-	while (T--) cout<<cal()<<'\n';
+	auto r1 = r0;
+	reverse(all(r1));
+	min_order(r0);
+	min_order(r1);
+	return min(r0, r1);
 }
 \end{lstlisting}
-
-
 
 \subsection{无向图最小环}
 
@@ -11534,9 +11460,9 @@ using HLD::fun;//5e5
 设预处理的根是 $u$，当前根是 $v$，那么 $w$ 的子树如下：
 
 \begin{enumerate}
-\item $w=v$，dfn 区间为 $[1,n]$。
-\item $w$ 在 $u,v$ 之间，dfn 区间为 $[1,n]$ 去掉 $w$ 前往 $v$ 方向的子树。找到这个子树的方法见 find 函数。
-\item 其余情况，dfn 区间和原来一致。
+	\item $w=v$，dfn 区间为 $[1,n]$。
+	\item $w$ 在 $u,v$ 之间，dfn 区间为 $[1,n]$ 去掉 $w$ 前往 $v$ 方向的子树。找到这个子树的方法见 find 函数。
+	\item 其余情况，dfn 区间和原来一致。
 \end{enumerate}
 
 $O(n+q\log n)$，$O(n)$。
@@ -11630,9 +11556,9 @@ int main()
 流程：
 
 \begin{enumerate}
-\item dfs 轻子树计算答案，并清空全局统计信息。
-\item dfs 重子树统计答案和全局信息。
-\item dfs 轻子树统计全局信息。
+	\item dfs 轻子树计算答案，并清空全局统计信息。
+	\item dfs 重子树统计答案和全局信息。
+	\item dfs 轻子树统计全局信息。
 \end{enumerate}
 
 \begin{lstlisting}
@@ -12239,6 +12165,8 @@ void dfs(int u)
 
 \subsection{支配树（DAG 版）}
 
+其定义见一般图版。
+
 $O(m\log n)$，$O(n\log n)$。
 
 \begin{lstlisting}
@@ -12303,7 +12231,9 @@ int main()
 \end{lstlisting}
 
 \subsection{支配树（一般图）}
-$idom[u]$ 表示 $u$ 的支配点。即：从 $S$ 走到 $u$ 必须走过支配树上到 $S$ 到 $u$ 这条链的点，其中 $idom[u]$ 是 $u$ 父节点。
+
+$u$ 支配 $v$ 指的是从 $S$ 到 $v$ 的路径必然经过 $u$。支配树是保持支配关系不变的树，其中 $S$ 是根，$idom[u]$ 是 $u$ 的父节点。
+
 \begin{lstlisting}
 #include <bits/stdc++.h>
 using namespace std;
@@ -12362,66 +12292,11 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{最小树形图（朱刘算法，无方案）}
-
-$O(nm)$，$O(n+m)$。
-
-\begin{lstlisting}
-int main()
-{
-	read(n);read(m);read(rt);
-	for (i=1;i<=m;i++)
-	{
-		read(lj[i][1]);read(lj[i][2]);read(lj[i][0]);
-	}
-	while (1)
-	{
-		memset(infl,0x3f,sizeof(infl));
-		memset(ed,0,sizeof(ed));
-		memset(fa,0,sizeof(fa));
-		for (i=1;i<=m;i++) if ((lj[i][1]!=lj[i][2])&&(lj[i][2]!=rt)&&(infl[lj[i][2]]>lj[i][0]))
-		{
-			infl[lj[i][2]]=lj[i][0];
-			pre[lj[i][2]]=lj[i][1];
-		}
-		for (i=1;i<=n;i++) if (i!=rt)
-		{
-			if (infl[i]==infl[0])
-			{
-				puts("-1");return 0;
-			}
-			ans+=infl[i];
-			for (j=i;(ed[j]!=i)&&(fa[j]==0)&&(j!=rt);j=pre[j]) ed[j]=i;
-			if (ed[j]==i)
-			{
-				++cnt;
-				while (fa[j]==0)
-				{
-					fa[j]=cnt;
-					j=pre[j];
-				}
-			}
-		}
-		if (!cnt)
-		{
-			printf("%d",ans);return 0;
-		}
-		for (i=1;i<=n;i++) if (!fa[i]) fa[i]=++cnt;
-		for (i=1;i<=m;i++)
-		{
-			lj[i][0]-=infl[lj[i][2]];
-			lj[i][1]=fa[lj[i][1]];
-			lj[i][2]=fa[lj[i][2]];
-		}
-		rt=fa[rt];
-		n=cnt;cnt=0;
-	}
-}
-\end{lstlisting}
-
 \subsection{最小乘积生成树}
 
-你需要实现的是 \verb|sol1|，即按照 \verb|val| 为权值的答案。
+题意：每条边有两个属性 $x_i,y_i$，你需要最小化 $(\sum x_i)(\sum y_i)$。
+
+你需要实现的是 \verb|sol1|，即按照 $val$ 为权值的答案。$val_i$ 是根据 $x_i,y_i$ 计算的。
 
 \begin{lstlisting}
 #include <bits/stdc++.h>
@@ -13207,7 +13082,7 @@ db sim(db l,db r)
 
 \subsection{计算几何全}
 
-功能其实比较少，因为实际遇到的几何题不多。最有用的可能是闵可夫斯基和合并凸包，和常规的线段判交之类的。
+功能其实比较少，因为实际遇到的几何题不多。最有用的可能是闵可夫斯基和合并凸包，和常规的线段判交之类的。其余功能最好直接使用 HDU 板。
 
 \begin{lstlisting}
 namespace geometry//不要用 int！
@@ -14178,9 +14053,9 @@ $f(p^k)=\begin{cases}
 
 以下代码给出所有的非负整数解。注意非负整数解个数不等于 $f(n)$。
 
-时间复杂度为 $O(n^{\dfrac{1}{4}}+f(n))$，其中 $O(n^{\dfrac{1}{4}})$ 是 pollard-rho 的复杂度。
+时间复杂度为 $O(n^{\frac{1}{4}}+f(n))$，其中 $O(n^{\frac{1}{4}})$ 是 pollard-rho 的复杂度。
 
-$f(n)$ 的量级不好分析，但不会超过约数个数 $O(d(n))\approx O(n^{\dfrac{1}{3}})$，且可以推测不能达到。
+$f(n)$ 的量级不好分析，但不会超过约数个数 $O(d(n))\approx O(n^{\frac{1}{3}})$，且可以推测不能达到。
 
 \begin{lstlisting}
 namespace pr
@@ -14405,7 +14280,7 @@ vector<pair<ll, ll>> two_sqr_sum(ll n)//只会返回非负解，按照字典序�
 
 没啥用。
 
-$q\equiv \dfrac{x}{a}\pmod p$，$|a|\le A$。
+$q\equiv \frac{x}{a}\pmod p$，$|a|\le A$。
 
 \begin{lstlisting}
 pair<int, int> approx(int p,int q,int A)
@@ -14594,80 +14469,80 @@ auto turn=[&](string s)
 \subsection{约数个数表}
 \begin{table}[H]
 	\centering
-\begin{tabular}{c|c|c|c|c|c}
-	\toprule
-	$n$ & $n$ 前第一个质数 & $n$ 后第一个质数 & $\max\{\omega(n)\}$ & $\max\{d(n)\}$ & $\pi(n)$ \\
-	\midrule
-	$10^{1}$ & $10^{1}-3$ & $10^{1}+1$ & $2$ & $d(6) = 4$ & $4$ \\
-	$10^{2}$ & $10^{2}-3$ & $10^{2}+1$ & $3$ & $d(60) = 12$ & $25$ \\
-	$10^{3}$ & $10^{3}-3$ & $10^{3}+13$ & $4$ & $d(840) = 32$ & $168$ \\
-	$10^{4}$ & $10^{4}-27$ & $10^{4}+7$ & $5$ & $d(7560) = 64$ & $1229$ \\
-	$10^{5}$ & $10^{5}-9$ & $10^{5}+3$ & $6$ & $d(83160) = 128$ & $9592$ \\
-	$10^{6}$ & $10^{6}-17$ & $10^{6}+3$ & $7$ & $d(720720) = 240$ & $7.9\times 10^4$ \\
-	$10^{7}$ & $10^{7}-9$ & $10^{7}+19$ & $8$ & $d(8648640) = 448$ & $6.7\times 10^5$ \\
-	$10^{8}$ & $10^{8}-11$ & $10^{8}+7$ & $8$ & $d(73513440) = 768$ & $5.8\times 10^6$ \\
-	$10^{9}$ & $10^{9}-63$ & $10^{9}+7$ & $9$ & $d(735134400) = 1344$ & $5.1\times 10^7$ \\
-	$10^{10}$ & $10^{10}-33$ & $10^{10}+19$ & $10$ & $d(6983776800) = 2304$ & $4.6\times 10^8$ \\
-	$10^{11}$ & $10^{11}-23$ & $10^{11}+3$ & $10$ & $d(97772875200) = 4032$ & $4.2\times 10^8$ \\
-	$10^{12}$ & $10^{12}-11$ & $10^{12}+39$ & $11$ & $d(963761198400) = 6720$ & $3.8\times 10^9$ \\
-	$10^{13}$ & $10^{13}-29$ & $10^{13}+37$ & $12$ & $d(9316358251200) = 10752$ & $3.5\times 10^{10}$ \\
-	$10^{14}$ & $10^{14}-27$ & $10^{14}+31$ & $12$ & $d(97821761637600) = 17280$ & $3.3\times 10^{11}$ \\
-	$10^{15}$ & $10^{15}-11$ & $10^{15}+37$ & $13$ & $d(866421317361600) = 26880$ & $3\times 10^{12}$ \\
-	$10^{16}$ & $10^{16}-63$ & $10^{16}+61$ & $13$ & $d(8086598962041600) = 41472$ & $2.8\times 10^{13}$ \\
-	$10^{17}$ & $10^{17}-3$ & $10^{17}+3$ & $14$ & $d(74801040398884800) = 64512$ &  \\
-	$10^{18}$ & $10^{18}-11$ & $10^{18}+3$ & $15$ & $d(897612484786617600) = 103680$ &  \\
-	$10^{19}$ & $10^{19}-39$ & $10^{19}+51$ & $16$ & $d(9200527969062830400) = 161280$ &  \\
-	\bottomrule
+	\begin{tabular}{c|c|c|c|c|c}
+		\toprule
+		$n$       & $n$ 前第一个质数   & $n$ 后第一个质数   & $\max\{\omega(n)\}$ & $\max\{d(n)\}$                    & $\pi(n)$            \\
+		\midrule
+		$10^{1}$  & $10^{1}-3$   & $10^{1}+1$   & $2$                 & $d(6) = 4$                        & $4$                 \\
+		$10^{2}$  & $10^{2}-3$   & $10^{2}+1$   & $3$                 & $d(60) = 12$                      & $25$                \\
+		$10^{3}$  & $10^{3}-3$   & $10^{3}+13$  & $4$                 & $d(840) = 32$                     & $168$               \\
+		$10^{4}$  & $10^{4}-27$  & $10^{4}+7$   & $5$                 & $d(7560) = 64$                    & $1229$              \\
+		$10^{5}$  & $10^{5}-9$   & $10^{5}+3$   & $6$                 & $d(83160) = 128$                  & $9592$              \\
+		$10^{6}$  & $10^{6}-17$  & $10^{6}+3$   & $7$                 & $d(720720) = 240$                 & $7.9\times 10^4$    \\
+		$10^{7}$  & $10^{7}-9$   & $10^{7}+19$  & $8$                 & $d(8648640) = 448$                & $6.7\times 10^5$    \\
+		$10^{8}$  & $10^{8}-11$  & $10^{8}+7$   & $8$                 & $d(73513440) = 768$               & $5.8\times 10^6$    \\
+		$10^{9}$  & $10^{9}-63$  & $10^{9}+7$   & $9$                 & $d(735134400) = 1344$             & $5.1\times 10^7$    \\
+		$10^{10}$ & $10^{10}-33$ & $10^{10}+19$ & $10$                & $d(6983776800) = 2304$            & $4.6\times 10^8$    \\
+		$10^{11}$ & $10^{11}-23$ & $10^{11}+3$  & $10$                & $d(97772875200) = 4032$           & $4.2\times 10^8$    \\
+		$10^{12}$ & $10^{12}-11$ & $10^{12}+39$ & $11$                & $d(963761198400) = 6720$          & $3.8\times 10^9$    \\
+		$10^{13}$ & $10^{13}-29$ & $10^{13}+37$ & $12$                & $d(9316358251200) = 10752$        & $3.5\times 10^{10}$ \\
+		$10^{14}$ & $10^{14}-27$ & $10^{14}+31$ & $12$                & $d(97821761637600) = 17280$       & $3.3\times 10^{11}$ \\
+		$10^{15}$ & $10^{15}-11$ & $10^{15}+37$ & $13$                & $d(866421317361600) = 26880$      & $3\times 10^{12}$   \\
+		$10^{16}$ & $10^{16}-63$ & $10^{16}+61$ & $13$                & $d(8086598962041600) = 41472$     & $2.8\times 10^{13}$ \\
+		$10^{17}$ & $10^{17}-3$  & $10^{17}+3$  & $14$                & $d(74801040398884800) = 64512$    &                     \\
+		$10^{18}$ & $10^{18}-11$ & $10^{18}+3$  & $15$                & $d(897612484786617600) = 103680$  &                     \\
+		$10^{19}$ & $10^{19}-39$ & $10^{19}+51$ & $16$                & $d(9200527969062830400) = 161280$ &                     \\
+		\bottomrule
 	\end{tabular}
 \end{table}
 \subsection{NTT 质数}
 \begin{table}[H]
 	\centering
-\begin{tabular}{c|c|c|c}
-	
-	\toprule
-	$p=r\times 2^k+1$     & $r$   & $k$  & $g$（最小原根） \\
-	\midrule
-	$17$                  & $1$   & $4$  & $3$       \\
-	$97$                  & $3$   & $5$  & $5$       \\
-	$193$                 & $3$   & $6$  & $5$       \\
-	$257$                 & $1$   & $8$  & $3$       \\
-	$7681$                & $15$  & $9$  & $17$      \\
-	$12289$               & $3$   & $12$ & $11$      \\
-	$40961$               & $5$   & $13$ & $3$       \\
-	$65537$               & $1$   & $16$ & $3$       \\
-	$786433$              & $3$   & $18$ & $10$      \\
-	$5767169$             & $11$  & $19$ & $3$       \\
-	$7340033$             & $7$   & $20$ & $3$       \\
-	$23068673$            & $11$  & $21$ & $3$       \\
-	$104857601$           & $25$  & $22$ & $3$       \\
-	$167772161$           & $5$   & $25$ & $3$       \\
-	$469762049$           & $7$   & $26$ & $3$       \\
-	$998244353$           & $119$ & $23$ & $3$       \\
-	$1004535809$          & $479$ & $21$ & $3$       \\
-	$2013265921$          & $15$  & $27$ & $31$      \\
-	$2281701377$          & $17$  & $27$ & $3$       \\
-	$3221225473$          & $3$   & $30$ & $5$       \\
-	$75161927681$         & $35$  & $31$ & $3$       \\
-	$77309411329$         & $9$   & $33$ & $7$       \\
-	$206158430209$        & $3$   & $36$ & $22$      \\
-	$2061584302081$       & $15$  & $37$ & $7$       \\
-	$2748779069441$       & $5$   & $39$ & $3$       \\
-	$6597069766657$       & $3$   & $41$ & $5$       \\
-	$39582418599937$      & $9$   & $42$ & $5$       \\
-	$79164837199873$      & $9$   & $43$ & $5$       \\
-	$263882790666241$     & $15$  & $44$ & $7$       \\
-	$1231453023109121$    & $35$  & $45$ & $3$       \\
-	$1337006139375617$    & $19$  & $46$ & $3$       \\
-	$3799912185593857$    & $27$  & $47$ & $5$       \\
-	$4222124650659841$    & $15$  & $48$ & $19$      \\
-	$7881299347898369$    & $7$   & $50$ & $6$       \\
-	$31525197391593473$   & $7$   & $52$ & $3$       \\
-	$180143985094819841$  & $5$   & $55$ & $6$       \\
-	$1945555039024054273$ & $27$  & $56$ & $5$       \\
-	$4179340454199820289$ & $29$  & $57$ & $3$       \\
-	\bottomrule
-\end{tabular}
+	\begin{tabular}{c|c|c|c}
+
+		\toprule
+		$p=r\times 2^k+1$     & $r$   & $k$  & $g$（最小原根） \\
+		\midrule
+		$17$                  & $1$   & $4$  & $3$       \\
+		$97$                  & $3$   & $5$  & $5$       \\
+		$193$                 & $3$   & $6$  & $5$       \\
+		$257$                 & $1$   & $8$  & $3$       \\
+		$7681$                & $15$  & $9$  & $17$      \\
+		$12289$               & $3$   & $12$ & $11$      \\
+		$40961$               & $5$   & $13$ & $3$       \\
+		$65537$               & $1$   & $16$ & $3$       \\
+		$786433$              & $3$   & $18$ & $10$      \\
+		$5767169$             & $11$  & $19$ & $3$       \\
+		$7340033$             & $7$   & $20$ & $3$       \\
+		$23068673$            & $11$  & $21$ & $3$       \\
+		$104857601$           & $25$  & $22$ & $3$       \\
+		$167772161$           & $5$   & $25$ & $3$       \\
+		$469762049$           & $7$   & $26$ & $3$       \\
+		$998244353$           & $119$ & $23$ & $3$       \\
+		$1004535809$          & $479$ & $21$ & $3$       \\
+		$2013265921$          & $15$  & $27$ & $31$      \\
+		$2281701377$          & $17$  & $27$ & $3$       \\
+		$3221225473$          & $3$   & $30$ & $5$       \\
+		$75161927681$         & $35$  & $31$ & $3$       \\
+		$77309411329$         & $9$   & $33$ & $7$       \\
+		$206158430209$        & $3$   & $36$ & $22$      \\
+		$2061584302081$       & $15$  & $37$ & $7$       \\
+		$2748779069441$       & $5$   & $39$ & $3$       \\
+		$6597069766657$       & $3$   & $41$ & $5$       \\
+		$39582418599937$      & $9$   & $42$ & $5$       \\
+		$79164837199873$      & $9$   & $43$ & $5$       \\
+		$263882790666241$     & $15$  & $44$ & $7$       \\
+		$1231453023109121$    & $35$  & $45$ & $3$       \\
+		$1337006139375617$    & $19$  & $46$ & $3$       \\
+		$3799912185593857$    & $27$  & $47$ & $5$       \\
+		$4222124650659841$    & $15$  & $48$ & $19$      \\
+		$7881299347898369$    & $7$   & $50$ & $6$       \\
+		$31525197391593473$   & $7$   & $52$ & $3$       \\
+		$180143985094819841$  & $5$   & $55$ & $6$       \\
+		$1945555039024054273$ & $27$  & $56$ & $5$       \\
+		$4179340454199820289$ & $29$  & $57$ & $3$       \\
+		\bottomrule
+	\end{tabular}
 
 \end{table}
 \subsection{公式}
