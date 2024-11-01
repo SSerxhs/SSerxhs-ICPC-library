@@ -44,7 +44,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver: 3.9.10}
+\centerline{ver: 3.9.11}
 
 \tableofcontents
 
@@ -14990,13 +14990,45 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{python 文件操作}
+\subsection{python 使用方法}
+
+注意事项：python 容易爆栈，且引用与赋值较为混乱。注意局部变量的 global 怎么写（如果需要修改全局内容）。
+
+文件操作
 
 \begin{lstlisting}
 fi = open("discuss.in", "r")
 fo = open("discuss.out", "w")
 n=int(fi.readline())
 fo.write(str(ans))
+\end{lstlisting}
+
+
+类的构造，重载运算符
+\begin{lstlisting}
+class Q:
+	def __init__(self,x,y):
+		self.x=x
+		self.y=y
+	def __add__(self,o):
+		r=Q(self.x+o.x,self.y+o.y)
+		return r
+	def __sub__(self,o):
+		r=Q(self.x-o.x,self.y-o.y)
+		return r
+	def __mul__(self,o):
+		return self.x*o.y-self.y*o.x
+	def __lt__(self,o):
+		if self.x!=o.x:
+			return self.x<o.x
+		return self.y<o.y
+n,m=map(int,input().split())
+c=list(map(int,input().split()))
+print(*c)
+a=Q(0,0)
+b=Q(1,1)
+if a<b-a:
+	pass
 \end{lstlisting}
 
 \newpage
