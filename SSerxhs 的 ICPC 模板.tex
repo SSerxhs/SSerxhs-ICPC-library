@@ -44,7 +44,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver: 3.9.8}
+\centerline{ver: 3.9.10}
 
 \tableofcontents
 
@@ -2462,7 +2462,7 @@ int main()
 
 \subsection{双端队列全局查询}
 
-对一个支持结合律的信息 T，维护 deque 内信息的和。总复杂度线性。
+对一个支持结合律的信息 T，维护 \verb|deque| 内信息的和。总复杂度线性。
 
 \begin{lstlisting}
 template<class T> struct dq
@@ -3085,6 +3085,128 @@ template<class T> struct mode//[0,n)
 		return {b[val],cnt};
 	}
 };
+\end{lstlisting}
+
+\subsection{表达式树}
+
+传入表达式，输出表达式树。
+
+输入的第二个参数是全体括号以外的运算符，每个运算符要记录字符优先级和是否右结合。优先级数字越大，越优先计算，且优先级必须为正整数。
+
+输出的第一个参数是子结点数组，第二个参数是每个结点对应的字符，第三个参数是根。结点编号从 $1$ 开始。
+
+输出的表达式树满足每个结点对应一个字符。若包含数字串，则视为相邻数码之间加一个井号，表示“数码链接”这个运算符。你不需要，也不应该手动加入这个井号。
+
+如果表达式非法，将返回根为 $0$。不允许一元运算符（负号），不允许省略乘号，不允许出现字母（除非字母是运算符）。
+
+如果需要支持字母作为数字，修改所有包含 \verb|isdigit| 的部分。
+
+由于存在“数码链接”，在 dfs 树的时候最好记录一下子树大小，便于链接时计算（你不能在链接时直接看右子树的数字大小，因为有可能有前导 $0$）。
+
+\begin{lstlisting}
+struct Q
+{
+	char ch;
+	int prec;
+	bool right;
+};
+tuple<vector<array<int, 2>>, vector<char>, int> parse_expr(string s, vector<Q> op) {
+	static int idx[128];
+	int maxp = 0, pos = 0, n, err = 0, i;
+	{
+		string t;
+		for (char c : s)
+		{
+			if (t.size() && isdigit(t.back()) && isdigit(c)) t += '#';
+			t += c;
+		}
+		swap(s, t);
+		n = s.size();
+	}
+	for (i = 0; i < op.size(); ++i)
+	{
+		idx[op[i].ch] = i + 1;
+		cmax(maxp, op[i].prec);
+	}
+	op.push_back({'#', ++maxp, 0});
+	idx['#'] = op.size();
+	vector<array<int, 2>> c(1);
+	vector<char> ch(1);
+	auto node = [&](char x) {
+		c.push_back({0, 0});
+		ch.push_back(x);
+		return c.size() - 1;
+	};
+	function<int(int)> parse = [&](int lv) -> int {
+		int u;
+		if (lv > maxp)
+		{
+			if (pos < n && s[pos] == '(')
+			{
+				pos++;
+				u = parse(1);
+				if (err |= (pos >= n || s[pos++] != ')')) return 0;
+				return u;
+			}
+			else if (pos < n && isdigit(s[pos])) return u = node(s[pos++]);
+			else return err = 1, 0;
+		}
+		else
+		{
+			u = parse(lv + 1);
+			while (!err && pos < n)
+			{
+				char ch = s[pos];
+				int i = idx[ch] - 1;
+				if (i >= 0 && op[i].prec == lv)
+				{
+					++pos;
+					int v = node(ch), w = parse(lv + !op[i].right);
+					c[v] = {u, w};
+					u = v;
+				}
+				else break;
+			}
+			return u;
+		}
+	};
+	int root = parse(0);
+	for (auto [ch, _, __] : op) idx[ch] = 0;
+	if (err || pos != n) return {{ }, { }, 0};
+	return {c, ch, root};
+}
+int main()
+{
+	ios::sync_with_stdio(0); cin.tie(0);
+	cout << fixed << setprecision(15);
+	string s;
+	getline(cin, s);
+	vector<Q> op = {
+		{'|', 1, 0},
+		{'&', 2, 0},
+	};
+	auto [c, ch, root] = parse_expr(s, op);
+	assert(root);
+	function<array<int, 3>(int)> dfs = [&](int u)->array<int, 3> {
+		if (isdigit(ch[u])) return {ch[u] - '0', 0, 0};
+		auto [l, r1, r2] = dfs(c[u][0]);
+		if (ch[u] == '|')
+		{
+			if (l) return {1, r1, r2 + 1};
+			auto [r, r3, r4] = dfs(c[u][1]);
+			return {r, r1 + r3, r2 + r4};
+		}
+		else
+		{
+			if (!l) return {0, r1 + 1, r2};
+			auto [r, r3, r4] = dfs(c[u][1]);
+			return {r, r1 + r3, r2 + r4};
+		}
+	};
+	auto [r0, r1, r2] = dfs(root);
+	cout << r0 << endl << r1 << ' ' << r2 << endl;
+}
+
 \end{lstlisting}
 
 \newpage
@@ -8412,7 +8534,7 @@ void ntt(vector <ui> &a)
 			}
 		}
 	}
-}\
+}
 vector<int> match(string s, string t, char ch='*')
 {
 	static mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
@@ -9400,341 +9522,330 @@ int main()
 \begin{lstlisting}
 namespace net
 {
-	const int N=4e5+50;//number of points
+	const int N = 4e5 + 50;//number of nodes
 	namespace flow
 	{
-		typedef ll wT;//single flow
-		typedef ll cT;//total flow
-		const cT inf=numeric_limits<cT>::max()/2;//maximum
+		const ll inf = 4e18;
 		struct Q
 		{
 			int v;
-			wT w;
+			ll w;
 			int id;
 		};
 		vector<Q> e[N];
-		int fc[N],q[N];
-		int n,s,t;
+		vector<Q>::iterator fir[N];
+		int fc[N], q[N];
+		int n, s, t;
 		int bfs()
 		{
-			fill_n(fc,n,0);
-			int p1=0,p2=0,u;
-			fc[s]=1; q[0]=s;
-			while (p1<=p2)
+			for (int i = 0;i < n;i++)
 			{
-				int u=q[p1++];
-				for (auto [v,w,id]:e[u]) if (w&&!fc[v]) fc[q[++p2]=v]=fc[u]+1;
+				fir[i] = e[i].begin();
+				fc[i] = 0;
+			}
+			int p1 = 0, p2 = 0, u;
+			fc[s] = 1; q[0] = s;
+			while (p1 <= p2)
+			{
+				int u = q[p1++];
+				for (auto [v, w, id] : e[u]) if (w && !fc[v])
+				{
+					q[++p2] = v;
+					fc[v] = fc[u] + 1;
+				}
 			}
 			return fc[t];
 		}
-		cT dfs(int u,cT maxf)
+		ll dfs(int u, ll maxf)
 		{
-			if (u==t) return maxf;
-			cT j=0,k;
-			for (auto &[v,w,id]:e[u]) if (w&&fc[v]==fc[u]+1&&(k=dfs(v,min(maxf-j,(cT)w))))
+			if (u == t) return maxf;
+			ll j = 0, k;
+			for (auto& it = fir[u];it != e[u].end();++it)
 			{
-				j+=k;
-				w-=k;
-				e[v][id].w+=k;
-				if (j==maxf) return j;
+				auto& [v, w, id] = *it;
+				if (w && fc[v] == fc[u] + 1 && (k = dfs(v, min(maxf - j, w))))
+				{
+					j += k;
+					w -= k;
+					e[v][id].w += k;
+					if (j == maxf) return j;
+				}
 			}
-			fc[u]=0;
+			fc[u] = 0;
 			return j;
 		}
-		cT max_flow(const vector<tuple<int,int,wT>> &edges,int S,int T)//[0,n]
+		ll max_flow(int _n, const vector<tuple<int, int, ll>>& edges, int _s, int _t)//[0,n]
 		{
-			s=S; t=T; n=max(s,t);
-			for (auto [u,v,w]:edges) n=max({n,u,v});
-			++n;
-			assert(n<N);
-			for (int i=0; i<n; i++) e[i].clear();
-			for (auto [u,v,w]:edges) if (u!=v)
+			s = _s; t = _t; n = _n + 1;
+			for (int i = 0; i < n; i++) e[i].clear();
+			for (auto [u, v, w] : edges) if (u != v)
 			{
-				e[u].push_back({v,w,(int)e[v].size()});
-				e[v].push_back({u,0,(int)e[u].size()-1});
+				e[u].push_back({v, w, (int)e[v].size()});
+				e[v].push_back({u, 0, (int)e[u].size() - 1});
 			}
-			cT r=0;
-			while (bfs()) r+=dfs(s,inf);
+			ll r = 0;
+			while (bfs()) r += dfs(s, inf);
 			return r;
 		}
 	}
-	using flow::max_flow,flow::fc;
+	using flow::max_flow, flow::fc;
 	namespace match
 	{
-		int lk[N];
-		int max_match(int n,int m,const vector<pair<int,int>> &edges)//lk[[0,n]]->[0,m]
+		int lk[N], kl[N], ed[N];
+		vector<int> e[N];
+		int max_match(int n, int m, const vector<pair<int, int>>& edges)//lk[[0,n]]->[0,m]
 		{
 			++n; ++m;
-			assert(max(n,m)<N);
-			int s=n+m,t=n+m+1,i;
-			vector<tuple<int,int,ll>> eg;
-			eg.reserve(n+m+edges.size());
-			for (i=0; i<n; i++) eg.push_back({s,i,1});
-			for (i=0; i<m; i++) eg.push_back({i+n,t,1});
-			for (auto [u,v]:edges) eg.push_back({u,v+n,1});
-			int r=max_flow(eg,s,t);
-			fill_n(lk,n,-1);
-			for (i=0; i<n; i++) for (auto [v,w,id]:flow::e[i]) if (v<s&&!w) { lk[i]=v-n; break; }
+			int s = n + m, t = n + m + 1, i;
+			vector<tuple<int, int, ll>> eg;
+			eg.reserve(n + m + edges.size());
+			for (i = 0; i < n; i++) eg.push_back({s, i, 1});
+			for (i = 0; i < m; i++) eg.push_back({i + n, t, 1});
+			for (auto [u, v] : edges) eg.push_back({u, v + n, 1});
+			int r = max_flow(t, eg, s, t);
+			fill_n(lk, n, -1);
+			for (i = 0; i < n; i++) for (auto [v, w, id] : flow::e[i]) if (v < s && !w)
+			{
+				lk[i] = v - n;
+				break;
+			}
 			return r;
 		}
-		bool ed[N];
-		int kl[N];
-		vector<int> e[N];
 		void dfs(int u)
 		{
-			for (int v:e[u]) if (!ed[v]) ed[v]=1,dfs(kl[v]);
+			for (int v : e[u]) if (!ed[v]) ed[v] = 1, dfs(kl[v]);
 		}
-		pair<vector<int>,vector<int>> min_cover(int n,int m,const vector<pair<int,int>> &edges)//[0,n]-[0,m]
+		pair<vector<int>, vector<int>> min_cover(int n, int m, const vector<pair<int, int>>& edges)//[0,n]-[0,m]
 		{
-			max_match(n,m,edges);
+			max_match(n, m, edges);
 			++n; ++m;
-			fill_n(kl,m,-1); fill_n(ed,m,0);
+			fill_n(kl, m, -1); fill_n(ed, m, 0);
 			int i;
-			for (i=0; i<n; i++)
+			for (i = 0; i < n; i++)
 			{
 				e[i].clear();
-				if (lk[i]!=-1) kl[lk[i]]=i;
+				if (lk[i] != -1) kl[lk[i]] = i;
 			}
-			for (auto [u,v]:edges) e[u].push_back(v);
-			for (i=0; i<n; i++) if (lk[i]==-1) dfs(i);
+			for (auto [u, v] : edges) e[u].push_back(v);
+			for (i = 0; i < n; i++) if (lk[i] == -1) dfs(i);
 			vector<int> r[2];
-			for (i=0; i<m; i++) if (kl[i]!=-1)
+			for (i = 0; i < m; i++) if (kl[i] != -1)
 			{
 				if (ed[i]) r[1].push_back(i); else r[0].push_back(kl[i]);
 			}
 			sort(all(r[0]));
-			return {r[0],r[1]};
+			return {r[0], r[1]};
 		}
 	}
-	using match::max_match,match::min_cover,match::lk,match::kl;
+	using match::max_match, match::min_cover, match::lk, match::kl;
 	namespace cost_flow
 	{
-		typedef ll wT;
-		typedef ll cT;
-		const cT inf=numeric_limits<cT>::max()/2;
+		const ll inf = 4e18;
 		struct Q
 		{
 			int v;
-			wT w;
-			cT c;
+			ll w, c;
 			int id;
 		};
 		vector<Q> e[N];
-		cT dis[N];
-		int pre[N],pid[N],ipd[N];
+		ll dis[N];
+		int pre[N], pid[N], ipd[N];
 		bool ed[N];
-		int n,s,t;
-		pair<wT,cT> spfa()
+		int n, s, t;
+		pair<ll, ll> spfa()
 		{
 			queue<int> q;
-			fill_n(dis,n,inf);
-			memset(ed,0,n*sizeof ed[0]);
-			q.push(s); dis[s]=0;
+			fill_n(dis, n, inf);
+			memset(ed, 0, n * sizeof ed[0]);
+			q.push(s); dis[s] = 0;
 			while (q.size())
 			{
-				int u=q.front(); q.pop(); ed[u]=0;
-				for (auto [v,w,c,id]:e[u]) if (w&&dis[v]>dis[u]+c)
+				int u = q.front(); q.pop(); ed[u] = 0;
+				for (auto [v, w, c, id] : e[u]) if (w && dis[v] > dis[u] + c)
 				{
-					dis[v]=dis[u]+c;
-					pre[v]=u;
-					pid[v]=e[v][id].id;
-					ipd[v]=id;
-					if (!ed[v]) q.push(v),ed[v]=1;
+					dis[v] = dis[u] + c;
+					pre[v] = u;
+					pid[v] = e[v][id].id;
+					ipd[v] = id;
+					if (!ed[v]) q.push(v), ed[v] = 1;
 				}
 			}
-			if (dis[t]==inf) return {0,0};
-			wT mw=numeric_limits<wT>::max();
-			for (int i=t; i!=s; i=pre[i]) mw=min(mw,e[pre[i]][pid[i]].w);
-			for (int i=t; i!=s; i=pre[i]) e[pre[i]][pid[i]].w-=mw,e[i][ipd[i]].w+=mw;
-			return {mw,(cT)mw*dis[t]};
+			if (dis[t] == inf) return {0, 0};
+			ll mw = 9e18;
+			for (int i = t; i != s; i = pre[i]) mw = min(mw, e[pre[i]][pid[i]].w);
+			for (int i = t; i != s; i = pre[i]) e[pre[i]][pid[i]].w -= mw, e[i][ipd[i]].w += mw;
+			return {mw, mw * dis[t]};
 		}
-		pair<wT,cT> mcmf_spfa(const vector<tuple<int,int,wT,cT>> &edges,int S,int T)//[0,n]
+		pair<ll, ll> mcmf_spfa(int _n, const vector<tuple<int, int, ll, ll>>& edges, int _s, int _t)//[0,n]
 		{
-			s=S; t=T; n=max(s,t);
-			for (auto [u,v,w,c]:edges) n=max({n,u,v});
-			++n;
-			assert(n<N);
-			for (int i=0; i<n; i++) e[i].clear();
-			for (auto [u,v,w,c]:edges) if (u!=v)
+			s = _s; t = _t; n = _n + 1;
+			for (int i = 0; i < n; i++) e[i].clear();
+			for (auto [u, v, w, c] : edges) if (u != v)
 			{
-				e[u].push_back({v,w,c,(int)e[v].size()});
-				e[v].push_back({u,0,-c,(int)e[u].size()-1});
+				e[u].push_back({v, w, c, (int)e[v].size()});
+				e[v].push_back({u, 0, -c, (int)e[u].size() - 1});
 			}
-			pair<wT,cT> r{0,0},rr;
-			while ((rr=spfa()).first) r={r.first+rr.first,r.second+rr.second};
+			pair<ll, ll> r{0, 0}, rr;
+			while ((rr = spfa()).first) r = {r.first + rr.first, r.second + rr.second};
 			return r;
 		}
-		pair<wT,cT> mcmf_dijk(const vector<tuple<int,int,wT,cT>> &edges,int S,int T)//[0,n]
+		pair<ll, ll> mcmf_dijk(int _n, const vector<tuple<int, int, ll, ll>>& edges, int _s, int _t)//[0,n]
 		{
-			s=S; t=T; n=max(s,t);
-			for (auto [u,v,w,c]:edges) n=max({n,u,v});
-			++n;
-			assert(n<N);
-			for (int i=0; i<n; i++) e[i].clear();
-			for (auto [u,v,w,c]:edges) if (u!=v)
+			s = _s; t = _t; n = _n + 1;
+			for (int i = 0; i < n; i++) e[i].clear();
+			for (auto [u, v, w, c] : edges) if (u != v)
 			{
-				e[u].push_back({v,w,c,(int)e[v].size()});
-				e[v].push_back({u,0,-c,(int)e[u].size()-1});
+				e[u].push_back({v, w, c, (int)e[v].size()});
+				e[v].push_back({u, 0, -c, (int)e[u].size() - 1});
 			}
-			static cT h[N];
-			auto get_h=[&]()
-			{
-				fill_n(h,n,inf);
-				memset(ed,0,n*sizeof ed[0]);
-				queue<int> q;
-				q.push(s); h[s]=0;
-				while (q.size())
+			static ll h[N];
+			auto get_h = [&]()
 				{
-					int u=q.front(); q.pop(); ed[u]=0;
-					for (auto [v,w,c,id]:e[u]) if (w&&h[v]>h[u]+c)
+					fill_n(h, n, inf);
+					memset(ed, 0, n * sizeof ed[0]);
+					queue<int> q;
+					q.push(s); h[s] = 0;
+					while (q.size())
 					{
-						h[v]=h[u]+c;
-						if (!ed[v]) q.push(v),ed[v]=1;
+						int u = q.front(); q.pop(); ed[u] = 0;
+						for (auto [v, w, c, id] : e[u]) if (w && h[v] > h[u] + c)
+						{
+							h[v] = h[u] + c;
+							if (!ed[v]) q.push(v), ed[v] = 1;
+						}
 					}
-				}
-				return;
-			};
-			auto dijkstra=[&]() -> pair<wT,cT>
-			{
-				static int fl[N],zl[N];
-				int i;
-				memset(ed,0,n*sizeof ed[0]);
-				fill_n(dis,n,inf);
-				typedef pair<cT,int> pa;
-				priority_queue<pa,vector<pa>,greater<pa>> q;
-				dis[s]=0; q.push({0,s});
-				while (q.size())
+					return;
+				};
+			auto dijkstra = [&]() -> pair<ll, ll>
 				{
-					int u=q.top().second;
-					q.pop(); ed[u]=1;
-					i=0;
-					for (auto [v,w,c,id]:e[u])
+					static int fl[N], zl[N];
+					int i;
+					memset(ed, 0, n * sizeof ed[0]);
+					fill_n(dis, n, inf);
+					typedef pair<ll, int> pa;
+					priority_queue<pa, vector<pa>, greater<pa>> q;
+					dis[s] = 0; q.push({0, s});
+					while (q.size())
 					{
-						if (w&&dis[v]>dis[u]+c) fl[v]=id,zl[v]=i,q.push({dis[v]=dis[pre[v]=u]+c,v});
-						++i;
+						int u = q.top().second;
+						q.pop(); ed[u] = 1;
+						i = 0;
+						for (auto [v, w, c, id] : e[u])
+						{
+							if (w && dis[v] > dis[u] + c) fl[v] = id, zl[v] = i, q.push({dis[v] = dis[pre[v] = u] + c, v});
+							++i;
+						}
+						while (q.size() && ed[q.top().second]) q.pop();
 					}
-					while (q.size()&&ed[q.top().second]) q.pop();
-				}
-				if (dis[t]==inf) return {0,0};
-				wT tf=numeric_limits<wT>::max();
-				for (i=t; i!=s; i=pre[i]) tf=min(tf,e[pre[i]][zl[i]].w);
-				for (i=t; i!=s; i=pre[i]) e[pre[i]][zl[i]].w-=tf,e[i][fl[i]].w+=tf;
-				for (int u=0; u<n; u++) for (auto &[v,w,c,id]:e[u]) c+=dis[u]-dis[v];
-				return {tf,tf*(h[t]+=dis[t])};
-			};
+					if (dis[t] == inf) return {0, 0};
+					ll tf = numeric_limits<ll>::max();
+					for (i = t; i != s; i = pre[i]) tf = min(tf, e[pre[i]][zl[i]].w);
+					for (i = t; i != s; i = pre[i]) e[pre[i]][zl[i]].w -= tf, e[i][fl[i]].w += tf;
+					for (int u = 0; u < n; u++) for (auto& [v, w, c, id] : e[u]) c += dis[u] - dis[v];
+					return {tf, tf * (h[t] += dis[t])};
+				};
 			get_h();
-			for (int u=0; u<n; u++) for (auto &[v,w,c,id]:e[u]) c+=h[u]-h[v];
-			pair<wT,cT> r{0,0},rr;
-			while ((rr=dijkstra()).first) r={r.first+rr.first,r.second+rr.second};
+			for (int u = 0; u < n; u++) for (auto& [v, w, c, id] : e[u]) c += h[u] - h[v];
+			pair<ll, ll> r{0, 0}, rr;
+			while ((rr = dijkstra()).first) r = {r.first + rr.first, r.second + rr.second};
 			return r;
 		}
 	}
-	using cost_flow::mcmf_spfa,cost_flow::mcmf_dijk;
+	using cost_flow::mcmf_spfa, cost_flow::mcmf_dijk;
 	namespace bounded_flow
 	{
-		typedef ll wT;//single flow
-		typedef ll cT;//total flow
-		bool valid_flow(const vector<tuple<int,int,wT,wT>> &edges)//方案需加上 l
+		bool valid_flow(int n, const vector<tuple<int, int, ll, ll>>& edges)//方案需加上 l
 		{
 			if (!edges.size()) return 1;
-			int n=0,i;
-			cT tot=0;
-			for (auto [u,v,l,r]:edges)
-			{
-				n=max({n,u,v});
-				if (l>r) return 0;
-			}
 			++n;
-			static cT cd[N];
-			memset(cd,0,n*sizeof cd[0]);
-			for (auto [u,v,l,r]:edges) cd[u]+=l,cd[v]-=l;
-			vector<tuple<int,int,wT>> eg;
-			eg.reserve(n+edges.size());
-			for (i=0; i<n; i++) if (cd[i]>0) eg.push_back({i,n+1,cd[i]}),tot+=cd[i];
-			else if (cd[i]<0) eg.push_back({n,i,-cd[i]});
-			for (auto [u,v,l,r]:edges) eg.push_back({u,v,r-l});
-			return tot==flow::max_flow(eg,n,n+1);
+			int i;
+			ll tot = 0;
+			static ll cd[N];
+			memset(cd, 0, n * sizeof cd[0]);
+			for (auto [u, v, l, r] : edges) cd[u] += l, cd[v] -= l;
+			vector<tuple<int, int, ll>> eg;
+			eg.reserve(n + edges.size());
+			for (i = 0; i < n; i++) if (cd[i] > 0) eg.push_back({i, n + 1, cd[i]}), tot += cd[i];
+			else if (cd[i] < 0) eg.push_back({n, i, -cd[i]});
+			for (auto [u, v, l, r] : edges) eg.push_back({u, v, r - l});
+			return tot == flow::max_flow(n + 1, eg, n, n + 1);
 		}
-		cT valid_flow_st(vector<tuple<int,int,wT,wT>> edges,int s,int t)//-1 invalid, wT=cT
+		ll valid_flow_st(int n, vector<tuple<int, int, ll, ll>> edges, int s, int t)//-1 invalid, ll=ll
 		{
-			int n=max(s,t);
-			cT tot=0;
-			for (auto [u,v,l,r]:edges) n=max({n,u,v}),tot+=(u==s)*r;
-			++n;
-			edges.push_back({t,s,0,tot});
-			if (!valid_flow(edges)) return -1;
-			assert(flow::e[s].back().v==t);
-			assert(flow::e[t].back().v==s);
-			return tot-flow::e[t].back().w;
+			ll tot = 0;
+			for (auto [u, v, l, r] : edges) tot += (u == s) * r;
+			edges.push_back({t, s, 0, tot});
+			if (!valid_flow(n, edges)) return -1;
+			assert(flow::e[s].back().v == t);
+			assert(flow::e[t].back().v == s);
+			return tot - flow::e[t].back().w;
 		}
-		cT valid_max_flow(const vector<tuple<int,int,wT,wT>> &edges,int s,int t)//-1 invalid, wT=cT
+		ll valid_max_flow(int n, const vector<tuple<int, int, ll, ll>>& edges, int s, int t)//-1 invalid, ll=ll
 		{
-			cT r=valid_flow_st(edges,s,t);
-			if (r<0) return r;
-			flow::s=s; flow::t=t;
+			ll r = valid_flow_st(n, edges, s, t);
+			if (r < 0) return r;
+			flow::s = s; flow::t = t;
 			flow::e[s].pop_back(); flow::e[t].pop_back();
-			while (flow::bfs()) r+=flow::dfs(s,flow::inf);
+			while (flow::bfs()) r += flow::dfs(s, flow::inf);
 			return r;
 		}
-		cT valid_min_flow(const vector<tuple<int,int,wT,wT>> &edges,int s,int t)//-1 invalid, wT=cT
+		ll valid_min_flow(int n, const vector<tuple<int, int, ll, ll>>& edges, int s, int t)//-1 invalid, ll=ll
 		{
-			cT r=valid_flow_st(edges,s,t);
-			if (r<0) return r;
-			flow::s=t; flow::t=s;
+			ll r = valid_flow_st(n, edges, s, t);
+			if (r < 0) return r;
+			flow::s = t; flow::t = s;
 			flow::e[s].pop_back(); flow::e[t].pop_back();
-			while (flow::bfs()) r-=flow::dfs(t,flow::inf);
+			while (flow::bfs()) r -= flow::dfs(t, flow::inf);
 			return r;
 		}//not check
 	}
-	using bounded_flow::valid_flow,bounded_flow::valid_flow_st,bounded_flow::valid_max_flow,bounded_flow::valid_min_flow;
+	using bounded_flow::valid_flow, bounded_flow::valid_flow_st, bounded_flow::valid_max_flow, bounded_flow::valid_min_flow;
 	namespace bounded_cost_flow
 	{
-		pair<ll,ll> valid_mcf(const vector<tuple<int,int,ll,ll,ll>> &edges,int s,int t)//[u,v,l,r,c],mincost flow
+		pair<ll, ll> valid_mcf(int n, const vector<tuple<int, int, ll, ll, ll>>& edges, int s, int t)//[u,v,l,r,c],mincost flow
 		{
-			int n=max(s,t);
-			for (auto [u,v,l,r,c]:edges) n=max({n,u,v});
 			++n;
-			int ss=n,tt=n+1;
+			int ss = n, tt = n + 1;
 			static ll cd[N];
-			memset(cd,0,n*sizeof cd[0]);
-			for (auto [u,v,l,r,c]:edges) cd[u]+=l,cd[v]-=l;
-			vector<tuple<int,int,ll,ll>> e;
-			ll t1=0,t2=0;
-			for (int i=0; i<n; i++) if (cd[i]>0) e.push_back({i,tt,cd[i],0}),t2+=cd[i];
-			else if (cd[i]<0) e.push_back({ss,i,-cd[i],0});
-			for (auto [u,v,l,r,c]:edges) e.push_back({u,v,r-l,c});
-			for (auto [u,v,w,c]:e) t1+=(u==s)*w;
-			e.push_back({t,s,t1,0});
-			auto res=mcmf_spfa(e,ss,tt);//checked dijk
-			if (res.first!=t2) return {-1,-1};
-			res.first=cost_flow::e[s].back().w;
-			for (auto [u,v,l,r,c]:edges) res.second+=l*c;
+			memset(cd, 0, n * sizeof cd[0]);
+			for (auto [u, v, l, r, c] : edges) cd[u] += l, cd[v] -= l;
+			vector<tuple<int, int, ll, ll>> e;
+			ll t1 = 0, t2 = 0;
+			for (int i = 0; i < n; i++) if (cd[i] > 0) e.push_back({i, tt, cd[i], 0}), t2 += cd[i];
+			else if (cd[i] < 0) e.push_back({ss, i, -cd[i], 0});
+			for (auto [u, v, l, r, c] : edges) e.push_back({u, v, r - l, c});
+			for (auto [u, v, w, c] : e) t1 += (u == s) * w;
+			e.push_back({t, s, t1, 0});
+			auto res = mcmf_spfa(tt, e, ss, tt);//checked dijk
+			if (res.first != t2) return {-1, -1};
+			res.first = cost_flow::e[s].back().w;
+			for (auto [u, v, l, r, c] : edges) res.second += l * c;
 			return res;
 		}
-		pair<ll,ll> valid_mcmf(const vector<tuple<int,int,ll,ll,ll>> &edges,int s,int t)//[u,v,l,r,c],mincost max_flow
+		pair<ll, ll> valid_mcmf(int n, const vector<tuple<int, int, ll, ll, ll>>& edges, int s, int t)//[u,v,l,r,c],mincost max_flow
 		{
-			auto r=valid_mcf(edges,s,t);
-			if (r.first<0) return {-1,-1};
+			auto r = valid_mcf(n, edges, s, t);
+			if (r.first < 0) return {-1, -1};
 			cost_flow::e[s].pop_back();
 			cost_flow::e[t].pop_back();
-			cost_flow::s=s; cost_flow::t=t;
-			pair<ll,ll> rr;
-			while ((rr=cost_flow::spfa()).first) r={r.first+rr.first,r.second+rr.second};//spfa ver. not checked dijk
+			cost_flow::s = s; cost_flow::t = t;
+			pair<ll, ll> rr;
+			while ((rr = cost_flow::spfa()).first) r = {r.first + rr.first, r.second + rr.second};//spfa ver. not checked dijk
 			return r;
 		}
 	}
-	using bounded_cost_flow::valid_mcf,bounded_cost_flow::valid_mcmf;
+	using bounded_cost_flow::valid_mcf, bounded_cost_flow::valid_mcmf;
 	namespace ne_cost_flow
 	{
-		pair<ll,ll> ne_mcmf(const vector<tuple<int,int,ll,ll>> &edges,int s,int t)
+		pair<ll, ll> ne_mcmf(int n, const vector<tuple<int, int, ll, ll>>& edges, int s, int t)
 		{
-			vector<tuple<int,int,ll,ll,ll>> e;
-			for (auto [u,v,w,c]:edges) if (c>=0) e.push_back({u,v,0,w,c}); else
+			vector<tuple<int, int, ll, ll, ll>> e;
+			for (auto [u, v, w, c] : edges) if (c >= 0) e.push_back({u, v, 0, w, c}); else
 			{
-				e.push_back({u,v,w,w,c});
-				e.push_back({v,u,0,w,-c});
+				e.push_back({u, v, w, w, c});
+				e.push_back({v, u, 0, w, -c});
 			}
-			return valid_mcmf(e,s,t);
+			return valid_mcmf(n, e, s, t);
 		}
 	}
 	using ne_cost_flow::ne_mcmf;
@@ -9950,173 +10061,170 @@ int main()
 
 \subsection{点双}
 
-$O(n+m)$，$O(n+m)$。
+一些结论：
 
-ans 存放每个点双包含的边。ct 为 $1$ 表示是割点。没有自环。
+判定一个图里是否有（点不重复）偶环：看其所有点双，若存在点数为偶数的或边数多于点数的点双，则存在偶环。
+
+（无自环时）点双的边不交，边双的点不交。点双内的总点数 $O(n)$，总边数为 $m$，边双内的总点数为 $n$，总边数不超过 $m$。
+
+构造函数传入邻接表和边数，其中 \verb|pair| 的 \verb|second| 是边的标号。
+
+所有标号从 $0$ 开始。
+
+不能处理有自环的情况，因为此时点双内的总边数不是线性的。
+
+\verb|bcc_node|：每个点双包含的点（已验证）；
+\verb|bcc_edge|：每个点双包含的边；
+\verb|bcc_n|：新图点数；
+\verb|cur_e|：新图边表；
+\verb|ct|：是否割点（已验证）；
+\verb|blk|：边所属点双标号。
 
 \begin{lstlisting}
-struct Q
+struct node_bcc
 {
-	int v,w;
-};
-vector<vector<int>> ans;
-vector<int> cur;
-vector<Q> e[N];
-int dfn[N],low[N],ct[N],st[N];
-bool ed[N],eed[N];
-int id,tp;
-void dfs(int u,bool rt)
-{
-	dfn[u]=low[u]=++id;
-	int cnt=0;
-	for (auto [v,w]:e[u]) if (!ed[w])
+	int n, id, tp, bcc_n;
+	vector<vector<pair<int, int>>> e;
+	vector<vector<int>> bcc_node, bcc_edge;
+	vector<int> dfn, low, st, ed, blk, ct;
+	node_bcc(const vector<vector<pair<int, int>>> &e, int m) :
+		n(e.size()), id(0), tp(0), bcc_n(0), e(e), dfn(n, -1), low(n, -1), st(m), ed(m), blk(m), ct(n)
 	{
-		st[tp++]=w;ed[w]=1;
-		if (dfn[v]) low[u]=min(low[u],dfn[v]);
-		else
+		for (int i = 0;i < n;i++) if (dfn[i] == -1) dfs(i, 1);
+		bcc_node.resize(bcc_n);
+		for (int i = 0;i < n;i++) for (auto [v, w] : e[i]) bcc_node[blk[w]].push_back(i);
+		vector<int> flg(n);
+		for (auto &v : bcc_node)
 		{
-			dfs(v,0);
-			++cnt;
-			low[u]=min(low[u],low[v]);
-			if (dfn[u]<=low[v])
+			vector<int> t;
+			for (int x : v) if (!exchange(flg[x], 1)) t.push_back(x);
+			swap(t, v);
+			for (int x : v) flg[x] = 0;
+		}
+		for (int i = 0;i < n;i++) if (e[i].size() == 0)
+		{
+			bcc_node.push_back({i});
+			bcc_edge.push_back({ });
+			++bcc_n;
+		}
+	}
+	void dfs(int u, bool rt)
+	{
+		dfn[u] = low[u] = id++;
+		int cnt = 0;
+		for (auto [v, w] : e[u]) if (!ed[w])
+		{
+			st[tp++] = w;
+			ed[w] = 1;
+			if (dfn[v] == -1)
 			{
-				ct[u]=cnt>rt;
-				cur.clear();
-				do cur.push_back(st[--tp]); while (st[tp]!=w);
-				ans.push_back(cur);
+				dfs(v, 0);
+				++cnt;
+				cmin(low[u], low[v]);
+				if (dfn[u] <= low[v])
+				{
+					ct[u] = cnt > rt;
+					bcc_edge.push_back({ });
+					do
+					{
+						bcc_edge[bcc_n].push_back(st[--tp]);
+						blk[st[tp]] = bcc_n;
+					} while (st[tp] != w);
+					++bcc_n;
+				}
 			}
+			else cmin(low[u], dfn[v]);
 		}
 	}
-}
-int main()
-{
-	ios::sync_with_stdio(0);cin.tie(0);
-	int n,m,i;
-	cin>>n>>m;
-	for (i=0;i<m;i++)
-	{
-		int u,v;
-		cin>>u>>v;
-		e[u].push_back({v,i});
-		e[v].push_back({u,i});
-	}
-	for (i=0;i<n;i++) if (!dfn[i]) dfs(i,1);
-	cout<<ans.size()<<'\n';
-	for (auto &v:ans) cout<<v.size()<<' '<<v<<'\n';
-}
-
-\end{lstlisting}
-
-ans 存放每个点双包含的点。可以自环。
-
-\begin{lstlisting}
-const int N=5e5+5;
-struct Q
-{
-	int v,w;
 };
-vector<vector<int>> ans;
-vector<int> cur;
-vector<int> e[N];
-int dfn[N],low[N],st[N];
-int id,tp;
-void dfs(int u)
-{
-	dfn[u]=low[u]=++id;
-	st[++tp]=u;
-	for (int v:e[u]) if (dfn[v]) low[u]=min(low[u],dfn[v]); else
-	{
-		dfs(v);
-		low[u]=min(low[u],low[v]);
-		if (dfn[u]<=low[v])
-		{
-			vector cur={u};
-			do
-			{
-				cur.push_back(st[tp]);
-			} while (st[tp--]!=v);
-			ans.push_back(cur);
-		}
-	}
-}
-int main()
-{
-	ios::sync_with_stdio(0);cin.tie(0);
-	cout<<setiosflags(ios::fixed)<<setprecision(15);
-	int n,m,i;
-	cin>>n>>m;
-	for (i=0;i<m;i++)
-	{
-		int u,v;
-		cin>>u>>v;
-		e[u].push_back(v);
-		e[v].push_back(u);
-	}
-	for (i=0;i<n;i++) if (!dfn[i]) dfs(i);
-	for (i=0;i<n;i++) if (count(all(e[i]),i)==e[i].size()) ans.push_back({i});
-	cout<<ans.size()<<'\n';
-	for (auto &v:ans) cout<<v.size()<<' '<<v<<'\n';
-}
 \end{lstlisting}
 
 \subsection{边双}
 
 $O(n+m)$，$O(n+m)$。
 
-ans 存放每个边双包含的点。ct 为 $1$ 表示是割边。
+构造函数传入邻接表和边数，其中 \verb|pair| 的 \verb|second| 是边的标号。
+
+所有标号从 $0$ 开始。
+
+\verb|bcc_node|：每个边双包含的点（已验证）；
+\verb|bcc_edge|：每个边双包含的边；
+\verb|bcc_n|：新图点数；
+\verb|cur_e|：新图边表；
+\verb|ct|：是否割边；
+\verb|blk|：点所属边双标号。
 
 \begin{lstlisting}
-struct Q
+struct edge_bcc
 {
-	int v,w;
-};
-vector<vector<int>> ans;
-vector<int> cur;
-vector<Q> e[N];
-int dfn[N],low[N],ed[N];
-bool ct[N];
-int id;
-void dfs(int u,int fw)
-{
-	dfn[u]=low[u]=++id;
-	for (auto [v,w]:e[u]) if (w!=fw)
+	int n, id, tp, bcc_n;
+	vector<vector<pair<int, int>>> e, cur_e;
+	vector<vector<int>> bcc_node, bcc_edge;
+	vector<int> dfn, low, st, blk, ct;
+	edge_bcc(const vector<vector<pair<int, int>>> &e, int m) :
+		n(e.size()), id(0), tp(0), bcc_n(0), e(e), dfn(n, -1), low(n, -1), st(n), blk(n), ct(m)
 	{
-		if (!dfn[v])
+		for (int i = 0;i < n;i++) if (dfn[i] == -1) dfs(i, -1);
+		cur_e.resize(bcc_n);
+		for (int i = 0;i < n;i++) for (auto [v, w] : e[i]) if (ct[w]) cur_e[blk[i]].push_back({blk[v], w});
+		else bcc_edge[blk[i]].push_back(w);
+		vector<int> flg(m);
+		for (auto &v : bcc_edge)
 		{
-			dfs(v,w);
-			low[u]=min(low[u],low[v]);
-			ct[w]=dfn[u]<low[v];
-		} else low[u]=min(low[u],dfn[v]);
+			vector<int> t;
+			for (int x:v) if (!exchange(flg[x],1)) t.push_back(x);
+			swap(t,v);
+		}
 	}
-}
-void dfs(int u)
-{
-	cur.push_back(u);ed[u]=1;
-	for (auto [v,w]:e[u]) if (!ct[w]&&!ed[v]) dfs(v);
-}
+	void dfs(int u, int fw)
+	{
+		dfn[u] = low[u] = id++;
+		st[tp++] = u;
+		for (auto [v, w] : e[u]) if (w != fw)
+		{
+			if (dfn[v] == -1)
+			{
+				dfs(v, w);
+				cmin(low[u], low[v]);
+				ct[w] = (dfn[u] < low[v]);
+			}
+			else cmin(low[u], dfn[v]);
+		}
+		if (dfn[u] == low[u])
+		{
+			bcc_node.push_back({ });
+			bcc_edge.push_back({ });
+			do
+			{
+				bcc_node[bcc_n].push_back(st[--tp]);
+				blk[st[tp]] = bcc_n;
+			} while (st[tp] != u);
+			++bcc_n;
+		}
+	}
+};
 int main()
 {
 	ios::sync_with_stdio(0);cin.tie(0);
-	int n,m,i;
-	cin>>n>>m;
-	for (i=0;i<m;i++)
+	int n, m, i;
+	cin >> n >> m;
+	vector<vector<pair<int, int>>> e(n);
+	for (i = 0;i < m;i++)
 	{
-		int u,v;
-		cin>>u>>v;
-		e[u].push_back({v,i});
-		e[v].push_back({u,i});
+		int u, v;
+		cin >> u >> v;
+		--u, --v;
+		e[u].push_back({v, i});
+		e[v].push_back({u, i});
 	}
-	for (i=0;i<n;i++) if (!dfn[i]) dfs(i,-1);
-	for (i=0;i<n;i++) if (!ed[i])
+	edge_bcc s(e, m);
+	cout << s.bcc_n << '\n';
+	for (auto &v : s.bcc_node)
 	{
-		cur.clear();
-		dfs(i);
-		ans.push_back(cur);
+		for (int &x : v) ++x;
+		cout << v.size() << ' ' << v << '\n';
 	}
-	cout<<ans.size()<<'\n';
-	for (auto &v:ans) cout<<v.size()<<' '<<v<<'\n';
 }
-
 \end{lstlisting}
 
 \subsection{双极分解}
