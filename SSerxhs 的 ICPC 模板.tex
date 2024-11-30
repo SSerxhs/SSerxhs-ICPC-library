@@ -44,7 +44,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver: 3.9.11}
+\centerline{ver: 3.9.13}
 
 \tableofcontents
 
@@ -7951,69 +7951,103 @@ $O((n+\sum)\log n)$，$O(n+\sum)$。
 下标从 1 开始。
 
 \begin{lstlisting}
-namespace SA
+//这回只花了114514min就打完了。
+//真好。记得多手造几组。ACM拍什么拍。 
+#include "bits/stdc++.h"
+using namespace std;
+using ui = unsigned; using db = long double; using ll = long long; using ull = unsigned long long; using lll = __int128;
+template<class T1, class T2> istream &operator>>(istream &cin, pair<T1, T2> &a) { return cin >> a.first >> a.second; }
+template <std::size_t Index = 0, typename... Ts> typename std::enable_if<Index == sizeof...(Ts), void>::type tuple_read(std::istream &is, std::tuple<Ts...> &t) { }
+template <std::size_t Index = 0, typename... Ts> typename std::enable_if < Index < sizeof...(Ts), void>::type tuple_read(std::istream &is, std::tuple<Ts...> &t) { is >> std::get<Index>(t); tuple_read<Index + 1>(is, t); }
+template <typename... Ts>std::istream &operator>>(std::istream &is, std::tuple<Ts...> &t) { tuple_read(is, t); return is; }
+template<class T1> istream &operator>>(istream &cin, valarray<T1> &a);
+template<class T1> istream &operator>>(istream &cin, vector<T1> &a) { for (auto &x : a) cin >> x; return cin; }
+template<class T1> istream &operator>>(istream &cin, valarray<T1> &a) { for (auto &x : a) cin >> x; return cin; }
+template<class T1, class T2> bool cmin(T1 &x, const T2 &y) { if (y < x) { x = y; return 1; } return 0; }
+template<class T1, class T2> bool cmax(T1 &x, const T2 &y) { if (x < y) { x = y; return 1; } return 0; }
+template<class T1> vector<T1> range(T1 l, T1 r, T1 step = 1) { assert(step > 0); int n = (r - l + step - 1) / step, i; vector<T1> res(n); for (i = 0; i < n; i++) res[i] = l + step * i; return res; }
+template<class T1> basic_string<T1> operator*(const basic_string<T1> &s, int m) { auto r = s; m *= s.size(); r.resize(m); for (int i = s.size(); i < m; i++) r[i] = r[i - s.size()]; return r; }
+istream &operator>>(istream &cin, lll &x) { bool flg = 0; x = 0; static string s; cin >> s; if (s[0] == '-') flg = 1, s = s.substr(1); for (char c : s) x = x * 10 + (c - '0'); if (flg) x = -x; return cin; }
+ostream &operator<<(ostream &cout, lll x) { static char s[60]; if (x < 0) cout << '-', x = -x; int tp = 1; s[0] = '0' + (x % 10); while (x /= 10) s[tp++] = '0' + (x % 10); while (tp--) cout << s[tp]; return cout; }
+#if !defined(ONLINE_JUDGE)&&defined(LOCAL)
+#include "my_header/debug.h"
+#else
+#define dbg(...) ;
+#endif
+template<class T1, class T2> ostream &operator<<(ostream &cout, const pair<T1, T2> &a) { return cout << a.first << ' ' << a.second; }
+template<class T1, class T2> ostream &operator<<(ostream &cout, const vector<pair<T1, T2>> &a) { for (auto &x : a) cout << x << '\n'; return cout; }
+template<class T1> ostream &operator<<(ostream &cout, vector<T1> a) { int n = a.size(); if (!n) return cout; cout << a[0]; for (int i = 1; i < n; i++) cout << ' ' << a[i]; return cout; }
+template<class T1> ostream &operator<<(ostream &cout, const valarray<T1> &a) { int n = a.size(); if (!n) return cout; cout << a[0]; for (int i = 1; i < n; i++) cout << ' ' << a[i]; return cout; }
+template<class T1> ostream &operator<<(ostream &cout, const vector<valarray<T1>> &a) { int n = a.size(); if (!n) return cout; cout << a[0]; for (int i = 1; i < n; i++) cout << '\n' << a[i]; return cout; }
+template<class T1> ostream &operator<<(ostream &cout, const vector<vector<T1>> &a) { int n = a.size(); if (!n) return cout; cout << a[0]; for (int i = 1; i < n; i++) cout << '\n' << a[i]; return cout; }
+#define all(x) (x).begin(),(x).end()
+#define print(...) cout<<format(__VA_ARGS__)
+#define println(...) cout<<format(__VA_ARGS__)<<'\n'
+#define err(...) cerr<<format(__VA_ARGS__)
+#define errln(...) cerr<<format(__VA_ARGS__)<<'\n'
+struct SA
 {
-	const int N=1e6+2;
-	int x[N],y[N],s[N];
-	int m,cnt;
-	struct Q
+	int n;
+	vector<vector<int>> st;
+	vector<int> sa, rk, h;
+	int lcp(int x, int y)
 	{
-		vector<vector<int>> st;
-		vector<int> sa,rk,h;
-		int lcp(int x,int y)
+		if (x == y) return n - x;
+		x = rk[x]; y = rk[y];
+		if (x > y) swap(x, y);
+		++x;
+		int z = __lg(y - x + 1);
+		return min(st[z][x], st[z][y - (1 << z) + 1]);
+	}
+	SA(vector<int> a) :n(a.size()), st(__lg(n) + 1, vector<int>(n + 1)), sa(n), h(n)
+	{
+		const static int N = 2e6 + 2;
+		static int s[N];
+		int i, j, m, cnt;
+		m = *min_element(all(a));
+		for (int &x : a) x -= m;
+		m = *max_element(all(a)) + 1;
+		assert(max(n, m) < N);
+		a.resize(n * 2);
+		for (i = 0; i < n; i++) a[i + n] = -i - 1;
+		vector<int> id(n * 2);
+		rk = a;
+		for (i = 0; i < n; i++) ++s[a[i]];
+		for (i = 1; i < m; i++) s[i] += s[i - 1];
+		for (i = n - 1; i >= 0; i--) sa[--s[rk[i]]] = i;
+		memset(s, 0, m * sizeof s[0]);
+		for (j = 1; j <= n; j <<= 1)
 		{
-			assert(x^y);
-			x=rk[x];y=rk[y];
-			if (x>y) swap(x,y);
-			++x;
-			int z=__lg(y-x+1);
-			return min(st[z][x],st[z][y-(1<<z)+1]);
+			cnt = 0;
+			for (i = n - j; i < n; i++) id[cnt++] = i;
+			for (i = 0; i < n; i++) if (sa[i] >= j) id[cnt++] = sa[i] - j;
+			for (i = 0; i < n; i++) ++s[rk[i]];
+			for (i = 1; i < m; i++) s[i] += s[i - 1];
+			for (i = n - 1; i >= 0; i--) sa[--s[rk[id[i]]]] = id[i];
+			id[sa[0]] = cnt = 0;
+			memset(s, 0, m * sizeof s[0]);
+			for (i = 1; i < n; i++)
+				if (rk[sa[i]] == rk[sa[i - 1]] && rk[sa[i] + j] == rk[sa[i - 1] + j])
+					id[sa[i]] = cnt;
+				else
+					id[sa[i]] = ++cnt;
+			swap(rk, id);
+			if ((m = cnt + 1) == n) break;
 		}
-		Q(int *a,int n):sa(n+1),rk(n+1),h(n+1),st(__lg(n)+1,vector<int>(n+1))//[1,n]
+		j = 0;
+		for (i = 0; i < n; i++) if (rk[i])
 		{
-			int i,j,k;
-			m=*min_element(a+1,a+n+1);--m;
-			for (i=1;i<=n;i++) a[i]-=m;
-			m=*max_element(a+1,a+n+1);
-			assert(n<N);assert(m<N);
-			memset(s+1,0,m*sizeof s[0]);
-			for (i=1;i<=n;i++) ++s[x[i]=a[i]];
-			for (i=2;i<=m;i++) s[i]+=s[i-1];
-			for (i=n;i;i--) sa[s[x[i]]--]=i;
-			memset(s+1,0,m*sizeof s[0]);
-			for (j=1;j<=n;j<<=1)
-			{
-				cnt=0;
-				for (i=n-j+1;i<=n;i++) y[++cnt]=i;
-				for (i=1;i<=n;i++) if (sa[i]>j) y[++cnt]=sa[i]-j;
-				for (i=1;i<=n;i++) ++s[x[i]];
-				for (i=2;i<=m;i++) s[i]+=s[i-1];
-				for (i=n;i;i--) sa[s[x[y[i]]]--]=y[i];
-				y[sa[1]]=cnt=1;
-				memset(s+1,0,m*sizeof s[0]);
-				for (i=2;i<=n;i++)
-					if (x[sa[i]]==x[sa[i-1]]&&sa[i]<=n-j&&sa[i-1]<=n-j&&x[sa[i]+j]==x[sa[i-1]+j])
-						y[sa[i]]=cnt;
-					else
-						y[sa[i]]=++cnt;
-				memcpy(x,y,(n+1)*sizeof y[0]);
-				if ((m=cnt)==n) break;
-			}
-			for (i=1;i<=n;i++) rk[sa[i]]=i;
-			j=0;
-			for (i=1;i<=n;i++) if (x[i]>1)
-			{
-				cnt=sa[x[i]-1];
-				while (i+j<=n&&cnt+j<=n&&a[i+j]==a[cnt+j]) ++j;
-				h[x[i]]=j;
-				if (j) --j;
-			}
-			for (i=1;i<=n;i++) st[0][i]=h[i];
-			for (j=1;j<=__lg(n);j++) for (i=1,k=n-(1<<j)+1;i<=k;i++) st[j][i]=min(st[j-1][i],st[j-1][i+(1<<j-1)]);
+			cnt = sa[rk[i] - 1];
+			while (a[i + j] == a[cnt + j]) ++j;
+			h[rk[i]] = j;
+			if (j) --j;
 		}
-	};
-}
-using str=SA::Q;
+		st[0] = h;
+		for (j = 0; j < __lg(n); j++)
+			for (i = 0, m = n - (1 << j + 1); i <= m; i++)
+				st[j + 1][i] = min(st[j][i], st[j][i + (1 << j)]);
+	}
+};
 \end{lstlisting}
 
 \subsection{SAM}
@@ -8670,6 +8704,8 @@ int main()
 
 \subsection{三/四元环计数}
 
+不能处理有重边和自环的情况。
+
 $O(m\sqrt m)$，$O(n+m)$。
 
 注意四元环数的是边四元环。点四元环需要去掉四点完全图个数*2，似乎不太能做？
@@ -8682,8 +8718,8 @@ ll triple(const vector<pair<int,int>> &edges)//start from 0
 	int n=0,i;
 	for (auto [u,v]:edges) n=max({n,u,v});
 	++n;
-	vector d(n,0),id(d),rk(d),cnt(d);
-	vector e(n,vector(0,0));
+	vector<int> d(n),id(n),rk(n),cnt(n);
+	vector<vector<int>> e(n);
 	for (auto [u,v]:edges) ++d[u],++d[v];
 	iota(all(id),0); sort(all(id),[&](int x,int y) { return d[x]<d[y]; });
 	for (i=0; i<n; i++) rk[id[i]]=i;
@@ -8706,8 +8742,8 @@ ll quadruple(const vector<pair<int,int>> &edges)
 	int n=0,i;
 	for (auto [u,v]:edges) n=max({n,u,v});
 	++n;
-	vector d(n,0),id(d),rk(d),cnt(d);
-	vector e(n,vector(0,0)),lk(n,vector(0,0));
+	vector<int> d(n),id(n),rk(n),cnt(n);
+	vector<vector<int>> e(n),lk(n);
 	for (auto [u,v]:edges) ++d[u],++d[v];
 	iota(all(id),0); sort(all(id),[&](int x,int y) { return d[x]<d[y]; });
 	for (i=0; i<n; i++) rk[id[i]]=i;
@@ -8725,6 +8761,70 @@ ll quadruple(const vector<pair<int,int>> &edges)
 		for (int u:lk[i]) for (int v:e[u]) cnt[v]=0;
 	}
 	return ans;
+}
+map<pair<int, int>, ll> quadruple(vector<pair<int, int>> edges)
+{
+	int n = 0, i;
+	for (auto [u, v] : edges) n = max({n, u, v});
+	++n;
+	map<pair<int, int>, int> ec;
+	for (auto [u, v] : edges)
+	{
+		if (u > v) swap(u, v);
+		++ec[{u, v}];
+	}
+	vector<ll> c;
+	edges.clear();
+	for (auto [_, cc] : ec) edges.push_back(_), c.push_back(cc);
+	vector d(n, 0), id(d), rk(d);
+	vector<ll> cnt(n);
+	vector<vector<pair<int, int>>> e(n), lk(n);
+	for (auto [u, v] : edges) ++d[u], ++d[v];
+	iota(all(id), 0); sort(all(id), [&](int x, int y) { return d[x] < d[y]; });
+	for (i = 0; i < n; i++) rk[id[i]] = i;
+	i = 0;
+	for (auto [u, v] : edges)
+	{
+		if (rk[u] > rk[v]) swap(u, v);
+		e[u].push_back({v, i});
+		lk[u].push_back({v, i});
+		lk[v].push_back({u, i});
+		++i;
+	}
+	int m = edges.size();
+	vector<ll> ans(m);
+	for (i = 0; i < n; i++)
+	{
+		for (auto [u, w1] : lk[i]) for (auto [v, w2] : e[u]) if (rk[v] > rk[i])
+		{
+			cnt[v] += c[w1] * c[w2];
+		}
+		for (auto [u, w1] : lk[i]) for (auto [v, w2] : e[u]) if (rk[v] > rk[i])
+		{
+			ans[w1] += (cnt[v] - c[w1] * c[w2]) * c[w2];
+			ans[w2] += (cnt[v] - c[w1] * c[w2]) * c[w1];
+		}
+		for (auto [u, w1] : lk[i]) for (auto [v, w2] : e[u]) if (rk[v] > rk[i]) cnt[v] = 0;
+	}
+	map<pair<int, int>, ll> mp;
+	for (i = 0;i < m;i++) mp[edges[i]] = ans[i];
+	return mp;
+}
+int main()
+{
+	ios::sync_with_stdio(0); cin.tie(0);
+	cout << fixed << setprecision(15);
+	int n, m, i;
+	cin >> n >> m;
+	vector<pair<int, int>> eg(m);
+	cin >> eg;
+	auto mp = quadruple(eg);
+	for (i = 0;i < m;i++)
+	{
+		auto [u, v] = eg[i];
+		if (u > v) swap(u, v);
+		cout << mp[{u, v}] << " \n"[i + 1 == m];
+	}
 }
 \end{lstlisting}
 
@@ -10076,7 +10176,6 @@ int main()
 \verb|bcc_node|：每个点双包含的点（已验证）；
 \verb|bcc_edge|：每个点双包含的边；
 \verb|bcc_n|：新图点数；
-\verb|cur_e|：新图边表；
 \verb|ct|：是否割点（已验证）；
 \verb|blk|：边所属点双标号。
 
@@ -10621,298 +10720,374 @@ int main()
 $O(n\log n)$，$O(n)$。
 
 \begin{lstlisting}
-int siz[N],dep[N];
-	int n,ksiz,md,rt,mn;
-	bool ed[N];
-	void find(int u)
+int siz[N], dep[N];
+int n, ksiz, md, rt, mn;
+bool ed[N];
+void find(int u)
+{
+	ed[u] = 1; siz[u] = 1;
+	int mx = 0;
+	for (int v : e[u]) if (!ed[v])
 	{
-		ed[u]=1;siz[u]=1;
-		int mx=0;
-		for (int v:e[u]) if (!ed[v])
-		{
-			find(v);
-			siz[u]+=siz[v];
-			mx=max(mx,siz[v]);
-		}
-		mx=max(mx,ksiz-siz[u]);
-		if (mn>mx) mn=mx,rt=u;
-		ed[u]=0;
+		find(v);
+		siz[u] += siz[v];
+		mx = max(mx, siz[v]);
 	}
-	void cal(int u)
+	mx = max(mx, ksiz - siz[u]);
+	if (mn > mx) mn = mx, rt = u;
+	ed[u] = 0;
+}
+void cal(int u)
+{
+	md = max(md, dep[u]);
+	ed[u] = 1; ++cnt[dep[u]];
+	for (int v : e[u]) if (!ed[v])
 	{
-		md=max(md,dep[u]);
-		ed[u]=1;++cnt[dep[u]];
-		for (int v:e[u]) if (!ed[v])
-		{
-			dep[v]=dep[u]+1;
-			cal(v);
-		}
-		ed[u]=0;
+		dep[v] = dep[u] + 1;
+		cal(v);
 	}
-	void solve(int u)
+	ed[u] = 0;
+}
+void solve(int u)
+{
+	mn = 1e9;
+	find(u);
+	ed[rt] = 1;
+	vector<int> c;
+	for (int v : e[rt]) if (!ed[v])
 	{
-		mn=1e9;
-		find(u);
-		ed[rt]=1;
-		vector<int> c;
-		for (int v:e[rt]) if (!ed[v])
-		{
-			c.push_back(v);
-			if (siz[v]>=siz[rt]) siz[v]=siz[u]-siz[rt];
-		}
-		sort(all(c),[&](const int &a,const int &b){return siz[a]<siz[b];});
-		NTT::Q a(vector<ui>{1});
-		NT::Q b(vector<ui>{1});
-		for (int v:c)
-		{
-			md=0;dep[v]=1;
-			cal(v);++md;
-			vector<ui> d(cnt,cnt+md);
-			NTT::Q e(d);
-			NT::Q f(d);
-			auto g=e&a;
-			auto h=f&b;
-			for (int i=0;i<g.a.size();i++) r1[i]=(r1[i]+g.a[i])%NTT::p;
-			for (int i=0;i<h.a.size();i++) r2[i]=(r2[i]+h.a[i])%NT::p;
-			a+=e;b+=f;
-			fill_n(cnt,md,0);
-		}
-		for (int v:c)
-		{
-			ksiz=siz[v];
-			solve(v);
-		}
+		c.push_back(v);
+		if (siz[v] >= siz[rt]) siz[v] = siz[u] - siz[rt];
 	}
+	sort(all(c), [&](const int &a, const int &b) {return siz[a] < siz[b]; });
+	NTT::Q a(vector<ui>{1});
+	NT::Q b(vector<ui>{1});
+	for (int v : c)
+	{
+		md = 0; dep[v] = 1;
+		cal(v); ++md;
+		vector<ui> d(cnt, cnt + md);
+		NTT::Q e(d);
+		NT::Q f(d);
+		auto g = e & a;
+		auto h = f & b;
+		for (int i = 0; i < g.a.size(); i++) r1[i] = (r1[i] + g.a[i]) % NTT::p;
+		for (int i = 0; i < h.a.size(); i++) r2[i] = (r2[i] + h.a[i]) % NT::p;
+		a += e; b += f;
+		fill_n(cnt, md, 0);
+	}
+	for (int v : c)
+	{
+		ksiz = siz[v];
+		solve(v);
+	}
+}
 \end{lstlisting}
 
 \subsection{点分树}
 
-
-在一片土地上有 $n$ 个城市，通过 $n-1$ 条无向边互相连接，形成一棵树的结构，相邻两个城市的距离为 $1$，其中第 $i$ 个城市的价值为 $value_i$。
-
-不幸的是，这片土地常常发生地震，并且随着时代的发展，城市的价值也往往会发生变动。
-
-接下来你需要在线处理 $m$ 次操作：
-
-0 x k 表示发生了一次地震，震中城市为 $x$，影响范围为 $k$，所有与 $x$ 距离不超过 $k$ 的城市都将受到影响，该次地震造成的经济损失为所有受影响城市的价值和。
-
-1 x y 表示第 $x$ 个城市的价值变成了 $y$ 。
-
-为了体现程序的在线性，操作中的 $x$、$y$、$k$ 都需要异或你程序上一次的输出来解密，如果之前没有输出，则默认上一次的输出为 $0$ 。
+核心结论：点分树上 lca 出现在原树路径上。
 
 $O(n\log^2 n)$，$O(n\log n)$。
 
 \begin{lstlisting}
+template<typename typC> struct bit
+{
+	vector<typC> a;
+	int n;
+	bit() { }
+	bit(int nn) :n(nn), a(nn + 1) { }
+	template<typename T> bit(int nn, T *b) : n(nn), a(nn + 1)
+	{
+		for (int i = 1; i <= n; i++) a[i] = b[i - 1];
+		for (int i = 1; i <= n; i++) if (i + (i & -i) <= n) a[i + (i & -i)] += a[i];
+	}
+	void add(int x, typC y)
+	{
+		//cerr<<"add "<<x<<" by "<<y<<endl;
+		++x;
+		x = clamp(x, 1, n + 1);
+		if (x > n) return;
+		assert(1 <= x && x <= n);
+		a[x] += y;
+		while ((x += x & -x) <= n) a[x] += y;
+	}
+	typC sum(int x)
+	{
+		//cerr<<"sum "<<x;
+		++x;
+		x = clamp(x, 0, n);
+		assert(0 <= x && x <= n);
+		typC r = a[x];
+		while (x ^= x & -x) r += a[x];
+		//cerr<<"= "<<r<<endl;
+		return r;
+	}
+	typC sum(int x, int y)
+	{
+		return sum(y) - sum(x - 1);
+	}
+	int lower_bound(typC x)
+	{
+		if (n == 0) return 0;
+		int i = __lg(n), j = 0;
+		for (; i >= 0; i--) if ((1 << i | j) <= n && a[1 << i | j] < x) j |= 1 << i, x -= a[j];
+		return j + 1;
+	}
+};
 namespace DFS
 {
-	template<class typC> struct bit0
-	{
-		vector<typC> a;
-		int n;
-		bit0() {}
-		bit0(int nn):n(nn),a(nn+1) {}
-		template<class T> bit0(int nn,T *b):n(nn),a(nn+1)
-		{
-			for (int i=1; i<=n; i++) a[i]=b[i-1];
-			for (int i=1; i<=n; i++) if (i+(i&-i)<=n) a[i+(i&-i)]+=a[i];
-		}
-		void add(int x,typC y)
-		{
-			++x;
-			//cerr<<"add "<<x<<" by "<<y<<endl;
-			assert(1<=x&&x<=n);
-			a[x]+=y;
-			while ((x+=x&-x)<=n) a[x]+=y;
-		}
-		typC sum(int x)
-		{
-			++x;
-			//cerr<<"sum "<<x;
-			if (x>n) x=n;
-			assert(0<=x&&x<=n);
-			typC r=a[x];
-			while (x^=x&-x) r+=a[x];
-			//cerr<<"= "<<r<<endl;
-			return r;
-		}
-		typC sum(int x,int y)
-		{
-			return sum(y)-sum(x-1);
-		}
-	};
 	typedef long long ll;
-	const int N=1e5+5,M=18;
+	const int N = 1e5 + 5, M = 18;
 	ll a[N];
-	bit0<ll> s[N],rc[N];
-	int st[M][N*2],lg[N*2];
-	int dep[N],dfn[N],siz[N],f[N];
-	vector<int> e[N],c[N];
+	int st[M][N * 2], lg[N * 2];
+	int dep[N], dfn[N], siz[N], f[N], szp[N], szn[N];
+	vector<int> e[N], c[N], rg[N];
 	bool ed[N];
-	int n,ksiz,rt,mn,id;
-	int lca(int u,int v)
+	int n, ksiz, rt, mn, id;
+	int lca(int u, int v)
 	{
-		u=dfn[u]; v=dfn[v];
-		if (u>v) swap(u,v);
-		int z=lg[v-u+1];
-		return dep[st[z][u]]<dep[st[z][v-(1<<z)+1]]?st[z][u]:st[z][v-(1<<z)+1];
+		u = dfn[u]; v = dfn[v];
+		if (u > v) swap(u, v);
+		int z = lg[v - u + 1];
+		return dep[st[z][u]] < dep[st[z][v - (1 << z) + 1]] ? st[z][u] : st[z][v - (1 << z) + 1];
 	}
-	int dis(int u,int v)
+	int dis(int u, int v)
 	{
-		return dep[u]+dep[v]-dep[lca(u,v)]*2;
+		return dep[u] + dep[v] - dep[lca(u, v)] * 2;
 	}
 	void findroot(int u)
 	{
-		ed[u]=siz[u]=1;
-		int mx=0;
-		for (int v:e[u]) if (!ed[v])
+		ed[u] = siz[u] = 1;
+		int mx = 0;
+		for (int v : e[u]) if (!ed[v])
 		{
 			findroot(v);
-			siz[u]+=siz[v];
-			mx=max(mx,siz[v]);
+			siz[u] += siz[v];
+			mx = max(mx, siz[v]);
 		}
-		mx=max(mx,ksiz-siz[u]);
-		ed[u]=0;
-		if (mn>mx) mn=mx,rt=u;
+		mx = max(mx, ksiz - siz[u]);
+		ed[u] = 0;
+		if (mn > mx) mn = mx, rt = u;
 	}
-	int fun(int u)
+	int dfs(int u)
 	{
-		mn=1e9;
+		mn = 1e9;
 		findroot(u);
-		u=rt;
-		ed[u]=1;
-		for (int v:e[u]) if (!ed[v]&&siz[v]>siz[u]) siz[v]=ksiz-siz[u];
-		for (int v:e[u]) if (!ed[v])
+		u = rt;
+		ed[u] = 1;
+		for (int v : e[u]) if (!ed[v] && siz[v] > siz[u]) siz[v] = ksiz - siz[u];
+		for (int v : e[u]) if (!ed[v])
 		{
-			ksiz=siz[v];
-			c[u].push_back(fun(v));
-			f[c[u].back()]=u;
+			ksiz = siz[v];
+			c[u].push_back(dfs(v));
+			f[c[u].back()] = u;
 		}
 		return u;
 	}
 	void pre_dfs(int u)
 	{
-		st[0][dfn[u]=++id]=u;
-		ed[u]=1;
-		for (int v:e[u]) if (!ed[v])
+		st[0][dfn[u] = ++id] = u;
+		ed[u] = 1;
+		for (int v : e[u]) if (!ed[v])
 		{
-			dep[v]=dep[u]+1;
+			dep[v] = dep[u] + 1;
 			pre_dfs(v);
-			st[0][++id]=u;
+			st[0][++id] = u;
 		}
-		ed[u]=0;
+		ed[u] = 0;
 	}
-	void clear(int _n)
+	void init(int _n)
 	{
-		n=_n; id=0;
+		n = _n; id = 0;
 		int i;
-		for (int i=1; i<=n; i++)
+		for (int i = 1; i <= n; i++)
 		{
 			e[i].clear();
-			a[i]=f[i]=ed[i]=0;
+			a[i] = f[i] = ed[i] = 0;
 		}
 	}
 	void new_dfs(int u)
 	{
-		siz[u]=1;
-		for (int v:c[u]) new_dfs(v),siz[u]+=siz[v];
-		static int nd[N];
-		vector<int> q={u};
-		int mx=0,ql=0;
-		nd[u]=0;
-		while (ql<q.size())
+		siz[u] = 1;
+		for (int v : c[u]) new_dfs(v), siz[u] += siz[v];
+		vector<int> &q = rg[u];
+		q = {u};
+		int ql = 0;
+		while (ql < q.size())
 		{
-			int x=q[ql++];
-			for (int v:c[x]) q.push_back(v),mx=max(mx,nd[v]=nd[u]+1);
-		}
-		static ll tmp[N];
-		static int ds[N];
-		mx=0;
-		for (int v:q) mx=max(mx,ds[v]=dis(u,v));
-		++mx;
-		fill_n(tmp,mx,0);
-		for (int v:q) tmp[ds[v]]+=a[v];
-		s[u]=bit0<ll>(mx,tmp);
-		if (u!=rt)
-		{
-			mx=0;
-			for (int v:q) mx=max(mx,ds[v]=dis(f[u],v));
-			++mx;
-			fill_n(tmp,mx,0);
-			for (int v:q) tmp[ds[v]]+=a[v];
-			rc[u]=bit0<ll>(mx,tmp);
+			int x = q[ql++];
+			for (int v : c[x]) q.push_back(v);
 		}
 	}
-	void init()
+	void fun()
 	{
 		pre_dfs(1);
-		int i,j;
-		for (i=2; i<=id; i++) lg[i]=lg[i>>1]+1;
-		for (j=0; j<lg[id]; j++)
+		int i, j;
+		for (i = 2; i <= id; i++) lg[i] = lg[i >> 1] + 1;
+		for (j = 0; j < lg[id]; j++)
 		{
-			int R=id-(2<<j)+1;
-			for (i=1; i<=R; i++) st[j+1][i]=dep[st[j][i]]<dep[st[j][i+(1<<j)]]?st[j][i]:st[j][i+(1<<j)];
+			int R = id - (2 << j) + 1;
+			for (i = 1; i <= R; i++) st[j + 1][i] = dep[st[j][i]] < dep[st[j][i + (1 << j)]] ? st[j][i] : st[j][i + (1 << j)];
 		}
-		ksiz=n;
-		int tmp=fun(1);
-		rt=tmp;
+		ksiz = n;
+		rt = dfs(1);
 		new_dfs(rt);
 	}
-	void add(int u,ll val)
+	vector<int> get(int u)
 	{
-		static int st[N],ds[N];
-		int tp=1,i; st[1]=u;
-		while (u=f[u]) st[++tp]=u;
-		u=st[1];
-		for (i=1; i<=tp; i++) ds[i]=dis(u,st[i]);
-		for (i=1; i<=tp; i++)
-		{
-			s[st[i]].add(ds[i],val);
-			if (i<tp) rc[st[i]].add(ds[i+1],val);
-		}
-	}
-	ll ask(int u,int k)
-	{
-		ll res=0;
-		static int st[N],ds[N];
-		int tp=1,i; st[1]=u;
-		while (u=f[u]) st[++tp]=u;
-		u=st[1];
-		for (i=1; i<=tp; i++) ds[i]=dis(u,st[i]);
-		for (i=1; i<=tp; i++)
-		{
-			if (ds[i]<=k) res+=s[st[i]].sum(k-ds[i]);
-			if (i<tp&&ds[i+1]<=k) res-=rc[st[i]].sum(k-ds[i+1]);
-		}
-		return res;
+		vector<int> st = {u};
+		while (u = f[u]) st.push_back(u);
+		return st;
 	}
 }
-//核心：点分树上 lca 出现在原树路径上
+using DFS::init, DFS::fun, DFS::e, DFS::dis, DFS::rg, DFS::get;
+
+\end{lstlisting}
+
+圆环修改和单点查询：
+
+\begin{lstlisting}
 int main()
 {
 	ios::sync_with_stdio(0); cin.tie(0);
-	cout<<setiosflags(ios::fixed)<<setprecision(15);
-	int n,m,i;
-	cin>>n>>m;
-	DFS::clear(n);
-	for (i=1; i<=n; i++) cin>>DFS::a[i];
-	for (i=1; i<n; i++)
+	cout << fixed << setprecision(15);
+	int n, m, i;
+	cin >> n >> m;
+	vector<int> a(n + 1);
+	for (i = 1; i <= n; i++) cin >> a[i];
+	DFS::init(n);
+	for (i = 1; i < n; i++)
 	{
-		int u,v;
-		cin>>u>>v;
-		DFS::e[u].push_back(v);
-		DFS::e[v].push_back(u);
+		int u, v;
+		cin >> u >> v;
+		++u; ++v;
+		e[u].push_back(v);
+		e[v].push_back(u);
 	}
-	DFS::init();
-	ll ans=0;
+	DFS::fun();
+	vector<bit<ll>> inc(n + 1), dec(n + 1);
+	for (i = 1; i <= n; i++)
+	{
+		int mx = 0;
+		for (int v : rg[i]) cmax(mx, dis(i, v));
+		inc[i] = bit<ll>(mx + 1);
+		if (i != DFS::rt)
+		{
+			mx = 0;
+			for (int v : rg[i]) cmax(mx, dis(DFS::f[i], v));
+			dec[i] = bit<ll>(mx + 1);
+		}
+	}
 	while (m--)
 	{
-		int op,x,y;
-		cin>>op>>x>>y; x^=ans; y^=ans;
-		if (op==1) DFS::add(x,y-DFS::a[x]),DFS::a[x]=y;
-		else cout<<(ans=DFS::ask(x,y))<<'\n';
+		int op, u;
+		cin >> op >> u; ++u;
+		if (op == 0)
+		{
+			int l, r, x;
+			cin >> l >> r >> x;
+			auto v = get(u);
+			int m = v.size();
+			for (i = 0; i < m; i++)
+			{
+				inc[v[i]].add(l - dis(v[i], u), x);
+				inc[v[i]].add(r - dis(v[i], u), -x);
+			}
+			for (i = 0; i + 1 < m; i++)
+			{
+				dec[v[i]].add(l - dis(v[i + 1], u), x);
+				dec[v[i]].add(r - dis(v[i + 1], u), -x);
+			}
+		}
+		else
+		{
+			ll res = a[u];
+			auto v = get(u);
+			int m = v.size();
+			for (i = 0; i < m; i++) res += inc[v[i]].sum(dis(v[i], u));
+			for (i = 0; i + 1 < m; i++) res -= dec[v[i]].sum(dis(v[i + 1], u));
+			cout << res << '\n';
+		}
 	}
 }
+\end{lstlisting}
 
+单点修改和圆环查询：
+
+\begin{lstlisting}
+	int main()
+	{
+		ios::sync_with_stdio(0); cin.tie(0);
+		cout << fixed << setprecision(15);
+		int n, m, i;
+		cin >> n >> m;
+		vector<int> a(n + 1);
+		for (i = 1; i <= n; i++) cin >> a[i];
+		DFS::init(n);
+		for (i = 1; i < n; i++)
+		{
+			int u, v;
+			cin >> u >> v;
+			++u; ++v;
+			e[u].push_back(v);
+			e[v].push_back(u);
+		}
+		DFS::fun();
+		vector<bit<ll>> inc(n + 1), dec(n + 1);
+		vector<ll> tmp(n + 1);
+		for (i = 1; i <= n; i++)
+		{
+			int mx = 0;
+			for (int v : rg[i])
+			{
+				int d = dis(i, v);
+				cmax(mx, d);
+				tmp[d] += a[v];
+			}
+			inc[i] = bit<ll>(mx + 1, tmp.data());
+			fill_n(tmp.begin(), mx + 1, 0);
+			if (i != DFS::rt)
+			{
+				mx = 0;
+				for (int v : rg[i])
+				{
+					int d = dis(DFS::f[i], v);
+					cmax(mx, d);
+					tmp[d] += a[v];
+				}
+				dec[i] = bit<ll>(mx + 1, tmp.data());
+				fill_n(tmp.begin(), mx + 1, 0);
+			}
+		}
+		while (m--)
+		{
+			int op, u;
+			cin >> op >> u; ++u;
+			if (op == 0)
+			{
+				int x;
+				cin >> x;
+				auto v = get(u);
+				int m = v.size();
+				for (i = 0; i < m; i++) inc[v[i]].add(dis(v[i], u), x);
+				for (i = 0; i + 1 < m; i++) dec[v[i]].add(dis(v[i + 1], u), x);
+			}
+			else
+			{
+				int l, r;
+				cin >> l >> r;
+				--r;
+				ll res = 0;
+				auto v = get(u);
+				int m = v.size();
+				for (i = 0; i < m; i++) res += inc[v[i]].sum(l - dis(v[i], u), r - dis(v[i], u));
+				for (i = 0; i + 1 < m; i++) res -= dec[v[i]].sum(l - dis(v[i + 1], u), r - dis(v[i + 1], u));
+				cout << res << '\n';
+			}
+		}
+	}
+	
 \end{lstlisting}
 
 \subsection{prufer 与树的互相转化}
@@ -11477,88 +11652,115 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{轻重链剖分}
+\subsection{轻重链剖分/DFS 序 LCA}
 
-首先 init(n)，然后正常存边（$[1,n]$），然后 fun(root)。
+首先 \verb|init(n)|，然后正常存边（$[1,n]$），然后 \verb|fun(root)|。
 
-get path 会返回这条路径上的 dfn 区间。
+\verb|get_path| 会返回这条路径上的 \verb|dfn| 区间。
 
 \begin{lstlisting}
 namespace HLD
 {
-	const int N=5e5+2;
+	const int N = 5e5 + 2;
 	vector<int> e[N];
-	int dfn[N],dep[N],f[N],siz[N],hc[N],top[N];
-	int id;
+	int dfn[N], nfd[N], dep[N], f[N], siz[N], hc[N], top[N];
+	int id, n;
 	void dfs1(int u)
 	{
-		siz[u]=1;
-		for (int v:e[u]) if (v!=f[u])
+		siz[u] = 1;
+		for (int v : e[u]) if (v != f[u])
 		{
-			dep[v]=dep[f[v]=u]+1;
+			dep[v] = dep[f[v] = u] + 1;
 			dfs1(v);
-			siz[u]+=siz[v];
-			if (siz[v]>siz[hc[u]]) hc[u]=v;
+			siz[u] += siz[v];
+			if (siz[v] > siz[hc[u]]) hc[u] = v;
 		}
 	}
 	void dfs2(int u)
 	{
-		dfn[u]=++id;
+		dfn[u] = ++id;
+		nfd[id] = u;
 		if (hc[u])
 		{
-			top[hc[u]]=top[u];
+			top[hc[u]] = top[u];
 			dfs2(hc[u]);
-			for (int v:e[u]) if (v!=hc[u]&&v!=f[u]) dfs2(top[v]=v);
+			for (int v : e[u]) if (v != hc[u] && v != f[u]) dfs2(top[v] = v);
 		}
 	}
-	int lca(int u,int v)
+	int lca(int u, int v)
 	{
-		while (top[u]!=top[v])
+		while (top[u] != top[v])
 		{
-			if (dep[top[u]]<dep[top[v]]) swap(u,v);
-			u=f[top[u]];
+			if (dep[top[u]] < dep[top[v]]) swap(u, v);
+			u = f[top[u]];
 		}
-		if (dep[u]>dep[v]) swap(u,v);
+		if (dep[u] > dep[v]) swap(u, v);
 		return u;
 	}
-	int dis(int u,int v)
+	int dis(int u, int v)
 	{
-		return dep[u]+dep[v]-(dep[lca(u,v)]<<1);
+		return dep[u] + dep[v] - (dep[lca(u, v)] << 1);
 	}
-	void init(int n)
+	void init(int _n)
 	{
-		for (int i=1;i<=n;i++)
+		n = _n;
+		for (int i = 1; i <= n; i++)
 		{
 			e[i].clear();
-			f[i]=hc[i]=0;
+			f[i] = hc[i] = 0;
 		}
-		id=0;
+		id = 0;
 	}
 	void fun(int root)
 	{
-		dep[root]=1;dfs1(root);dfs2(top[root]=root);
+		dep[root] = 1; dfs1(root); dfs2(top[root] = root);
 	}
-	vector<pair<int,int>> get_path(int u,int v)//u->v，注意可能出现 [r>l]（表示反过来走）
+	vector<pair<int, int>> get_path(int u, int v)//u->v，注意可能出现 [r>l]（表示反过来走）
 	{
 		//cerr<<"path from "<<u<<" to "<<v<<": ";
-		vector<pair<int,int>> v1,v2;
-		while (top[u]!=top[v])
+		vector<pair<int, int>> v1, v2;
+		while (top[u] != top[v])
 		{
-			if (dep[top[u]]>dep[top[v]]) v1.push_back({dfn[u],dfn[top[u]]}),u=f[top[u]];
-			else v2.push_back({dfn[top[v]],dfn[v]}),v=f[top[v]];
+			if (dep[top[u]] > dep[top[v]]) v1.push_back({dfn[u], dfn[top[u]]}), u = f[top[u]];
+			else v2.push_back({dfn[top[v]], dfn[v]}), v = f[top[v]];
 		}
-		v1.reserve(v1.size()+v2.size()+1);
-		v1.push_back({dfn[u],dfn[v]});
-		reverse(v2.begin(),v2.end());
-		for (auto v:v2) v1.push_back(v);
+		v1.reserve(v1.size() + v2.size() + 1);
+		v1.push_back({dfn[u], dfn[v]});
+		reverse(v2.begin(), v2.end());
+		for (auto v : v2) v1.push_back(v);
 		//for (auto [x,y]:v1) cerr<<"["<<x<<','<<y<<"] ";cerr<<endl;
 		return v1;
 	}
 }
-using HLD::e,HLD::lca,HLD::dis,HLD::dfn,HLD::dep,HLD::f,HLD::siz,HLD::get_path;
-using HLD::fun;//5e5
-
-
+using HLD::e, HLD::dfn, HLD::nfd, HLD::dep, HLD::f, HLD::siz, HLD::get_path;
+using HLD::init;//5e5
+namespace LCA
+{
+	using HLD::N, HLD::n;
+	int st[__lg(N) + 1][N];
+	int cmp(const int &x, const int &y) { return dep[x] < dep[y] ? x : y; }
+	void fun(int rt)
+	{
+		HLD::fun(rt);
+		assert(f[rt] == 0);
+		for (int i = 1; i <= n; i++) st[0][dfn[i] - 1] = f[i];
+		for (int j = 0; j < __lg(n); j++)
+			for (int i = 1, k = n - (1 << j + 1); i <= k; i++) st[j + 1][i] = cmp(st[j][i], st[j][i + (1 << j)]);
+	}
+	int lca(int u, int v)
+	{
+		if (u == v) return u;
+		u = dfn[u], v = dfn[v];
+		if (u > v) swap(u, v);
+		int g = __lg(v - u);
+		return cmp(st[g][u], st[g][v - (1 << g)]);
+	}
+	int dis(int u, int v)
+	{
+		return dep[u] + dep[v] - (dep[lca(u, v)] << 1);
+	}
+}
+using LCA::lca, LCA::fun, LCA::dis;
 \end{lstlisting}
 
 \subsection{换根树剖}
@@ -16321,5 +16523,36 @@ int main()
     //cerr << "??\n";
 }
 
+\end{lstlisting}
+
+\subsection{所有区间 GCD}
+
+\begin{lstlisting}
+template<typename T> struct GCD
+{
+	vector<pair<int, T>> res;
+	GCD(const vector<T> &a) :res(n)
+	{
+		int n = a.size(), i, j;
+		vector<ll> v(n);
+		vector<int> l(n);
+		vector < vector<pair<int, T>> res(n);
+		for (i = 0; i < n; i++)
+		{
+			for (v[i] = a[i], j = l[i] = i; j >= 0; j = l[j] - 1)
+			{
+				v[j] = fun(v[j], a[i]);
+				while (l[j] && fun(a[i], v[l[j] - 1]) == fun(a[i], v[j])) l[j] = l[l[j] - 1];
+				//[l[j]..j,i]区间内的值求fun均为v[j]
+			}
+			for (j = i; j >= 0; j = l[j] - 1) res[i].push_back({l[j], v[j]});
+			reverse(all(res[i]));
+		}
+	}
+	T ask(int l, int r)//[l,r]
+	{
+		return res[r].prev(upper_bound(l))->second;
+	}
+};
 \end{lstlisting}
 \end{document}
