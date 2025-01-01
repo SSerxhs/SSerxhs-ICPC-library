@@ -1,5 +1,7 @@
 不定期更新。只更新 tex 版和 pdf 版。
 
+3.9.15：微调 exgcd 防止爆 long long。修改了万能欧几里得的接口和解释，加入了 min of mod of linear。
+
 3.9.13：加了 dfs 序 lca 和所有区间 GCD。
 
 3.9.11：加了点 python。
