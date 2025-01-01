@@ -44,7 +44,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver: 3.9.13}
+\centerline{ver: 3.9.15}
 
 \tableofcontents
 
@@ -321,15 +321,15 @@ template<class Tx,class Ty> struct hashtable //定义域，值域
 {
 	const static int N=2e6+5,p=1e6+7;//元素个数，模数
 	Tx X[N];
-	Ty Y[N],default;
-	int fir[p],nxt[N],sz;
-	ht(Ty default=Ty{}):val(default):sz(0),{memset(fir,-1,sizeof fir);}
+	Ty Y[N],val;
+	int fir[p],nxt[N],sz,cnt;
+	ht(Ty val=Ty{}):val(val),sz(0),cnt(0){memset(fir,-1,sizeof fir);}
 	Ty &operator[](T x)
 	{
 		int index=(x%p+p)%p;
 		for (int i=fir[index];i!=-1;i=nxt[i]) if (X[i]==x) return Y[i];//若 x 不重复，可以省略这个 for
 		X[cnt]=x;
-		Y[cnt]=default;
+		Y[cnt]=val;
 		nxt[cnt]=fir[index];
 		fir[index]=cnt++;
 		return Y[cnt-1];
@@ -4017,7 +4017,7 @@ pair<ll,ll> exgcd(ll a,ll b,ll c)//ax+by=c，{-1,-1} 无解，b=0 返回 {c/a,0}
 		swap(a,b);
 	}
 	b=abs(q/d);
-	x=x*(c/d)%b;
+	x=(c/d)%b*(x%b)%b;
 	if (x<0) x+=b;
 	return {x, (ll)((c-(lll)p*x)/q)};
 }
@@ -4029,7 +4029,7 @@ ll fun(ll a, ll b, ll p)//ax=b(mod p)
 
 \subsection{exCRT}
 
-实现了一个类 Q，表示一条方程，支持合并。
+实现了一个类 \verb|Q|，表示一条方程，支持合并。
 
 \begin{lstlisting}
 namespace CRT
@@ -7371,59 +7371,61 @@ int main(){
 
 
 
-\subsection{万能欧几里得}
+\subsection{万能欧几里得/min of mod of linear}
 
-题意：$\sum\limits_{i=0}^{n-1}\lfloor \dfrac {ai+b}m\rfloor$ （$0\le a,b$）
+题意：$\sum\limits_{x=0}^{n-1}\lfloor \dfrac {ax+b}m\rfloor$ （$0\le a,b<m$）
 
-注意若 $b\ge m$ 需要增加先往上走一步。
+\includegraphics[scale=0.8]{1.png}
 
 原理：考虑紧贴着斜线的折线的答案。每个 \verb|nd| 表示的是一段折线，你需要实现 \verb|operator+| 来计算出拼接两个折线之后的答案。除此以外的原理不必了解。
 
-你需要传入的 \verb|a| 和 \verb|b| 表示向上和向右的折线的答案（也就是边界）。
-
-如果你发现横竖反了，自行调整。你可以通过在 \verb|nd| 中加一个 \verb|string| 记录当前是什么折线来确认这一点。
+你需要传入的 \verb|dx| 和 \verb|dy| 表示向上和向右的折线的答案（也就是边界）。
 
 \begin{lstlisting}
 struct nd
 {
-	ll x,y,sy;
+	ll x, y, sy;
 	nd operator+(const nd &o) const
 	{
-		return {x+o.x,y+o.y,sy+o.sy+y*o.x};
+		return {x + o.x, y + o.y, sy + o.sy + y * o.x};
 	}
 };
-nd ksm (nd a,int k)
+nd ksm(nd a, int k)
 {
-	nd res{};
+	nd res{ };
 	while (k)
 	{
-		if (k&1) res=res+a;
-		a=a+a;k>>=1;
+		if (k & 1) res = res + a;
+		a = a + a; k >>= 1;
 	}
 	return res;
 }
-nd sol (int p,int q,int r,int l,nd a,nd b)//(0,l],(pi+r)/q
+nd sol(int a, int b, int m, int n, nd dx, nd dy)//[0,n] (ax+b)/m 0<=b<m
 {
-	if (!l) return {};
-	if (p>=q) return sol(p%q,q,r,l,a,ksm(a,p/q)+b);
-	int m=((ll)l*p+r)/q;
-	if (!m) return ksm(b,l);
-	int cnt=l-((ll)q*m-r-1)/p;
-	return ksm(b,(q-r-1)/p)+a+sol(q,p,(q-r-1)%p,m-1,b,a)+ksm(b,cnt);
+	if (!n) return { };
+	if (a >= m) return sol(a % m, b, m, n, ksm(dy, a / m) + dx, dy);
+	int c = ((ll)n * a + b) / m;
+	if (!c) return ksm(dx, n);
+	int cnt = n - ((ll)m * c - b - 1) / a;
+	return ksm(dx, (m - b - 1) / a) + dy + sol(m, (m - b - 1) % a, a, c - 1, dy, dx) + ksm(dx, cnt);
 }
-int main()
+ll sum_of_floor_of_linear(int a, int b, int m, int n)//[0,n] sum((ax+b)/m)
 {
-	ios::sync_with_stdio(0);cin.tie(0);
-	cout<<setiosflags(ios::fixed)<<setprecision(15);
-	int T;cin>>T;
-	while (T--)
+	nd dx = {1, 0, 0}, dy = {0, 1, 0};
+	int nb = (b % m + m) % m;
+	return sol(a, nb, m, n, dx, dy).sy + (ll)(b - nb) / m * (n + 1);
+}
+int min_of_mod_of_linear(int a, int b, int p, int n)//[0,n] min((ax+b) mod p)
+{
+	ll s = sum_of_floor_of_linear(a, b, p, n);
+	int l = 0, r = p - 1, mid;
+	while (l < r)
 	{
-		int n,m,a,b;
-		cin>>n>>m>>a>>b;
-		nd nx={1,0,0},ny={0,1,0};
-		nd ans=sol(a,m,b,n-1,ny,nx);
-		cout<<ans.sy<<'\n';
+		mid = (l + r + 1) / 2;
+		if (sum_of_floor_of_linear(a, b - mid, p, n) >= s) l = mid;
+		else r = mid - 1;
 	}
+	return l;
 }
 \end{lstlisting}
 
@@ -7951,40 +7953,6 @@ $O((n+\sum)\log n)$，$O(n+\sum)$。
 下标从 1 开始。
 
 \begin{lstlisting}
-//这回只花了114514min就打完了。
-//真好。记得多手造几组。ACM拍什么拍。 
-#include "bits/stdc++.h"
-using namespace std;
-using ui = unsigned; using db = long double; using ll = long long; using ull = unsigned long long; using lll = __int128;
-template<class T1, class T2> istream &operator>>(istream &cin, pair<T1, T2> &a) { return cin >> a.first >> a.second; }
-template <std::size_t Index = 0, typename... Ts> typename std::enable_if<Index == sizeof...(Ts), void>::type tuple_read(std::istream &is, std::tuple<Ts...> &t) { }
-template <std::size_t Index = 0, typename... Ts> typename std::enable_if < Index < sizeof...(Ts), void>::type tuple_read(std::istream &is, std::tuple<Ts...> &t) { is >> std::get<Index>(t); tuple_read<Index + 1>(is, t); }
-template <typename... Ts>std::istream &operator>>(std::istream &is, std::tuple<Ts...> &t) { tuple_read(is, t); return is; }
-template<class T1> istream &operator>>(istream &cin, valarray<T1> &a);
-template<class T1> istream &operator>>(istream &cin, vector<T1> &a) { for (auto &x : a) cin >> x; return cin; }
-template<class T1> istream &operator>>(istream &cin, valarray<T1> &a) { for (auto &x : a) cin >> x; return cin; }
-template<class T1, class T2> bool cmin(T1 &x, const T2 &y) { if (y < x) { x = y; return 1; } return 0; }
-template<class T1, class T2> bool cmax(T1 &x, const T2 &y) { if (x < y) { x = y; return 1; } return 0; }
-template<class T1> vector<T1> range(T1 l, T1 r, T1 step = 1) { assert(step > 0); int n = (r - l + step - 1) / step, i; vector<T1> res(n); for (i = 0; i < n; i++) res[i] = l + step * i; return res; }
-template<class T1> basic_string<T1> operator*(const basic_string<T1> &s, int m) { auto r = s; m *= s.size(); r.resize(m); for (int i = s.size(); i < m; i++) r[i] = r[i - s.size()]; return r; }
-istream &operator>>(istream &cin, lll &x) { bool flg = 0; x = 0; static string s; cin >> s; if (s[0] == '-') flg = 1, s = s.substr(1); for (char c : s) x = x * 10 + (c - '0'); if (flg) x = -x; return cin; }
-ostream &operator<<(ostream &cout, lll x) { static char s[60]; if (x < 0) cout << '-', x = -x; int tp = 1; s[0] = '0' + (x % 10); while (x /= 10) s[tp++] = '0' + (x % 10); while (tp--) cout << s[tp]; return cout; }
-#if !defined(ONLINE_JUDGE)&&defined(LOCAL)
-#include "my_header/debug.h"
-#else
-#define dbg(...) ;
-#endif
-template<class T1, class T2> ostream &operator<<(ostream &cout, const pair<T1, T2> &a) { return cout << a.first << ' ' << a.second; }
-template<class T1, class T2> ostream &operator<<(ostream &cout, const vector<pair<T1, T2>> &a) { for (auto &x : a) cout << x << '\n'; return cout; }
-template<class T1> ostream &operator<<(ostream &cout, vector<T1> a) { int n = a.size(); if (!n) return cout; cout << a[0]; for (int i = 1; i < n; i++) cout << ' ' << a[i]; return cout; }
-template<class T1> ostream &operator<<(ostream &cout, const valarray<T1> &a) { int n = a.size(); if (!n) return cout; cout << a[0]; for (int i = 1; i < n; i++) cout << ' ' << a[i]; return cout; }
-template<class T1> ostream &operator<<(ostream &cout, const vector<valarray<T1>> &a) { int n = a.size(); if (!n) return cout; cout << a[0]; for (int i = 1; i < n; i++) cout << '\n' << a[i]; return cout; }
-template<class T1> ostream &operator<<(ostream &cout, const vector<vector<T1>> &a) { int n = a.size(); if (!n) return cout; cout << a[0]; for (int i = 1; i < n; i++) cout << '\n' << a[i]; return cout; }
-#define all(x) (x).begin(),(x).end()
-#define print(...) cout<<format(__VA_ARGS__)
-#define println(...) cout<<format(__VA_ARGS__)<<'\n'
-#define err(...) cerr<<format(__VA_ARGS__)
-#define errln(...) cerr<<format(__VA_ARGS__)<<'\n'
 struct SA
 {
 	int n;
@@ -14718,7 +14686,18 @@ void write(const int x)
 
 另一种写法是在 \verb|main| 开头写，但必须以 \verb|exit(0)| 结束程序。
 
+以下两个应该有一个是对的，不对会 CE。
+
 \begin{lstlisting}
+{
+	static int OP = 0;
+	if (OP++ == 0)
+	{
+		int size = 256 << 20; // 256MB
+		char *p = (char *)malloc(size) + size;
+		__asm__("movl %0, %%esp\n" :: "r"(p));
+	}
+}
 {
 	static int OP=0;
 	if (OP++==0)
