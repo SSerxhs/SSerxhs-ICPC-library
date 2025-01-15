@@ -44,7 +44,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver: 3.9.15}
+\centerline{ver: 3.9.16}
 
 \tableofcontents
 
@@ -4340,6 +4340,64 @@ namespace du_seive
 using du_seive::init,du_seive::get_phi_sum;
 \end{lstlisting}
 
+\subsection{$\mu^2(n)$ 前缀和}
+
+$10^{18}$，0.46s。
+
+$\mu^2(n)=\sum\limits_{d^2|n}\mu(d)$
+
+\begin{lstlisting}
+const int N = 5e7 + 5;
+int pr[N / 8], cnt, mu[N];
+bool ed[N];
+void init()
+{
+	ui i, j, k;
+	mu[1] = 1;
+	for (i = 2; i < N; i++)
+	{
+		if (!ed[i]) pr[++cnt] = i, mu[i] = -1;
+		for (j = 1; pr[j] * i < N; j++)
+		{
+			ed[pr[j] * i] = 1;
+			if (i % pr[j] == 0) break;
+			mu[pr[j] * i] = -mu[i];
+		}
+		mu[i] += mu[i - 1];
+	}
+}
+ll sum_mu(ll n)
+{
+	if (n < N) return mu[n];
+	ll r = 1, i, j, k;
+	for (i = 2; i <= n; i = j + 1)
+	{
+		j = n / (k = n / i);
+		r -= sum_mu(k) * (j - i + 1);
+	}
+	return r;
+}
+ll sum_mu2(ll n)
+{
+	ll r = 0, i, j, k, l, s = 0, t;
+	for (i = 1; i * i <= n; i = j + 1)
+	{
+		k = n / (i * i);
+		j = sqrtl(n / k);
+		t = sum_mu(j);
+		r += k * (t - s);
+		s = t;
+	}
+	return r;
+}
+int main()
+{
+	ll n;
+	init();
+	cin >> n;
+	cout << sum_mu2(n) << endl;
+}
+\end{lstlisting}
 \subsection{线性规划}
 用法：构造函数指明目标函数系数，add 函数增加限制。额外的限制是 $x_i\ge 0$。
 \begin{lstlisting}
@@ -12510,64 +12568,72 @@ int main()
 
 \subsection{支配树（一般图）}
 
-$u$ 支配 $v$ 指的是从 $S$ 到 $v$ 的路径必然经过 $u$。支配树是保持支配关系不变的树，其中 $S$ 是根，$idom[u]$ 是 $u$ 的父节点。
+$u$ 支配 $v$ 指的是从 $S$ 到 $v$ 的路径必然经过 $u$。支配树是保持支配关系不变的树，其中 $s$ 是根，$idom[u]$ 是 $u$ 的父节点。
 
 \begin{lstlisting}
-#include <bits/stdc++.h>
-using namespace std;
-const int N=2e5+2;
-vector<int> lj[N],llj[N],fl[N],tl[N],buc[N],c[N];
-int f[N],mn[N],siz[N],sdom[N],idom[N],dfn[N],nfd[N],pv[N];
-int n,m,cnt,i,j,x,y,na;
-bool reach[N];
-void dfs1(int x)
+vector<int> dom_tree(vector<vector<int>> e, int s)//[1,n]
 {
-	nfd[dfn[x]=++cnt]=x;
-	for (auto v:lj[x]) if (!dfn[v]) dfs1(v),c[x].push_back(v);
-}
-int getf(int x)
-{
-	if (f[x]==x) return x;
-	int u=getf(f[x]);
-	mn[x]=dfn[sdom[mn[x]]]<dfn[sdom[mn[f[x]]]]?mn[x]:mn[f[x]];
-	return f[x]=u;
-}
-void dfs0(int u)
-{
-	reach[u]=1;
-	for (auto &v:lj[u]) if (!reach[v]) dfs0(v);
+	int n = e.size() - 1, i, id = 0;
+	vector<vector<int>> c(n + 1), buc(c), ie(c);
+	vector<int> mn(n + 1), f(n + 1), sdom(n + 1), idom(n + 1), dfn(n + 1), nfd(n + 1), pv(n + 1), ed(n + 1);
+	auto cmp = [&](int x, int y) {return dfn[x] < dfn[y] ? x : y; };
+	auto cmp2 = [&](int x, int y) {return dfn[sdom[x]] < dfn[sdom[y]] ? x : y; };
+	function<void(int)> getf = [&](int u) {
+		if (f[u] == u) return;
+		getf(f[u]);
+		mn[u] = cmp2(mn[u], mn[f[u]]);
+		f[u] = f[f[u]];
+	};
+	for (i = 1; i <= n; i++) mn[i] = f[i] = i;
+	function<void(int)> dfs = [&](int u) {
+		ed[u] = 1;
+		for (int v : e[u]) if (!ed[v]) dfs(v);
+	};
+	dfs(s);
+	for (i = 1; i <= n; i++) if (ed[i]) erase_if(e[i], [&](int v) { return !ed[v]; });
+	else e[i].clear();
+	for (i = 1; i <= n; i++) for (int v : e[i]) ie[v].push_back(i);
+	dfs = [&](int u) {
+		nfd[dfn[u] = ++id] = u;
+		for (int v : e[u]) if (!dfn[v]) dfs(v), c[u].push_back(v);
+	};
+	dfs(s); dfn[0] = 1e9;
+	for (i = id; i; i--)
+	{
+		int u = nfd[i], w = 0;
+		for (int v : ie[u])
+		{
+			sdom[u] = cmp(sdom[u], v);
+			if (dfn[v] > dfn[u])
+			{
+				getf(v);
+				w = cmp2(w, mn[v]);
+			}
+		}
+		sdom[u] = cmp(sdom[u], sdom[w]);
+		buc[sdom[u]].push_back(u);
+		for (int v : buc[u]) getf(v), pv[v] = mn[v];
+		for (int v : c[u]) f[v] = u, mn[v] = cmp2(mn[v], mn[u]);
+	}
+	for (i = 1; i <= n; i++) idom[nfd[i]] = (sdom[pv[nfd[i]]] == sdom[nfd[i]]) ? sdom[nfd[i]] : idom[pv[nfd[i]]];
+	idom[s] = s;
+	return idom;
 }
 int main()
 {
-	ios::sync_with_stdio(0);cin.tie(0);
-	int S;
-	cin>>n>>m>>S;++S;
-	while (m--) cin>>x>>y,++x,++y,lj[x].push_back(y);
-	for (i=1;i<=n;i++) mn[i]=f[i]=i;
-	dfs0(S);
-	for (i=1;i<=n;i++) if (reach[i]) for (auto &v:lj[i]) if (reach[v]) llj[i].push_back(v),fl[v].push_back(i);
-	for (i=1;i<=n;i++) lj[i]=llj[i];
-	dfs1(S);dfn[0]=1e9;
-	for (i=cnt;i;i--)
+	int n, m, s;
+	cin >> n >> m >> s; ++s;
+	vector<vector<int>> e(n + 1);
+	for (int i = 1; i <= m; i++)
 	{
-		x=nfd[i];na=0;
-		for (auto v:fl[x])
-		{
-			sdom[x]=dfn[sdom[x]]<dfn[v]?sdom[x]:v;
-			if (dfn[v]>dfn[x])
-			{
-				getf(v);
-				na=dfn[sdom[na]]<dfn[sdom[mn[v]]]?na:mn[v];
-			}
-		}
-		sdom[x]=dfn[sdom[x]]<dfn[sdom[na]]?sdom[x]:sdom[na];
-		buc[sdom[x]].push_back(x);
-		for (auto v:buc[x]) getf(v),pv[v]=mn[v];
-		for (auto v:c[x]) f[v]=x,mn[v]=dfn[sdom[mn[v]]]<dfn[sdom[mn[x]]]?mn[v]:mn[x];
+		int u, v;
+		cin >> u >> v; ++u; ++v;
+		e[u].push_back(v);
 	}
-	for (i=1;i<=n;i++) idom[nfd[i]]=(sdom[pv[nfd[i]]]==sdom[nfd[i]])?sdom[nfd[i]]:idom[pv[nfd[i]]];
-	for (i=1;i<=n;i++) cout<<(i==S?S:idom[i])-1<<" \n"[i==n];
+	auto r = dom_tree(e, s);
+	for (int i = 1; i <= n; i++) cout << r[i] - 1 << " \n"[i == n];
 }
+
 \end{lstlisting}
 
 \subsection{最小乘积生成树}
@@ -14333,7 +14399,7 @@ $f(p^k)=\begin{cases}
 
 时间复杂度为 $O(n^{\frac{1}{4}}+f(n))$，其中 $O(n^{\frac{1}{4}})$ 是 pollard-rho 的复杂度。
 
-$f(n)$ 的量级不好分析，但不会超过约数个数 $O(d(n))\approx O(n^{\frac{1}{3}})$，且可以推测不能达到。
+$f(n)$ 的量级不好分析，但不会超过约数个数 $O(d(n))\approx O(n^{\frac{1}{3}})$，且可以推测不能达到。实践上 $10^{18}$ 以内 $f(n)\le 3072$。
 
 \begin{lstlisting}
 namespace pr
