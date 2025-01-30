@@ -44,7 +44,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver: 3.9.16}
+\centerline{ver: 3.10.1}
 
 \tableofcontents
 
@@ -1783,7 +1783,7 @@ struct P
 
 \subsection{第 $k$ 大线性基}
 
-注意数字大于 $2^50$ 时可能要修改循环范围。
+注意数字大于 $2^{50}$ 时可能要修改循环范围。
 
 $O((n+q)\log a)$，$O(\log a)$。
 
@@ -3213,104 +3213,6 @@ int main()
 
 \section{数学}
 
-\subsection{单情况矩阵 (+)}
-没啥用。特殊的 ddp 有用。
-\begin{lstlisting}
-template<class T,int n> struct matrix
-{
-	#define all(x) (x).begin(),(x).end()
-	array<pair<int,T>,n> a;
-	matrix(char c='E')
-	{
-		int i;
-		if (c=='E') for (i=0;i<n;i++) a[i]={i,0};
-		else assert(0);
-	}
-	matrix(char c,int x)
-	{
-		
-	}
-	matrix operator+(const matrix &o) const
-	{
-		matrix r;
-		int i,j,k;
-		for (i=0;i<n;i++)
-		{
-			auto [x,y]=a[i];
-			r.a[i]={o.a[x].first,o.a[x].second+y};
-		}
-		return r;
-	}
-};
-
-\end{lstlisting}
-
-\subsection{矩阵求逆（要求质数）}
-
-一种原地算法，总体效率更高。
-
-$O(n^3)$，$O(n)$。
-
-\begin{lstlisting}
-#include <bits/stdc++.h>
-using namespace std;
-typedef long long ll;
-const int N=402,p=1e9+7;
-void inv(int &x)
-{
-	int y=p-2,r=1;
-	while (y)
-	{
-		if (y&1) r=(ll)r*x%p;
-		x=(ll)x*x%p;
-		y>>=1;
-	}
-	x=r;
-}
-int a[N][N],ih[N],jh[N];
-int main()
-{
-	ios::sync_with_stdio(0);cin.tie(0);
-	int i,j,k,n;
-	cin>>n;
-	for (i=0;i<n;i++) for (j=0;j<n;j++) cin>>a[i][j];
-	memset(ih,-1,sizeof ih);
-	memset(jh,-1,sizeof jh);
-	for (k=0;k<n;k++)
-	{//ih,jh要清空
-		for (i=k;i<n;i++) if (ih[k]==-1) for (j=k;j<n;j++) if (a[i][j])
-		{
-			ih[k]=i;
-			jh[k]=j;
-			break;
-		}
-		if (ih[k]==-1) return cout<<"No Solution"<<endl,0;
-		for (j=0;j<n;j++) swap(a[k][j],a[ih[k]][j]);
-		for (i=0;i<n;i++) swap(a[i][k],a[i][jh[k]]);
-		if (!a[k][k]) return cout<<"No Solution"<<endl,0;inv(a[k][k]);
-		for (i=0;i<n;i++) if (i!=k) a[k][i]=(ll)a[k][i]*a[k][k]%p;
-		for (i=0;i<n;i++) if (i!=k) for (j=0;j<n;j++) if (j!=k) a[i][j]=(a[i][j]+(ll)(p-a[i][k])*a[k][j])%p;
-		for (i=0;i<n;i++) if (i!=k) a[i][k]=(ll)(p-a[i][k])*a[k][k]%p;	
-	}
-	for (k=n-1;k>=0;k--)
-	{
-		for (j=0;j<n;j++) swap(a[k][j],a[jh[k]][j]);
-		for (i=0;i<n;i++) swap(a[i][k],a[i][ih[k]]);
-	}
-}
-/*
-输入
-3
-1 2 8
-2 5 6
-5 1 2
-输出
-718750005 718750005 968750007
-171875001 671875005 296875002
-117187501 867187506 429687503
-*/
-\end{lstlisting}
-
 \subsection{任意模数矩阵求逆（未验证）}
 
 $O(n^3)$，$O(n^2)$。
@@ -3378,279 +3280,311 @@ void cal(int a[][N],int b[][N],int n)
 }
 \end{lstlisting}
 
-\subsection{矩阵的特征多项式}
-
-
-$O(n^3)$，$O(n^2)$。
-
-封装版本见矩阵类。
-
-\begin{lstlisting}
-#include <bits/stdc++.h>
-using namespace std;
-typedef long long ll;
-const int N=502,p=998244353;
-int a[N][N],f[N];
-int n,i,j,k,x,y,r;
-void inc(int &x,const int y)
-{
-	if ((x+=y)>=p) x-=p;
-}
-void dec(int &x,const int y)
-{
-	if ((x-=y)<0) x+=p;
-}
-int ksm(int x,int y)
-{
-	int r=1;
-	while (y)
-	{
-		if (y&1) r=(ll)r*x%p;
-		x=(ll)x*x%p;y>>=1;
-	}
-	return r;
-}
-void calmatrix(int a[N][N],int n)
-{
-	int i,j,k,r;
-	for (i=2;i<=n;i++)
-	{
-		for (j=i;j<=n&&!a[j][i-1];j++);
-		if (j>n) continue;
-		if (j>i)
-		{
-			swap(a[i],a[j]);
-			for (k=1;k<=n;k++) swap(a[k][j],a[k][i]);
-		}
-		r=a[i][i-1];
-		for (j=1;j<=n;j++) a[j][i]=(ll)a[j][i]*r%p;
-		r=ksm(r,p-2);
-		for (j=i-1;j<=n;j++) a[i][j]=(ll)a[i][j]*r%p;
-		for (j=i+1;j<=n;j++)
-		{
-			r=a[j][i-1];
-			for (k=1;k<=n;k++) a[k][i]=(a[k][i]+(ll)a[k][j]*r)%p;
-			r=p-r;
-			for (k=i-1;k<=n;k++) a[j][k]=(a[j][k]+(ll)a[i][k]*r)%p;
-		}
-	}
-}
-void calpoly(int a[N][N],int n,int *f)
-{
-	static int g[N][N];
-	memset(g,0,sizeof(g));
-	g[0][0]=1;
-	int i,j,k,r,rr;
-	for (i=1;i<=n;i++)
-	{
-		r=p-1;
-		for (j=i;j;j--)//第 j 行选第 n 列
-		{
-			rr=(ll)r*a[j][i]%p;
-			for (k=0;k<j;k++) g[i][k]=(g[i][k]+(ll)rr*g[j-1][k])%p;
-			r=(ll)r*a[j][j-1]%p;
-		}
-		for (k=1;k<=i;k++) inc(g[i][k],g[i-1][k-1]);
-	}
-	memcpy(f,g[n],n+1<<2);
-	//if (n&1) for (i=0;i<=n;i++) if (f[i]) f[i]=p-f[i];//若注释掉则为 |kE-A|
-}
-int main()
-{
-	ios::sync_with_stdio(0);cin.tie(0);
-	cin>>n;
-	for (i=1;i<=n;i++) for (j=1;j<=n;j++) cin>>a[i][j];
-	calmatrix(a,n);calpoly(a,n,f);
-	for (i=0;i<=n;i++) cout<<f[i]<<"x^"<<i<<"+\n"[i==n];
-}
-/*
-3
-1 2 3
-4 5 6
-7 8 9
-输出：0x^0+998244335x^1+998244338x^2+1x^3
-*/
-\end{lstlisting}
-
 \subsection{矩阵类（较新）}
 
 \begin{lstlisting}
-typedef unsigned long long ll;
-const ll p=998244353;
+using ll = unsigned long long;
+const ll p = 998244353;
 ll ksm(ll x, ll y)
 {
-	ll r=1;
+	ll r = 1;
 	while (y)
 	{
-		if (y&1) r=r*x%p;
-		x=x*x%p; y>>=1;
+		if (y & 1) r = r * x % p;
+		x = x * x % p; y >>= 1;
 	}
 	return r;
 }
-struct matrix:vector<vector<ll>>
+struct matrix;
+matrix E(int n);
+struct matrix :vector<vector<ll>>
 {
-	explicit matrix(int n=0, int m=0):vector(n, vector<ll>(m)) { }
+	explicit matrix(int n = 0, int m = 0) :vector(n, vector<ll>(m)) { }
 	pair<int, int> sz() const { if (size()) return {size(), back().size()}; return {0, 0}; }
-	int rank() const//秩
+	matrix &operator+=(const matrix &b)
 	{
-		vector<vector<ll>> a=*this;
-		auto [n, m]=sz();
-		int i, j, k, l, r=0;
-		for (i=0, j=0; i<n&&j<m; j++)
+		assert(sz() == b.sz());
+		auto [n, m] = sz();
+		for (int i = 0; i < n; i++) for (int j = 0; j < m; j++) ((*this)[i][j] += b[i][j]) %= p;
+		return *this;
+	}
+	matrix &operator-=(const matrix &b)
+	{
+		assert(sz() == b.sz());
+		auto [n, m] = sz();
+		for (int i = 0; i < n; i++) for (int j = 0; j < m; j++) ((*this)[i][j] += p - b[i][j]) %= p;
+		return *this;
+	}
+	matrix operator*(const matrix &b) const
+	{
+		auto [n, m] = sz();
+		auto [_, q] = b.sz();
+		assert(m == _);
+		int i, j, k;
+		matrix c(n, q);
+		for (k = 0; k < m; k++)
 		{
-			for (k=i; k<n; k++) if (a[k][j]) break;
-			if (k==n) continue;
+			for (i = 0; i < n; i++) for (j = 0; j < q; j++) c[i][j] += (*this)[i][k] * b[k][j];
+			if (!((k ^ q - 1) & 15)) for (auto &v : c) for (ll &x : v) x %= p;
+		}
+		static_assert(-1llu / p / p > 17);
+		return c;
+	}
+	matrix operator+(const matrix &b) const { auto a = *this; return a += b; }
+	matrix operator-(const matrix &b) const { auto a = *this; return a -= b; }
+	matrix &operator*=(const matrix &b) { return *this = *this * b; }
+	matrix &operator*=(ll k) { for (auto &v : *this) for (ll &x : v) x = x * k % p; return *this; }
+	matrix operator*(ll k) const { auto a = *this; return a *= k; }
+	matrix transpose() const
+	{
+		auto [n, m] = sz();
+		matrix res(m, n);
+		for (int i = 0; i < n; i++) for (int j = 0; j < m; j++) res[j][i] = (*this)[i][j];
+		return res;
+	}
+	int rank() const
+	{
+		auto [n, m] = sz();
+		vector<vector<ll>> a = n <= m ? *this : transpose();
+		if (n > m) ::swap(n, m);
+		int i, j, k, l, r = 0;
+		for (i = 0, j = 0; i < n && j < m; j++)
+		{
+			for (k = i; k < n; k++) if (a[k][j]) break;
+			if (k == n) continue;
 			::swap(a[i], a[k]);
-			ll iv=ksm(a[i][j], p-2);
-			for (k=j; k<m; k++) a[i][k]=a[i][k]*iv%p;
-			for (k=i+1; k<n; k++) for (l=j+1; l<m; l++) a[k][l]=(a[k][l]+(p-a[k][j])*a[i][l])%p;
+			ll iv = ksm(a[i][j], p - 2);
+			for (k = j; k < m; k++) a[i][k] = a[i][k] * iv % p;
+			for (k = i + 1; k < n; k++) for (l = j + 1; l < m; l++) a[k][l] = (a[k][l] + (p - a[k][j]) * a[i][l]) % p;
 			++i; ++r;
 		}
 		return r;
 	}
-	vector<ll> poly()//特征多项式
+	vector<ll> poly() const
 	{
-		auto [n, m]=sz();
-		vector<vector<ll>> a=*this;
-		assert(n==m);
+		auto [n, m] = sz();
+		vector<vector<ll>> a = *this;
+		assert(n == m);
 		int i, j, k;
-		for (i=1; i<n; i++)
+		for (i = 1; i < n; i++)
 		{
-			for (j=i; j<n&&!a[j][i-1]; j++);
-			if (j==n) continue;
-			if (j>i)
+			for (j = i; j < n && !a[j][i - 1]; j++);
+			if (j == n) continue;
+			if (j > i)
 			{
 				::swap(a[i], a[j]);
-				for (k=0; k<n; k++) ::swap(a[k][j], a[k][i]);
+				for (k = 0; k < n; k++) ::swap(a[k][j], a[k][i]);
 			}
-			ll r=a[i][i-1];
-			for (j=0; j<n; j++) a[j][i]=a[j][i]*r%p;
-			r=ksm(r, p-2);
-			for (j=i-1; j<n; j++) a[i][j]=a[i][j]*r%p;
-			for (j=i+1; j<n; j++)
+			ll r = a[i][i - 1];
+			for (j = 0; j < n; j++) a[j][i] = a[j][i] * r % p;
+			r = ksm(r, p - 2);
+			for (j = i - 1; j < n; j++) a[i][j] = a[i][j] * r % p;
+			for (j = i + 1; j < n; j++)
 			{
-				r=a[j][i-1];
-				for (k=0; k<n; k++) a[k][i]=(a[k][i]+a[k][j]*r)%p;
-				r=p-r;
-				for (k=i-1; k<n; k++) a[j][k]=(a[j][k]+a[i][k]*r)%p;
+				r = a[j][i - 1];
+				for (k = 0; k < n; k++) a[k][i] = (a[k][i] + a[k][j] * r) % p;
+				r = p - r;
+				for (k = i - 1; k < n; k++) a[j][k] = (a[j][k] + a[i][k] * r) % p;
 			}
 		}
-		vector g(n+1, vector<ll>(n+1));
-		g[0][0]=1;
-		for (i=0; i<n; i++)
+		vector g(n + 1, vector<ll>(n + 1));
+		g[0][0] = 1;
+		for (i = 0; i < n; i++)
 		{
-			ll r=p-1, rr;
-			for (j=i; j>=0; j--)//第 j 行选第 n 列
+			ll r = p - 1, rr;
+			for (j = i; j >= 0; j--)//第 j 行选第 n 列
 			{
-				rr=r*a[j][i]%p;
-				for (k=0; k<=j; k++) g[i+1][k]=(g[i+1][k]+rr*g[j][k])%p;
-				if (j) r=r*a[j][j-1]%p;
+				rr = r * a[j][i] % p;
+				for (k = 0; k <= j; k++) g[i + 1][k] = (g[i + 1][k] + rr * g[j][k]) % p;
+				if (j) r = r * a[j][j - 1] % p;
 			}
-			for (k=1; k<=i+1; k++) (g[i+1][k]+=g[i][k-1])%=p;
+			for (k = 1; k <= i + 1; k++) (g[i + 1][k] += g[i][k - 1]) %= p;
 		}
-		auto f=g[n];
+		auto f = g[n];
 		//if (n&1) for (i=0;i<=n;i++) if (f[i]) f[i]=p-f[i];//若注释掉则为 |kE-A|
 		return f;
 	}
-};
-istream &operator>>(istream &cin, matrix &r) { for (auto &v:r) for (ll &x:v) cin>>x; return cin; }
-ostream &operator<<(ostream &cout, const matrix &r) { auto [n, m]=r.sz(); for (int i=0; i<n; i++) for (int j=0; j<m; j++) cout<<r[i][j]<<" \n"[j+1==m]; return cout; }
-matrix &operator+=(matrix &a, const matrix &b)
-{
-	assert(a.size()==b.size());
-	auto [n, m]=a.sz();
-	for (int i=0; i<n; i++) for (int j=0; j<m; j++) (a[i][j]+=b[i][j])%=p;
-	return a;
-}
-matrix &operator-=(matrix &a, const matrix &b)
-{
-	assert(a.size()==b.size());
-	auto [n, m]=a.sz();
-	for (int i=0; i<n; i++) for (int j=0; j<m; j++) (a[i][j]+=p-b[i][j])%=p;
-	return a;
-}
-matrix operator*(const matrix &a, const matrix &b)
-{
-	auto [n, m]=a.sz();
-	auto [_, q]=b.sz();
-	assert(m==_);
-	int i, j, k;
-	matrix c(n, q);
-	for (k=0; k<m; k++)
+	ll det() const
 	{
-		for (i=0; i<n; i++) for (j=0; j<q; j++) c[i][j]+=a[i][k]*b[k][j];
-		if (!((k^q-1)&15)) for (auto &v:c) for (ll &x:v) x%=p;
+		auto [n, m] = sz();
+		vector<vector<ll>> a = *this;
+		assert(n == m);
+		int i, j, k;
+		ll r = 1;
+		for (i = 0; i < n; i++)
+		{
+			for (j = i; j < n; j++) if (a[j][i]) break;
+			if (j == n) return 0;
+			if (i != j) r = p - r, ::swap(a[i], a[j]);
+			(r *= a[i][i]) %= p;
+			ll iv = ksm(a[i][i], p - 2);
+			for (j = i; j < n; j++) a[i][j] = a[i][j] * iv % p;
+			for (j = i + 1; j < n; j++) for (k = i + 1; k < n; k++) a[j][k] = (a[j][k] + (p - a[i][k]) * a[j][i]) % p;
+		}
+		return r % p;
 	}
-	return c;
-}
-matrix operator+(matrix a, const matrix &b) { return a+=b; }
-matrix operator-(matrix a, const matrix &b) { return a-=b; }
-matrix &operator*=(matrix &a, const matrix &b) { return a=a*b; }
-matrix &operator*=(matrix &a, ll k) { for (auto &v:a) for (ll &x:v) x=x*k%p; return a; }
-matrix operator*(matrix a, ll k) { return a*=k; }
-matrix E(int n) { matrix r(n, n); for (int i=0; i<n; i++) r[i][i]=1; return r; }
-matrix pow(matrix a, long long k)//普通的快速幂
+	tuple<int, vector<ll>, vector<vector<ll>>> gauss(const vector<ll> &b) const//Ax=b, rank of base, one sol, base
+	{
+		auto [n, m] = sz();
+		if (b.size() != n) return {-1, { }, { }};
+		vector<vector<ll>> a = *this;
+		int i, j, k, R = m;
+		for (i = 0; i < n; i++) a[i].push_back(b[i]);
+		vector<int> fix(m, -1);
+		for (i = k = 0; i < m; i++)
+		{
+			for (j = k; j < n; j++) if (a[j][i]) break;
+			if (j == n) continue;
+			fix[i] = k; --R;
+			::swap(a[k], a[j]);
+			auto &u = a[k];
+			ll x = ksm(u[i], p - 2);
+			for (j = i; j <= m; j++) u[j] = u[j] * x % p;
+			for (auto &v : a) if (v.data() != u.data())
+			{
+				x = p - v[i];
+				for (j = i; j <= m; j++) v[j] = (v[j] + x * u[j]) % p;
+			}
+			++k;
+		}
+		for (i = k; i < n; i++) if (a[i][m]) return {-1, { }, { }};
+		vector<ll> r(m);
+		vector<vector<ll>> c;
+		for (i = 0; i < m; i++) if (fix[i] != -1) r[i] = a[fix[i]][m];
+		for (i = 0; i < m; i++) if (fix[i] == -1)
+		{
+			vector<ll> r(m);
+			r[i] = 1;
+			for (j = 0; j < m; j++) if (fix[j] != -1) r[j] = (p - a[fix[j]][i]) % p;
+			c.push_back(r);
+		}
+		return {R, r, c};
+	}
+	optional<matrix> inverse() const
+	{
+		auto [n, m] = sz();
+		assert(n == m);
+		vector<int> ih(n, -1), jh(n, -1);
+		matrix a = *this;
+		int i, j, k;
+		for (k = 0; k < n; k++)
+		{
+			for (i = k; i < n; i++) if (ih[k] == -1) for (j = k; j < n; j++) if (a[i][j])
+			{
+				ih[k] = i;
+				jh[k] = j;
+				break;
+			}
+			if (ih[k] == -1) return { };
+			::swap(a[k], a[ih[k]]);
+			for (i = 0; i < n; i++) ::swap(a[i][k], a[i][jh[k]]);
+			if (!a[k][k]) return { };
+			a[k][k] = ksm(a[k][k], p - 2);
+			for (i = 0; i < n; i++) if (i != k) (a[k][i] *= a[k][k]) %= p;
+			for (i = 0; i < n; i++) if (i != k) for (j = 0; j < n; j++) if (j != k)
+				(a[i][j] += (p - a[i][k]) * a[k][j]) %= p;
+			for (i = 0; i < n; i++) if (i != k) (a[i][k] *= p - a[k][k]) %= p;
+		}
+		for (k = n - 1; k >= 0; k--)
+		{
+			::swap(a[k], a[jh[k]]);
+			for (i = 0; i < n; i++) ::swap(a[i][k], a[i][ih[k]]);
+		}
+		return a;
+	}
+	matrix adjugate() const
+	{
+		auto [n, m] = sz();
+		assert(n == m);
+		int R = rank();
+		if (n == 1) return E(1);
+		if (R == n) return *inverse() * det();
+		if (R == n - 1)
+		{
+			int i, j, k, l;
+			auto [_, x, dx] = gauss(vector<ll>(n));
+			auto [__, y, dy] = transpose().gauss(vector<ll>(n));
+			if (count(all(x), 0) == n) x = dx[0];
+			if (count(all(y), 0) == n) y = dy[0];
+			for (k = 0; k < n; k++) if (x[k]) break;
+			for (l = 0; l < n; l++) if (y[l]) break;
+			assert(k < n && l < n);
+			matrix res(n, n), c(n - 1, n - 1);
+			for (i = 0; i < n; i++) if (i != l) for (j = 0; j < n; j++) if (j != k) c[i - (i > l)][j - (j > k)] = (*this)[i][j];
+			for (i = 0; i < n; i++) for (j = 0; j < n; j++) res[i][j] = x[i] * y[j] % p;
+			ll t = c.det() * ksm((k + l & 1) ? p - res[k][l] : res[k][l], p - 2) % p;
+			assert(res[k][l]);
+			assert(c.det());
+			assert(t);
+			return res * t;
+		}
+		return matrix(n, n);
+	}
+};
+istream &operator>>(istream &cin, matrix &r) { for (auto &v : r) for (ll &x : v) cin >> x; return cin; }
+ostream &operator<<(ostream &cout, const matrix &r) { auto [n, m] = r.sz(); for (int i = 0; i < n; i++) for (int j = 0; j < m; j++) cout << r[i][j] << " \n"[j + 1 == m]; return cout; }
+matrix E(int n) { matrix r(n, n); for (int i = 0; i < n; i++) r[i][i] = 1; return r; }
+matrix pow(matrix a, long long k)
 {
-	assert(k>=0);
-	auto [n, m]=a.sz();
-	assert(n==m);
-	matrix r=k&1?a:E(n);
-	k>>=1;
+	assert(k >= 0);
+	auto [n, m] = a.sz();
+	assert(n == m);
+	matrix r = k & 1 ? a : E(n);
+	k >>= 1;
 	while (k)
 	{
-		a*=a;
-		if (k&1) r*=a;
-		k>>=1;
+		a *= a;
+		if (k & 1) r *= a;
+		k >>= 1;
 	}
 	return r;
 }
-matrix pow2(matrix a, long long k)//较快的快速幂。运用了一些技巧。
+matrix pow2(matrix a, long long k)
 {
-	vector<ll> f=a.poly();
-	int n=f.size()-1, i, j;
+	vector<ll> f = a.poly();
+	int n = f.size() - 1, i, j;
 	if (!n) return matrix();
-	if (n==1) return E(1)*ksm(a[0][0], k);
-	assert(f[n]==1);
-	vector<ll> r(n), x(n), t(n*2);
-	r[0]=x[1]=1;
-	for (ll &x:f) x=(p-x)%p;
+	if (n == 1) return E(1) * ksm(a[0][0], k);
+	assert(f[n] == 1);
+	vector<ll> r(n), x(n), t(n * 2);
+	r[0] = x[1] = 1;
+	for (ll &x : f) x = (p - x) % p;
 	reverse(all(f));
 	fill(all(t), 0);
-	if (k&1)
+	if (k & 1)
 	{
-		for (i=0; i<n; i++) for (j=0; j<n; j++) t[i+j]=(t[i+j]+r[i]*x[j])%p;
-		for (i=n*2-2; i>=n; i--) for (j=1; j<=n; j++) t[i-j]=(t[i-j]+f[j]*t[i])%p;
-		for (i=0; i<n; i++) r[i]=t[i];
+		for (i = 0; i < n; i++) for (j = 0; j < n; j++) t[i + j] = (t[i + j] + r[i] * x[j]) % p;
+		for (i = n * 2 - 2; i >= n; i--) for (j = 1; j <= n; j++) t[i - j] = (t[i - j] + f[j] * t[i]) % p;
+		for (i = 0; i < n; i++) r[i] = t[i];
 	}
-	k>>=1;
+	k >>= 1;
 	while (k)
 	{
 		fill(all(t), 0);
-		for (i=0; i<n; i++) for (j=0; j<n; j++) t[i+j]=(t[i+j]+x[i]*x[j])%p;
-		for (i=n*2-2; i>=n; i--) for (j=1; j<=n; j++) t[i-j]=(t[i-j]+f[j]*t[i])%p;
-		for (i=0; i<n; i++) x[i]=t[i];
-		if (k&1)
+		for (i = 0; i < n; i++) for (j = 0; j < n; j++) t[i + j] = (t[i + j] + x[i] * x[j]) % p;
+		for (i = n * 2 - 2; i >= n; i--) for (j = 1; j <= n; j++) t[i - j] = (t[i - j] + f[j] * t[i]) % p;
+		for (i = 0; i < n; i++) x[i] = t[i];
+		if (k & 1)
 		{
 			fill(all(t), 0);
-			for (i=0; i<n; i++) for (j=0; j<n; j++) t[i+j]=(t[i+j]+r[i]*x[j])%p;
-			for (i=n*2-2; i>=n; i--) for (j=1; j<=n; j++) t[i-j]=(t[i-j]+f[j]*t[i])%p;
-			for (i=0; i<n; i++) r[i]=t[i];
+			for (i = 0; i < n; i++) for (j = 0; j < n; j++) t[i + j] = (t[i + j] + r[i] * x[j]) % p;
+			for (i = n * 2 - 2; i >= n; i--) for (j = 1; j <= n; j++) t[i - j] = (t[i - j] + f[j] * t[i]) % p;
+			for (i = 0; i < n; i++) r[i] = t[i];
 		}
-		k>>=1;
+		k >>= 1;
 	}
 	matrix res(n, n);
-	int b=ceil(sqrt(n));
-	vector<matrix> s(b+1);
-	s[0]=E(n); s[1]=a;
-	for (i=2; i<=b; i++) s[i]=s[i-1]*a;
-	for (i=b-1; i>=0; i--)
+	int b = ceil(sqrt(n));
+	vector<matrix> s(b + 1);
+	s[0] = E(n); s[1] = a;
+	for (i = 2; i <= b; i++) s[i] = s[i - 1] * a;
+	for (i = b - 1; i >= 0; i--)
 	{
-		res*=s[b];
-		for (j=min(n, (i+1)*b)-1; j>=i*b; j--) res+=s[j-i*b]*r[j];
+		res *= s[b];
+		for (j = min(n, (i + 1) * b) - 1; j >= i * b; j--) res += s[j - i * b] * r[j];
 	}
 	return res;
 }
-
 \end{lstlisting}
 
 \subsection{最短递推式（BM 算法）}
@@ -4857,46 +4791,6 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{高斯消元（通解）}
-
-返回方程的一组解和自由元。
-
-\begin{lstlisting}
-tuple<int,vector<ui>,vector<vector<ui>>> gauss(vector<vector<ui>> a)//sum = a[i][m], rank of base, one sol, base
-{
-	int n=a.size(),m=a[0].size()-1,i,j,k,R=m;
-	vector<int> fix(m,-1);
-	for (i=k=0;i<m;i++)
-	{
-		for (j=k;j<n;j++) if (a[j][i]) break;
-		if (j==n) continue;
-		fix[i]=k;--R;
-		swap(a[k],a[j]);
-		ui *u=a[k].data();
-		ui x=ksm(u[i],p-2);
-		for (j=i;j<=m;j++) u[j]=(ll)u[j]*x%p;
-		for (auto &v:a) if (v.data()!=a[k].data())
-		{
-			x=p-v[i];
-			for (j=i;j<=m;j++) v[j]=(v[j]+(ll)x*u[j])%p;
-		}
-		++k;
-	}
-	for (i=k;i<n;i++) if (a[i][m]) return {-1,{},{}};
-	vector<ui> r(m);
-	vector<vector<ui>> c;
-	for (i=0;i<m;i++) if (fix[i]!=-1) r[i]=a[fix[i]][m];
-	for (i=0;i<m;i++) if (fix[i]==-1)
-	{
-		vector<ui> r(m);
-		r[i]=1;
-		for (j=0;j<m;j++) if (fix[j]!=-1) r[j]=(p-a[fix[j]][i])%p;
-		c.push_back(r);
-	}
-	return {R,r,c};
-}
-\end{lstlisting}
-
 \subsection{高斯消元（列主元）}
 
 $O(n^3)$，$O(n^2)$。
@@ -4989,64 +4883,6 @@ int main()
 	for (i=1;i<=n;i++) for (j=1;j<=n;j++) cin>>a[i][j];
 	cout<<cal(a,n)<<endl;
 }
-\end{lstlisting}
-
-\subsection{行列式求值（质数模数）}
-
-$O(n^3)$，$O(n^2)$。
-
-\begin{lstlisting}
-#include <bits/stdc++.h>
-using namespace std;
-typedef long long ll;
-const int N=502,p=998244353;
-int ksm(int x,int y)
-{
-	int r=1;
-	while (y)
-	{
-		if (y&1) r=(ll)r*x%p;
-		y>>=1;x=(ll)x*x%p;
-	}
-	return r;
-}
-int cal(int a[][N],int n)
-{
-	int i,j,k,r=1,fh=0,l;
-	for (i=1;i<=n;i++)
-	{
-		for (j=i;j<=n;j++) if (a[j][i]) break;
-		if (j>n) return 0;
-		if (i!=j) swap(a[j],a[i]),fh^=1;
-		r=(ll)r*a[i][i]%p;
-		k=ksm(a[i][i],p-2);
-		for (j=i;j<=n;j++) a[i][j]=(ll)a[i][j]*k%p;
-		for (j=i+1;j<=n;j++)
-		{
-			a[j][i]=p-a[j][i];
-			for (k=i+1;k<=n;k++) a[j][k]=(a[j][k]+(ll)a[j][i]*a[i][k])%p;
-			a[j][i]=0;
-		}
-	}
-	if (fh) return (p-r)%p;
-	return r;
-}
-int main()
-{
-	ios::sync_with_stdio(0);cin.tie(0);
-	int n,i,j;
-	static int a[N][N];
-	cin>>n;
-	for (i=1;i<=n;i++) for (j=1;j<=n;j++) cin>>a[i][j];
-	cout<<cal(a,n)<<endl;
-}
-/*
-3
-3 1 4
-1 5 9
-2 6 5
-998244263
-*/
 \end{lstlisting}
 
 \subsection{稀疏矩阵系列}
@@ -8008,7 +7844,7 @@ $O((n+\sum)\log n)$，$O(n+\sum)$。
 
 功能：查询两个后缀的 lcp。单次询问复杂度 $O(1)$。
 
-下标从 1 开始。
+下标从 $0$ 开始。
 
 \begin{lstlisting}
 struct SA
@@ -10185,172 +10021,6 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{点双}
-
-一些结论：
-
-判定一个图里是否有（点不重复）偶环：看其所有点双，若存在点数为偶数的或边数多于点数的点双，则存在偶环。
-
-（无自环时）点双的边不交，边双的点不交。点双内的总点数 $O(n)$，总边数为 $m$，边双内的总点数为 $n$，总边数不超过 $m$。
-
-构造函数传入邻接表和边数，其中 \verb|pair| 的 \verb|second| 是边的标号。
-
-所有标号从 $0$ 开始。
-
-不能处理有自环的情况，因为此时点双内的总边数不是线性的。
-
-\verb|bcc_node|：每个点双包含的点（已验证）；
-\verb|bcc_edge|：每个点双包含的边；
-\verb|bcc_n|：新图点数；
-\verb|ct|：是否割点（已验证）；
-\verb|blk|：边所属点双标号。
-
-\begin{lstlisting}
-struct node_bcc
-{
-	int n, id, tp, bcc_n;
-	vector<vector<pair<int, int>>> e;
-	vector<vector<int>> bcc_node, bcc_edge;
-	vector<int> dfn, low, st, ed, blk, ct;
-	node_bcc(const vector<vector<pair<int, int>>> &e, int m) :
-		n(e.size()), id(0), tp(0), bcc_n(0), e(e), dfn(n, -1), low(n, -1), st(m), ed(m), blk(m), ct(n)
-	{
-		for (int i = 0;i < n;i++) if (dfn[i] == -1) dfs(i, 1);
-		bcc_node.resize(bcc_n);
-		for (int i = 0;i < n;i++) for (auto [v, w] : e[i]) bcc_node[blk[w]].push_back(i);
-		vector<int> flg(n);
-		for (auto &v : bcc_node)
-		{
-			vector<int> t;
-			for (int x : v) if (!exchange(flg[x], 1)) t.push_back(x);
-			swap(t, v);
-			for (int x : v) flg[x] = 0;
-		}
-		for (int i = 0;i < n;i++) if (e[i].size() == 0)
-		{
-			bcc_node.push_back({i});
-			bcc_edge.push_back({ });
-			++bcc_n;
-		}
-	}
-	void dfs(int u, bool rt)
-	{
-		dfn[u] = low[u] = id++;
-		int cnt = 0;
-		for (auto [v, w] : e[u]) if (!ed[w])
-		{
-			st[tp++] = w;
-			ed[w] = 1;
-			if (dfn[v] == -1)
-			{
-				dfs(v, 0);
-				++cnt;
-				cmin(low[u], low[v]);
-				if (dfn[u] <= low[v])
-				{
-					ct[u] = cnt > rt;
-					bcc_edge.push_back({ });
-					do
-					{
-						bcc_edge[bcc_n].push_back(st[--tp]);
-						blk[st[tp]] = bcc_n;
-					} while (st[tp] != w);
-					++bcc_n;
-				}
-			}
-			else cmin(low[u], dfn[v]);
-		}
-	}
-};
-\end{lstlisting}
-
-\subsection{边双}
-
-$O(n+m)$，$O(n+m)$。
-
-构造函数传入邻接表和边数，其中 \verb|pair| 的 \verb|second| 是边的标号。
-
-所有标号从 $0$ 开始。
-
-\verb|bcc_node|：每个边双包含的点（已验证）；
-\verb|bcc_edge|：每个边双包含的边；
-\verb|bcc_n|：新图点数；
-\verb|cur_e|：新图边表；
-\verb|ct|：是否割边；
-\verb|blk|：点所属边双标号。
-
-\begin{lstlisting}
-struct edge_bcc
-{
-	int n, id, tp, bcc_n;
-	vector<vector<pair<int, int>>> e, cur_e;
-	vector<vector<int>> bcc_node, bcc_edge;
-	vector<int> dfn, low, st, blk, ct;
-	edge_bcc(const vector<vector<pair<int, int>>> &e, int m) :
-		n(e.size()), id(0), tp(0), bcc_n(0), e(e), dfn(n, -1), low(n, -1), st(n), blk(n), ct(m)
-	{
-		for (int i = 0;i < n;i++) if (dfn[i] == -1) dfs(i, -1);
-		cur_e.resize(bcc_n);
-		for (int i = 0;i < n;i++) for (auto [v, w] : e[i]) if (ct[w]) cur_e[blk[i]].push_back({blk[v], w});
-		else bcc_edge[blk[i]].push_back(w);
-		vector<int> flg(m);
-		for (auto &v : bcc_edge)
-		{
-			vector<int> t;
-			for (int x:v) if (!exchange(flg[x],1)) t.push_back(x);
-			swap(t,v);
-		}
-	}
-	void dfs(int u, int fw)
-	{
-		dfn[u] = low[u] = id++;
-		st[tp++] = u;
-		for (auto [v, w] : e[u]) if (w != fw)
-		{
-			if (dfn[v] == -1)
-			{
-				dfs(v, w);
-				cmin(low[u], low[v]);
-				ct[w] = (dfn[u] < low[v]);
-			}
-			else cmin(low[u], dfn[v]);
-		}
-		if (dfn[u] == low[u])
-		{
-			bcc_node.push_back({ });
-			bcc_edge.push_back({ });
-			do
-			{
-				bcc_node[bcc_n].push_back(st[--tp]);
-				blk[st[tp]] = bcc_n;
-			} while (st[tp] != u);
-			++bcc_n;
-		}
-	}
-};
-int main()
-{
-	ios::sync_with_stdio(0);cin.tie(0);
-	int n, m, i;
-	cin >> n >> m;
-	vector<vector<pair<int, int>>> e(n);
-	for (i = 0;i < m;i++)
-	{
-		int u, v;
-		cin >> u >> v;
-		--u, --v;
-		e[u].push_back({v, i});
-		e[v].push_back({u, i});
-	}
-	edge_bcc s(e, m);
-	cout << s.bcc_n << '\n';
-	for (auto &v : s.bcc_node)
-	{
-		for (int &x : v) ++x;
-		cout << v.size() << ' ' << v << '\n';
-	}
-}
-\end{lstlisting}
 
 \subsection{双极分解}
 
@@ -10430,6 +10100,173 @@ vector<int> bipolar_orientation(const vector<pair<int, int>> &edges, int n, int 
 	return a;
 }
 
+\end{lstlisting}
+
+\subsection{点双}
+
+一些结论：
+
+判定一个图里是否有（点不重复）偶环：看其所有点双，若存在点数为偶数的或边数多于点数的点双，则存在偶环。
+
+（无自环时）点双的边不交，边双的点不交。点双内的总点数 $O(n)$，总边数为 $m$，边双内的总点数为 $n$，总边数不超过 $m$。
+
+构造函数传入邻接表和边数，其中 \verb|pair| 的 \verb|second| 是边的标号。
+
+所有标号从 $0$ 开始。
+
+不能处理有自环的情况，因为此时点双内的总边数不是线性的。
+
+\verb|bcc_node|：每个点双包含的点（已验证）；
+\verb|bcc_edge|：每个点双包含的边；
+\verb|bcc_n|：新图点数；
+\verb|ct|：是否割点（已验证）；
+\verb|blk|：边所属点双标号。
+
+\begin{lstlisting}
+struct node_bcc
+{
+	int n, id, tp, bcc_n;
+	vector<vector<pair<int, int>>> e;
+	vector<vector<int>> bcc_node, bcc_edge;
+	vector<int> dfn, low, st, ed, blk, ct;
+	node_bcc(const vector<vector<pair<int, int>>> &e, int m) :
+		n(e.size()), id(0), tp(0), bcc_n(0), e(e), dfn(n, -1), low(n, -1), st(m), ed(m), blk(m), ct(n)
+	{
+		for (int i = 0; i < n; i++) if (dfn[i] == -1) dfs(i, 1);
+		bcc_node.resize(bcc_n);
+		for (int i = 0; i < n; i++) for (auto [v, w] : e[i]) bcc_node[blk[w]].push_back(i);
+		vector<int> flg(n);
+		for (auto &v : bcc_node)
+		{
+			vector<int> t;
+			for (int x : v) if (!exchange(flg[x], 1)) t.push_back(x);
+			swap(t, v);
+			for (int x : v) flg[x] = 0;
+		}
+		for (int i = 0; i < n; i++) if (e[i].size() == 0)
+		{
+			bcc_node.push_back({i});
+			bcc_edge.push_back({ });
+			++bcc_n;
+		}
+	}
+	void dfs(int u, bool rt)
+	{
+		dfn[u] = low[u] = id++;
+		int cnt = 0;
+		for (auto [v, w] : e[u]) if (!ed[w])
+		{
+			st[tp++] = w;
+			ed[w] = 1;
+			if (dfn[v] == -1)
+			{
+				dfs(v, 0);
+				++cnt;
+				cmin(low[u], low[v]);
+				if (dfn[u] <= low[v])
+				{
+					ct[u] = cnt > rt;
+					bcc_edge.push_back({ });
+					do
+					{
+						bcc_edge[bcc_n].push_back(st[--tp]);
+						blk[st[tp]] = bcc_n;
+					} while (st[tp] != w);
+					++bcc_n;
+				}
+			}
+			else cmin(low[u], dfn[v]);
+		}
+	}
+};
+\end{lstlisting}
+
+\subsection{边双}
+
+$O(n+m)$，$O(n+m)$。
+
+构造函数传入邻接表和边数，其中 \verb|pair| 的 \verb|second| 是边的标号。
+
+所有标号从 $0$ 开始。
+
+\verb|bcc_node|：每个边双包含的点（已验证）；
+\verb|bcc_edge|：每个边双包含的边；
+\verb|bcc_n|：新图点数；
+\verb|cur_e|：新图边表；
+\verb|ct|：是否割边；
+\verb|blk|：点所属边双标号。
+
+\begin{lstlisting}
+struct edge_bcc
+{
+	int n, id, tp, bcc_n;
+	vector<vector<pair<int, int>>> e, cur_e;
+	vector<vector<int>> bcc_node, bcc_edge;
+	vector<int> dfn, low, st, blk, ct;
+	edge_bcc(const vector<vector<pair<int, int>>> &e, int m) :
+		n(e.size()), id(0), tp(0), bcc_n(0), e(e), dfn(n, -1), low(n, -1), st(n), blk(n), ct(m)
+	{
+		for (int i = 0; i < n; i++) if (dfn[i] == -1) dfs(i, -1);
+		cur_e.resize(bcc_n);
+		for (int i = 0; i < n; i++) for (auto [v, w] : e[i]) if (ct[w]) cur_e[blk[i]].push_back({blk[v], w});
+		else bcc_edge[blk[i]].push_back(w);
+		vector<int> flg(m);
+		for (auto &v : bcc_edge)
+		{
+			vector<int> t;
+			for (int x : v) if (!exchange(flg[x], 1)) t.push_back(x);
+			swap(t, v);
+		}
+	}
+	void dfs(int u, int fw)
+	{
+		dfn[u] = low[u] = id++;
+		st[tp++] = u;
+		for (auto [v, w] : e[u]) if (w != fw)
+		{
+			if (dfn[v] == -1)
+			{
+				dfs(v, w);
+				cmin(low[u], low[v]);
+				ct[w] = (dfn[u] < low[v]);
+			}
+			else cmin(low[u], dfn[v]);
+		}
+		if (dfn[u] == low[u])
+		{
+			bcc_node.push_back({ });
+			bcc_edge.push_back({ });
+			do
+			{
+				bcc_node[bcc_n].push_back(st[--tp]);
+				blk[st[tp]] = bcc_n;
+			} while (st[tp] != u);
+			++bcc_n;
+		}
+	}
+};
+int main()
+{
+	ios::sync_with_stdio(0); cin.tie(0);
+	int n, m, i;
+	cin >> n >> m;
+	vector<vector<pair<int, int>>> e(n);
+	for (i = 0; i < m; i++)
+	{
+		int u, v;
+		cin >> u >> v;
+		--u, --v;
+		e[u].push_back({v, i});
+		e[v].push_back({u, i});
+	}
+	edge_bcc s(e, m);
+	cout << s.bcc_n << '\n';
+	for (auto &v : s.bcc_node)
+	{
+		for (int &x : v) ++x;
+		cout << v.size() << ' ' << v << '\n';
+	}
+}
 \end{lstlisting}
 
 \subsection{输出负环}
@@ -11042,78 +10879,77 @@ int main()
 单点修改和圆环查询：
 
 \begin{lstlisting}
-	int main()
+int main()
+{
+	ios::sync_with_stdio(0); cin.tie(0);
+	cout << fixed << setprecision(15);
+	int n, m, i;
+	cin >> n >> m;
+	vector<int> a(n + 1);
+	for (i = 1; i <= n; i++) cin >> a[i];
+	DFS::init(n);
+	for (i = 1; i < n; i++)
 	{
-		ios::sync_with_stdio(0); cin.tie(0);
-		cout << fixed << setprecision(15);
-		int n, m, i;
-		cin >> n >> m;
-		vector<int> a(n + 1);
-		for (i = 1; i <= n; i++) cin >> a[i];
-		DFS::init(n);
-		for (i = 1; i < n; i++)
+		int u, v;
+		cin >> u >> v;
+		++u; ++v;
+		e[u].push_back(v);
+		e[v].push_back(u);
+	}
+	DFS::fun();
+	vector<bit<ll>> inc(n + 1), dec(n + 1);
+	vector<ll> tmp(n + 1);
+	for (i = 1; i <= n; i++)
+	{
+		int mx = 0;
+		for (int v : rg[i])
 		{
-			int u, v;
-			cin >> u >> v;
-			++u; ++v;
-			e[u].push_back(v);
-			e[v].push_back(u);
+			int d = dis(i, v);
+			cmax(mx, d);
+			tmp[d] += a[v];
 		}
-		DFS::fun();
-		vector<bit<ll>> inc(n + 1), dec(n + 1);
-		vector<ll> tmp(n + 1);
-		for (i = 1; i <= n; i++)
+		inc[i] = bit<ll>(mx + 1, tmp.data());
+		fill_n(tmp.begin(), mx + 1, 0);
+		if (i != DFS::rt)
 		{
-			int mx = 0;
+			mx = 0;
 			for (int v : rg[i])
 			{
-				int d = dis(i, v);
+				int d = dis(DFS::f[i], v);
 				cmax(mx, d);
 				tmp[d] += a[v];
 			}
-			inc[i] = bit<ll>(mx + 1, tmp.data());
+			dec[i] = bit<ll>(mx + 1, tmp.data());
 			fill_n(tmp.begin(), mx + 1, 0);
-			if (i != DFS::rt)
-			{
-				mx = 0;
-				for (int v : rg[i])
-				{
-					int d = dis(DFS::f[i], v);
-					cmax(mx, d);
-					tmp[d] += a[v];
-				}
-				dec[i] = bit<ll>(mx + 1, tmp.data());
-				fill_n(tmp.begin(), mx + 1, 0);
-			}
-		}
-		while (m--)
-		{
-			int op, u;
-			cin >> op >> u; ++u;
-			if (op == 0)
-			{
-				int x;
-				cin >> x;
-				auto v = get(u);
-				int m = v.size();
-				for (i = 0; i < m; i++) inc[v[i]].add(dis(v[i], u), x);
-				for (i = 0; i + 1 < m; i++) dec[v[i]].add(dis(v[i + 1], u), x);
-			}
-			else
-			{
-				int l, r;
-				cin >> l >> r;
-				--r;
-				ll res = 0;
-				auto v = get(u);
-				int m = v.size();
-				for (i = 0; i < m; i++) res += inc[v[i]].sum(l - dis(v[i], u), r - dis(v[i], u));
-				for (i = 0; i + 1 < m; i++) res -= dec[v[i]].sum(l - dis(v[i + 1], u), r - dis(v[i + 1], u));
-				cout << res << '\n';
-			}
 		}
 	}
-	
+	while (m--)
+	{
+		int op, u;
+		cin >> op >> u; ++u;
+		if (op == 0)
+		{
+			int x;
+			cin >> x;
+			auto v = get(u);
+			int m = v.size();
+			for (i = 0; i < m; i++) inc[v[i]].add(dis(v[i], u), x);
+			for (i = 0; i + 1 < m; i++) dec[v[i]].add(dis(v[i + 1], u), x);
+		}
+		else
+		{
+			int l, r;
+			cin >> l >> r;
+			--r;
+			ll res = 0;
+			auto v = get(u);
+			int m = v.size();
+			for (i = 0; i < m; i++) res += inc[v[i]].sum(l - dis(v[i], u), r - dis(v[i], u));
+			for (i = 0; i + 1 < m; i++) res -= dec[v[i]].sum(l - dis(v[i + 1], u), r - dis(v[i + 1], u));
+			cout << res << '\n';
+		}
+	}
+}
 \end{lstlisting}
 
 \subsection{prufer 与树的互相转化}
@@ -11175,7 +11011,7 @@ vector<pair<int,int>> prufer_to_edges(const vector<int> &p)//[1,n]，定根为 n
 
 $O(n\log n)$，$O(n)$。
 
-makeroot 会变根，split 会把 $y$ 变根，findroot 会把根变根，link 会把 $x,y$ 变根（$y$ 是新的），cut 会把 $x,y$ 变根（$x$ 是新的），注意 swap 子节点可能要 pushup。
+\verb|makeroot| 会变根，\verb|split| 会把 $y$ 变根，\verb|findroot| 会把根变根，\verb|link| 会把 $x,y$ 变根（$y$ 是新的），\verb|cut| 会把 $x,y$ 变根（$x$ 是新的），注意\verb|swap| 子节点可能要 \verb|pushup|。
 
 \begin{lstlisting}
 template<int N,class Q> struct LCT
@@ -11796,9 +11632,9 @@ using LCA::lca, LCA::fun, LCA::dis;
 设预处理的根是 $u$，当前根是 $v$，那么 $w$ 的子树如下：
 
 \begin{enumerate}
-	\item $w=v$，dfn 区间为 $[1,n]$。
-	\item $w$ 在 $u,v$ 之间，dfn 区间为 $[1,n]$ 去掉 $w$ 前往 $v$ 方向的子树。找到这个子树的方法见 find 函数。
-	\item 其余情况，dfn 区间和原来一致。
+	\item $w=v$，\verb|dfn| 区间为 $[1,n]$。
+	\item $w$ 在 $u,v$ 之间，\verb|dfn| 区间为 $[1,n]$ 去掉 $w$ 前往 $v$ 方向的子树。找到这个子树的方法见 \verb|find| 函数。
+	\item 其余情况，\verb|dfn| 区间和原来一致。
 \end{enumerate}
 
 $O(n+q\log n)$，$O(n)$。
@@ -12306,7 +12142,7 @@ signed main()
 
 需要注意的是：在清空的时候需要同时考虑点列表和边表，都清空一下。
 
-你需要提供的是：dep, lca, dfn。
+你需要提供的是：\verb|dep|,\verb|lca|,\verb|dfn|。
 
 $O(n+\sum k\log n)$，$O(n)$。
 
@@ -13903,7 +13739,6 @@ template<class T> struct GCD
 		int n=a.size(), i, j;
 		vector<ll> v(n);
 		vector<int> l(n);
-		vector<vector<pair<int, T>> res(n);
 		for (i=0; i<n; i++)
 		{
 			for (v[i]=a[i], j=l[i]=i; j>=0; j=l[j]-1)
@@ -13912,13 +13747,7 @@ template<class T> struct GCD
 				while (l[j]&&fun(a[i], v[l[j]-1])==fun(a[i], v[j])) l[j]=l[l[j]-1];
 				//[l[j]..j,i]区间内的值求 fun 均为 v[j]
 			}
-			for (j=i; j>=0; j=l[j]) res[i].push_back({l[j], v[j]});
-			reverse(all(res[i]));
 		}
-	}
-	T ask(int l, int r)//[l,r]
-	{
-		return res[r].prev(upper_bound(l))->second;
 	}
 };
 \end{lstlisting}
@@ -14003,336 +13832,278 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{cdq 分治（三维偏序）}
-
-本质：统计跨越区间中点的贡献，此时左右就不必保持原本的下标顺序了，可以按下一个维度排序。
-
-$O(n\log ^2n)$，$O(n)$。
-
-\begin{lstlisting}
-int lb(int x)
-{
-	return x&(-x);
-}
-void add(int x,int y)
-{
-	for (;x<=mx;x+=lb(x)) a[x]+=y;
-}
-int sum(int x)
-{
-	int ans=0;
-	for (;x;x^=lb(x)) ans+=a[x];
-	return ans;
-}
-void gb(int l,int r)
-{
-	int i=l,m=l+r>>1,j=m+1,p=l;
-	if (i<m) gb(i,m);
-	if (j<r) gb(j,r);
-	while ((i<=m)||(j<=r)) if ((j>r)||(i<=m)&&(q[i].x<=q[j].x))
-	{
-		if (!q[i].typ) add(q[i].y,1);
-		qq[p++]=q[i++];
-	}
-	else
-	{
-		if (q[j].typ) ans[q[j].pos]+=q[j].typ*sum(q[j].y);
-		qq[p++]=q[j++];
-	}
-	for (i=l;i<=m;i++) if (!q[i].typ) add(q[i].y,-1);
-	for (i=l;i<=r;i++) q[i]=qq[i];
-}
-int main()
-{
-	read(n);read(m);
-	for (i=1;i<=n;i++)
-	{
-		read(q[i].x);read(q[i].y);++q[i].y;
-		yc[i]=q[i].y;
-		if (q[i].y>mx) mx=q[i].y;
-	}
-	qs=ys=n;
-	for (i=1;i<=m;i++)
-	{
-		read(x);read(y);read(z);read(j);
-		q[++qs].x=x-1;q[qs].y=y;q[qs].pos=i;q[qs].typ=1;
-		q[++qs].x=z;q[qs].y=y;q[qs].pos=i;q[qs].typ=-1;
-		q[++qs].x=x-1;q[qs].y=j+1;q[qs].pos=i;q[qs].typ=-1;
-		q[++qs].x=z;q[qs].y=j+1;q[qs].pos=i;q[qs].typ=1;
-		if (j+1>mx) mx=j+1;
-	}
-	gb(1,qs);
-	for (i=1;i<=m;i++) printf("%d\n",ans[i]);
-}
-\end{lstlisting}
-
 \subsection{高精度}
 
 除法和取模有点问题，但 gcd 是对的。
 
 \begin{lstlisting}
+struct bigint;
+int cmp(const bigint &a, const bigint &b);
 struct bigint
 {
-	using ll=unsigned long long;
-	using lll=unsigned __int128;
-	const static ll base=1e6;
-	const static ll sign=1llu<<63;
-	const static lll p=4179340454199820289;
-	const static lll g=5;
-	const static int N=1<<23;
+	using ll = unsigned long long;
+	using lll = unsigned __int128;
+	const static ll base = 1e6;
+	const static ll sign = 1llu << 63;
+	const static lll p = 4179340454199820289;
+	const static lll g = 5;
+	const static int N = 1 << 23;
 	static int r[N];
 	static lll w[N];
 	bool neg;
 	vector<ll> a;
 private:
-	static lll ksm(lll x,ll y)
+	static lll ksm(lll x, ll y)
 	{
-		lll r=1;
+		lll r = 1;
 		while (y)
 		{
-			if (y&1) r=r*x%p;
-			x=x*x%p; y>>=1;
+			if (y & 1) r = r * x % p;
+			x = x * x % p; y >>= 1;
 		}
 		return r;
 	}
 	static void init(int n)
 	{
-		static int pr=0,pw=0;
-		if (pr==n) return;
-		int b=__lg(n)-1,i,j,k;
-		for (i=1; i<n; i++) r[i]=r[i>>1]>>1|(i&1)<<b;
-		if (pw<n)
+		static int pr = 0, pw = 0;
+		if (pr == n) return;
+		int b = __lg(n) - 1, i, j, k;
+		for (i = 1; i < n; i++) r[i] = r[i >> 1] >> 1 | (i & 1) << b;
+		if (pw < n)
 		{
-			for (j=1; j<n; j=k)
+			for (j = 1; j < n; j = k)
 			{
-				k=j*2;
-				ll wn=ksm(g,(p-1)/k);
-				w[j]=1;
-				for (i=j+1; i<k; i++) w[i]=w[i-1]*wn%p;
+				k = j * 2;
+				ll wn = ksm(g, (p - 1) / k);
+				w[j] = 1;
+				for (i = j + 1; i < k; i++) w[i] = w[i - 1] * wn % p;
 			}
-			pw=n;
+			pw = n;
 		}
-		pr=n;
+		pr = n;
 	}
-	static void dft(vector<lll> &a,int o=0)
+	static void dft(vector<lll> &a, int o = 0)
 	{
-		int n=a.size(),i,j,k;
-		lll y,*f,*g,*wn,*A=a.data();
+		int n = a.size(), i, j, k;
+		lll y, *f, *g, *wn, *A = a.data();
 		init(n);
-		for (i=1; i<n; i++) if (i<r[i]) swap(A[i],A[r[i]]);
-		for (k=1; k<n; k*=2)
+		for (i = 1; i < n; i++) if (i < r[i]) swap(A[i], A[r[i]]);
+		for (k = 1; k < n; k *= 2)
 		{
-			wn=w+k;
-			for (i=0; i<n; i+=k*2)
+			wn = w + k;
+			for (i = 0; i < n; i += k * 2)
 			{
-				f=A+i; g=A+i+k;
-				for (j=0; j<k; j++)
+				f = A + i; g = A + i + k;
+				for (j = 0; j < k; j++)
 				{
-					y=g[j]*wn[j]%p;
-					g[j]=f[j]+p-y;
-					f[j]+=y;
+					y = g[j] * wn[j] % p;
+					g[j] = f[j] + p - y;
+					f[j] += y;
 				}
 			}
-			if (k*2==n||k==1<<10) for (lll &x:a) x%=p;
+			if (k * 2 == n || k == 1 << 10) for (lll &x : a) x %= p;
 		}
 		if (o)
 		{
-			y=ksm(n,p-2);
-			for (lll &x:a) x=x*y%p;
-			reverse(1+all(a));
+			y = ksm(n, p - 2);
+			for (lll &x : a) x = x * y % p;
+			reverse(1 + all(a));
 		}
 	}
 	ll &operator[](const int &x) { return a[x]; }
 	const ll &operator[](const int &x) const { return a[x]; }
-	static void plus_by(vector<ll> &a,const vector<ll> &b)
+	static void plus_by(vector<ll> &a, const vector<ll> &b)
 	{
-		int n=a.size(),m=b.size(),i,j;
-		cmax(n,m);
+		int n = a.size(), m = b.size(), i, j;
+		cmax(n, m);
 		a.resize(++n);
-		for (i=0; i<m; i++) if ((a[i]+=b[i])>=base) a[i]-=base,++a[i+1];
-		for (i=m; i<n&&a[i]>=base; i++) a[i]-=base,++a[i+1];
-		if (a[n-1]==0) a.pop_back();
+		for (i = 0; i < m; i++) if ((a[i] += b[i]) >= base) a[i] -= base, ++a[i + 1];
+		for (i = m; i < n && a[i] >= base; i++) a[i] -= base, ++a[i + 1];
+		if (a[n - 1] == 0) a.pop_back();
 	}
-	static void minus_by(vector<ll> &a,const vector<ll> &b)
+	static void minus_by(vector<ll> &a, const vector<ll> &b)
 	{
-		int n=a.size(),m=b.size(),i,j;
-		for (i=0; i<m; i++) if (!(a[i]&sign)&&a[i]>=b[i]) a[i]-=b[i];
-		else --a[i+1],a[i]+=base-b[i];
-		for (; i<n&&(a[i]&sign); i++) --a[i+1],a[i]+=base-b[i];
-		while (a.size()>1&&!a.back()) a.pop_back();
+		int n = a.size(), m = b.size(), i, j;
+		for (i = 0; i < m; i++) if (!(a[i] & sign) && a[i] >= b[i]) a[i] -= b[i];
+		else --a[i + 1], a[i] += base - b[i];
+		for (; i < n && (a[i] & sign); i++) a[i] += base, --a[i + 1];
+		while (a.size() > 1 && !a.back()) a.pop_back();
 	}
-	static bool less(const vector<ll> &a,const vector<ll> &b)
+	static bool less(const vector<ll> &a, const vector<ll> &b)
 	{
-		if (a.size()!=b.size()) return a.size()<b.size();
-		for (int i=a.size()-1; i>=0; i--) if (a[i]!=b[i]) return a[i]<b[i];
+		if (a.size() != b.size()) return a.size() < b.size();
+		for (int i = a.size() - 1; i >= 0; i--) if (a[i] != b[i]) return a[i] < b[i];
 		return 0;
 	}
-	static int cal(int x) { return 1<<__lg(max(x,1)*2-1); }
+	static int cal(int x) { return 1 << __lg(max(x, 1) * 2 - 1); }
 public:
 	bigint &operator+=(const bigint &o)
 	{
-		if (neg==o.neg) plus_by(a,o.a);
+		if (neg == o.neg) plus_by(a, o.a);
 		else if (neg)
 		{
-			if (less(o.a,a)) minus_by(a,o.a);
+			if (less(o.a, a)) minus_by(a, o.a);
 			else
 			{
-				neg=0;
-				auto t=o.a;
-				swap(a,t);
-				minus_by(a,t);
+				neg = 0;
+				auto t = o.a;
+				swap(a, t);
+				minus_by(a, t);
 			}
 		}
 		else
 		{
-			if (less(a,o.a))
+			if (less(a, o.a))
 			{
-				neg=1;
-				auto t=o.a;
-				swap(a,t);
-				minus_by(a,t);
+				neg = 1;
+				auto t = o.a;
+				swap(a, t);
+				minus_by(a, t);
 			}
-			else minus_by(a,o.a);
+			else minus_by(a, o.a);
 		}
 		return *this;
 	}
 	bigint &operator-=(const bigint &o)
 	{
-		neg^=1;
-		*this+=o;
-		neg^=1;
-		if (a==vector<ll>{0}) neg=0;
+		neg ^= 1;
+		*this += o;
+		neg ^= 1;
+		if (a == vector<ll>{0}) neg = 0;
 		return *this;
 	}
 	bigint &operator*=(const bigint &o)
 	{
-		neg^=o.neg;
-		int n=a.size(),m=o.a.size(),i,j;
-		assert(min(n,m)<=p/((base-1)*(base-1)));
-		if (min(n,m)<=64)
+		neg ^= o.neg;
+		int n = a.size(), m = o.a.size(), i, j;
+		assert(min(n, m) <= p / ((base - 1) * (base - 1)));
+		if (min(n, m) <= 64)
 		{
-			vector<ll> c(n+m);
-			for (i=0; i<n; i++) for (j=0; j<m; j++) c[i+j]+=a[i]*o[j];
-			for (i=0; i<n+m-1; i++)
+			vector<ll> c(n + m);
+			for (i = 0; i < n; i++) for (j = 0; j < m; j++) c[i + j] += a[i] * o[j];
+			for (i = 0; i < n + m - 1; i++)
 			{
-				c[i+1]+=c[i]/base;
-				c[i]%=base;
+				c[i + 1] += c[i] / base;
+				c[i] %= base;
 			}
-			swap(a,c);
-			while (a.size()>1&&!a.back()) a.pop_back();
-			if (a==vector<ll>{0}) neg=0;
+			swap(a, c);
+			while (a.size() > 1 && !a.back()) a.pop_back();
+			if (a == vector<ll>{0}) neg = 0;
 			return *this;
 		}
-		int len=cal(n+m-1);
-		vector<lll> f(len),g(len);
-		copy_n(a.begin(),n,f.begin());
-		copy_n(o.a.begin(),m,g.begin());
+		int len = cal(n + m - 1);
+		vector<lll> f(len), g(len);
+		copy_n(a.begin(), n, f.begin());
+		copy_n(o.a.begin(), m, g.begin());
 		dft(f); dft(g);
-		for (i=0; i<len; i++) f[i]=f[i]*g[i]%p;
-		dft(f,1);
-		a.resize(n+m-1);
-		copy_n(f.begin(),n+m-1,a.begin());
-		for (i=0; i<n+m-2; i++)
+		for (i = 0; i < len; i++) f[i] = f[i] * g[i] % p;
+		dft(f, 1);
+		a.resize(n + m - 1);
+		copy_n(f.begin(), n + m - 1, a.begin());
+		for (i = 0; i < n + m - 2; i++)
 		{
-			a[i+1]+=a[i]/base;
-			a[i]%=base;
+			a[i + 1] += a[i] / base;
+			a[i] %= base;
 		}
-		while (a.size()>1&&!a.back()) a.pop_back();
-		if (a==vector<ll>{0}) neg=0;
+		while (a.size() > 1 && !a.back()) a.pop_back();
+		if (a == vector<ll>{0}) neg = 0;
 		return *this;
 	}
 	bigint &operator/=(long long x)//to zero
 	{
-		if (x<0) x=-x,neg^=1;
-		for (int i=a.size()-1; i; i--)
+		if (x < 0) x = -x, neg ^= 1;
+		for (int i = a.size() - 1; i; i--)
 		{
-			a[i-1]+=a[i]%x*base;
-			a[i]/=x;
+			a[i - 1] += a[i] % x * base;
+			a[i] /= x;
 		}
-		a[0]/=x;
-		while (a.size()>1&&!a.back()) a.pop_back();
-		if (a==vector<ll>{0}) neg=0;
+		a[0] /= x;
+		while (a.size() > 1 && !a.back()) a.pop_back();
+		if (a == vector<ll>{0}) neg = 0;
 		return *this;
 	}
-	bigint operator+(bigint o) const { return o+=*this; }
-	bigint operator-(bigint o) const { o-=*this; if (o.a!=vector<ll>{0}) o.neg^=1; return o; }
-	bigint operator*(bigint o) const { return o*=*this; }
-	bigint operator/(long long x) const { auto res=*this; return res/=x; }
+	bigint operator+(bigint o) const { return o += *this; }
+	bigint operator-(bigint o) const { o -= *this; if (o.a != vector<ll>{0}) o.neg ^= 1; return o; }
+	bigint operator*(bigint o) const { return o *= *this; }
+	bigint operator/(long long x) const { auto res = *this; return res /= x; }
 	long long operator%(long long x) const
 	{
-		bool flg=neg;
-		if (x<0) flg^=1,x=-x;
-		ll res=0;
-		for (int i=(base%x==0?0:a.size()-1); i>=0; i--) res=(res*base+a[i])%x;
-		return (long long)res*(flg?-1:1);
+		bool flg = neg;
+		if (x < 0) flg ^= 1, x = -x;
+		ll res = 0;
+		for (int i = (base % x == 0 ? 0 : a.size() - 1); i >= 0; i--) res = (res * base + a[i]) % x;
+		return (long long)res * (flg ? -1 : 1);
 	}
-	bigint(long long x=0):neg(0)
+	bigint(long long x = 0) :neg(0)
 	{
-		if (x<0) x=-x,neg=1;
-		a.push_back(x%base);
-		while (x/=base) a.push_back(x%base);
+		if (x < 0) x = -x, neg = 1;
+		a.push_back(x % base);
+		while (x /= base) a.push_back(x % base);
 	}
-	bool operator<(const bigint &o) const
-	{
-		if (neg!=o.neg) return neg;
-		if (neg) return less(o.a,a);
-		return less(a,o.a);
-	}
-	bool operator>(const bigint &o) const { return o<*this; }
-	bool operator==(const bigint &o)const { return neg==o.neg&&a==o.a; }
-	bool operator!=(const bigint &o)const { return neg!=o.neg||a!=o.a; }
-	bool operator<=(const bigint &o) const { return !(*this>o); }
-	bool operator>=(const bigint &o) const { return !(*this<o); }
+	bool operator<(const bigint &o) const { return cmp(*this, o) < 0; }
+	bool operator>(const bigint &o) const { return cmp(*this, o) > 0; }
+	bool operator<=(const bigint &o) const { return cmp(*this, o) <= 0; }
+	bool operator>=(const bigint &o) const { return cmp(*this, o) >= 0; }
+	bool operator==(const bigint &o) const { return cmp(*this, o) == 0; }
+	bool operator!=(const bigint &o) const { return cmp(*this, o) != 0; }
 };
-istream &operator>>(istream &cin,bigint &x)
+int cmp(const bigint &a, const bigint &b)
 {
-	x.neg=0;
+	if (a.neg != b.neg) return a.neg ? -1 : 1;
+	if (a.neg) return -cmp(b, a);
+	if (a.a.size() != b.a.size()) return a.a.size() < b.a.size() ? -1 : 1;
+	for (int i = a.a.size() - 1; i >= 0; i--) if (a.a[i] != b.a[i]) return a.a[i] < b.a[i] ? -1 : 1;
+	return 0;
+}
+istream &operator>>(istream &cin, bigint &x)
+{
+	x.neg = 0;
 	x.a.clear();
 	string s;
-	cin>>s;
-	const int length=round(log10(bigint::base));
-	if (s[0]=='-') x.neg=1,s.erase(s.begin());
+	cin >> s;
+	const int length = round(log10(bigint::base));
 	reverse(all(s));
-	ll base=1;
-	for (int i=0; i<s.size(); i++)
+	if (s.back() == '-') x.neg = 1, s.pop_back();
+	ll base = 1;
+	for (int i = 0; i < s.size(); i++)
 	{
-		if (i%length==0) x.a.push_back(0),base=1;
-		x.a.back()=x.a.back()+(s[i]-'0')*base;
-		base*=10;
+		if (i % length == 0) x.a.push_back(0), base = 1;
+		x.a.back() += (s[i] - '0') * base;
+		base *= 10;
 	}
 	return cin;
 }
-ostream &operator<<(ostream &cout,const bigint &x)
+ostream &operator<<(ostream &cout, const bigint &x)
 {
-	if (x.neg) cout<<"-";
-	cout<<x.a.back();
-	int length=round(log10(bigint::base));
-	for (int i=x.a.size()-2; i>=0; i--) cout<<setfill('0')<<setw(length)<<x.a[i];
+	if (x.neg) cout << "-";
+	cout << x.a.back();
+	const int length = round(log10(bigint::base));
+	for (int i = (int)x.a.size() - 2; i >= 0; i--) cout << setfill('0') << setw(length) << x.a[i];
 	return cout;
 }
 bigint abs(bigint x)
 {
-	x.neg=0;
+	x.neg = 0;
 	return x;
 }
-bigint gcd(bigint x,bigint y)
+bigint gcd(bigint x, bigint y)
 {
-	x.neg=y.neg=0;
-	if (x==bigint(0)) return y;
-	if (y==bigint(0)) return x;
-	int c1=0,c2=0;
-	while (x%2==0) x/=2,++c1;
-	while (y%2==0) y/=2,++c2;
-	cmin(c1,c2);
-	if (x>y) swap(x,y);
-	while (x!=y)
+	x.neg = y.neg = 0;
+	if (x == bigint(0)) return y;
+	if (y == bigint(0)) return x;
+	int c1 = 0, c2 = 0;
+	while (x % 2 == 0) x /= 2, ++c1;
+	while (y % 2 == 0) y /= 2, ++c2;
+	cmin(c1, c2);
+	if (x > y) swap(x, y);
+	while (x != y)
 	{
-		y-=x;
-		y/=2;
-		while (y%2==0) y/=2;
-		if (x>y) swap(x,y);
+		y -= x;
+		y /= 2;
+		while (y % 2 == 0) y /= 2;
+		if (x > y) swap(x, y);
 	}
-	while (c1--) y*=bigint(2);
+	while (c1--) y *= bigint(2);
 	return y;
 }
 bigint::lll bigint::w[bigint::N];
@@ -14620,25 +14391,6 @@ vector<pair<ll, ll>> two_sqr_sum(ll n)//只会返回非负解，按照字典序�
 \end{lstlisting}
 
 
-\subsection{模意义真分数还原}
-
-没啥用。
-
-$q\equiv \frac{x}{a}\pmod p$，$|a|\le A$。
-
-\begin{lstlisting}
-pair<int, int> approx(int p,int q,int A)
-{
-	int x=q,y=p,a=1,b=0;
-	while (x>A)
-	{
-		swap(x,y);swap(a,b);
-		a-=x/y*b;x%=y;
-	}
-	return make_pair(x,a);
-}
-\end{lstlisting}
-
 \subsection{快速取模}
 
 \begin{lstlisting}
@@ -14707,41 +14459,6 @@ public:
 	}
 }fio;//unsigned
 \end{lstlisting}
-
-\subsubsection{自用}
-
-\begin{lstlisting}
-c[fread(c+1,1,N,stdin)+1]=0;char *cc=c;
-void read(int &x)
-{
-	char *c=cc;
-	while ((*c<48)||(*c>57)) ++c;
-	x=*(c++)^48;
-	while ((*c>=48)&&(*c<=57)) x=x*10+(*(c++)^48);cc=c;
-}
-void read(int &x)
-{
-	char *c=cc;fh=1;
-	while ((*c<48)||(*c>57)){if (*c=='-') {++c;fh=-1;break;}++c;}
-	x=*(c++)^48;
-	while ((*c>=48)&&(*c<=57)) x=x*10+(*(c++)^48);
-	x*=fh;cc=c;
-}
-void write(const int x)
-{
-	while (x)
-	{
-		st[++tp]=x%10;
-		x/=10;
-	}
-	char *c=nc;
-	while (tp) *(++c)=st[tp--]|48;
-	*(++c)=10;nc=c;
-}
-	char *nc=sc;
-	fwrite(sc+1,1,stp,stdout);
-\end{lstlisting}
-
 \subsection{手动开栈}
 
 一种写法是文件开头放，但部分 OJ 会失效。
@@ -15797,158 +15514,6 @@ int main(){
     NTT(A,0);
     for(int i=0;i<n+m-1;++i)printf("%d%c",A[i]," \n"[i==n+m-2]);
     return 0;
-}
-\end{lstlisting}
-
-\subsection{平面欧几里得距离最小生成树}
-
-$10^5$，400ms。
-
-By Claris.
-
-\begin{lstlisting}
-#include<cstdio>
-#include<algorithm>
-#include<cmath>
-using namespace std;
-typedef long long ll;
-const int N=100010;
-const ll inf=2000000000000000001LL;
-const double eps=1e-9;
-inline int sgn(double x){
-  if(x>eps)return 1;
-  if(x<-eps)return -1;
-  return 0;
-}
-struct P{
-  double x,y;
-  P(){}
-  P(double _x,double _y){x=_x,y=_y;}
-  bool operator<(const P&a)const{return sgn(x-a.x)<0||sgn(x-a.x)==0&&sgn(y-a.y)<0;}
-  P operator-(const P&a)const{return P(x-a.x,y-a.y);}
-  double operator&(const P&a)const{return x*a.y-y*a.x;}
-  double operator|(const P&a)const{return x*a.x+y*a.y;}
-}p[N];
-struct PI{
-  ll x,y;
-  PI(){}
-  PI(ll _x,ll _y){x=_x,y=_y;}
-}loc[N],pool[N];
-inline double check(const P&a,const P&b,const P&c){return (b-a)&(c-a);}
-inline double dis2(const P&a){return a.x*a.x+a.y*a.y;}
-inline bool cross(int a,int b,int c,int d){
-  return sgn(check(p[a],p[c],p[d])*check(p[b],p[c],p[d]))<0&&sgn(check(p[c],p[a],p[b])*check(p[d],p[a],p[b]))<0;
-}
-inline ll dis(const PI&a,const PI&b){return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y);}
-inline bool cmpx(const PI&a,const PI&b){return a.x<b.x;}
-inline bool cmpy(int a,int b){return pool[a].y<pool[b].y;}
-struct P3{
-  double x,y,z;
-  P3(){}
-  P3(double _x,double _y,double _z){x=_x,y=_y,z=_z;}
-  bool operator<(const P3&a)const{return sgn(x-a.x)<0||sgn(x-a.x)==0&&sgn(y-a.y)<0;}
-  P3 operator-(const P3&a)const{return P3(x-a.x,y-a.y,z-a.z);}
-  double operator|(const P3&a)const{return x*a.x+y*a.y+z*a.z;}
-  P3 operator&(const P3&a)const{return P3(y*a.z-z*a.y,z*a.x-x*a.z,x*a.y-y*a.x);}
-}ori[N];
-inline P3 check(const P3&a,const P3&b,const P3&c){return (b-a)&(c-a);}
-inline P3 gp3(const P&a){return P3(a.x,a.y,a.x*a.x+a.y*a.y);}
-inline int cal(double x){
-  int y=x;
-  for(int i=y-2;i<=y+2;i++)if(!sgn(x-i))return i;
-}
-bool incir(int a,int b,int c,int d){
-  P3 aa=gp3(p[a]),bb=gp3(p[b]),cc=gp3(p[c]),dd=gp3(p[d]);
-  if(sgn(check(p[a],p[b],p[c]))<0)swap(bb,cc);
-  return sgn(check(aa,bb,cc)|(dd-aa))<0;
-}
-int n,i,j,et,la[N],tot,l,r,q[N<<2];
-struct E{
-  int to,l,r;
-  E(){}
-  E(int _to,int _l,int _r=0){to=_to,l=_l,r=_r;}
-}e[N<<5];
-inline void add(int x,int y){
-  e[++et]=E(y,la[x]),e[la[x]].r=et,la[x]=et;
-  e[++et]=E(x,la[y]),e[la[y]].r=et,la[y]=et;
-}
-inline void del(int x){
-  e[e[x].r].l=e[x].l;
-  e[e[x].l].r=e[x].r;
-  la[e[x^1].to]==x?la[e[x^1].to]=e[x].l:1;
-}
-void delaunay(int l,int r){
-  if(r-l<=2){
-    for(int i=l;i<r;i++)for(int j=i+1;j<=r;j++)add(i,j);
-    return;
-  }
-  int i,j,mid=(l+r)>>1,ld=0,rd=0,id,op;
-  delaunay(l,mid),delaunay(mid+1,r);
-  for(tot=0,i=l;i<=r;q[++tot]=i++)
-    while(tot>1&&sgn(check(p[q[tot-1]],p[q[tot]],p[i]))<0)tot--;
-  for(i=1;i<tot&&!ld;i++)if(q[i]<=mid&&mid<q[i+1])ld=q[i],rd=q[i+1];
-  for(;add(ld,rd),1;){
-    id=op=0;
-    for(i=la[ld];i;i=e[i].l)
-      if(sgn(check(p[ld],p[rd],p[e[i].to]))>0)
-        if(!id||incir(ld,rd,id,e[i].to))op=-1,id=e[i].to;
-    for(i=la[rd];i;i=e[i].l)
-      if(sgn(check(p[rd],p[ld],p[e[i].to]))<0)
-        if(!id||incir(ld,rd,id,e[i].to))op=1,id=e[i].to;
-    if(op==0)break;
-    if(op==-1){
-      for(i=la[ld];i;i=e[i].l)
-      if(cross(rd,id,ld,e[i].to))del(i),del(i^1),i=e[i].r;
-      ld=id;
-    }else{
-      for(i=la[rd];i;i=e[i].l)
-      if(cross(ld,id,rd,e[i].to))del(i),del(i^1),i=e[i].r;
-      rd=id;
-    }
-  }
-}
-namespace DS{
-int m,tot,a[N],f[N],g[N],v[N<<1],nxt[N<<1],ed,col[N];ll w[N<<1];
-double ans;
-struct E{int x,y;ll w;E(){}E(int _x,int _y,ll _w){x=_x,y=_y,w=_w;}}e[N<<3];
-inline bool cmp(const E&a,const E&b){return a.w<b.w;}
-inline void newedge(int x,int y,ll z){e[++tot]=E(x,y,z);}
-int F(int x){return f[x]==x?x:f[x]=F(f[x]);}
-inline void merge(int x,int y,ll z){
-  if(F(x)==F(y))return;
-  f[f[x]]=f[y];
-  v[++ed]=y;w[ed]=z;nxt[ed]=g[x];g[x]=ed;
-  v[++ed]=x;w[ed]=z;nxt[ed]=g[y];g[y]=ed;
-  ans+=sqrt(z);
-}
-inline void work(){
-  sort(e+1,e+tot+1,cmp);
-  for(ed=0,i=1;i<=n;i++)f[i]=i,g[i]=0;
-  for(i=1;i<=tot;i++)merge(e[i].x,e[i].y,e[i].w);
-  printf("%.15f\n",ans);
-}
-}
-int main(){
-  while(~scanf("%d",&n)){
-    for(i=0;i<=n+1;i++)la[i]=0;
-    et=1;
-    DS::tot=0;
-    for(i=1;i<=n;i++){
-      ll x,y;
-      scanf("%lld%lld",&x,&y);
-      p[i]=P(x,y);
-      loc[i]=PI(x,y);
-      ori[i]=P3(x,y,i);
-    }
-    sort(p+1,p+n+1);
-    sort(ori+1,ori+n+1);
-    delaunay(1,n);
-    for(i=1;i<=n;i++)for(j=la[i];j;j=e[j].l){
-      int x=cal(ori[i].z),y=cal(ori[e[j].to].z);
-      DS::newedge(x,y,dis(loc[x],loc[y]));
-    }
-    DS::work();
-  }
 }
 \end{lstlisting}
 
