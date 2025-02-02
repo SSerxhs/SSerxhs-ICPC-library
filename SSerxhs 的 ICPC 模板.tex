@@ -44,7 +44,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver: 3.10.2}
+\centerline{ver: 3.11.1}
 
 \tableofcontents
 
@@ -8096,44 +8096,222 @@ vector<int> match(string s, string t, char ch='*')
 
 \section{图论}
 
-\subsection{最小密度环}
+\subsection{最小生成树相关}
 
-求所有环中边权和除以边数最少的，$O(nm)$。更常用的做法是二分 spfa。
+\subsubsection{切比雪夫距离最小生成树}
+
+原理：先转曼哈顿距离，再用曼哈顿的板子。
+
+$O(n\log n)$，$O(n)$。
+
+\begin{lstlisting}
+const int N=3e5+2,M=N<<2;
+struct P
+{
+	int u,v,w;
+	P(int a=0,int b=0,int c=0):u(a),v(b),w(c){}
+	bool operator<(const P &o) const {return w<o.w;}
+};
+struct Q
+{
+	int x,y,id;
+	Q(int a=0,int b=0,int c=0):x(a),y(b),id(c){}
+	bool operator<(const Q &o) const {return x!=o.x?x>o.x:y>o.y;}
+};
+ll ans;
+P lb[M];
+Q a[N],b[N];
+int f[N],c[N];
+int n,m,i,x,y;
+struct bit
+{
+	int a[N],pos[N],n;
+	void init(int &nn)
+	{
+		memset(a+1,0x7f,(n=nn)*sizeof a[0]);
+		memset(pos+1,0,n*sizeof pos[0]);
+	}
+	void mdf(int x,const int y,const int z)
+	{
+		if (a[x]>y) a[x]=y,pos[x]=z;
+		while (x-=x&-x) if (a[x]>y) a[x]=y,pos[x]=z;
+	}
+	int sum(int x)
+	{
+		int r=a[x],rr=pos[x];
+		while ((x+=x&-x)<=n) if (a[x]<r) r=a[x],rr=pos[x];
+		return rr;
+	}
+};
+bit s;
+void cal()
+{
+	int i,x,y;
+	s.init(n);
+	memcpy(b+1,a+1,sizeof(Q)*n);
+	sort(a+1,a+n+1);
+	for (i=1;i<=n;i++) c[i]=a[i].y-a[i].x;
+	sort(c+1,c+n+1);
+	for (i=1;i<=n;i++)
+	{
+		if (x=s.sum(y=lower_bound(c+1,c+n+1,a[i].y-a[i].x)-c))
+			lb[++m]=P(a[x].id,a[i].id,a[x].x+a[x].y-a[i].x-a[i].y);//谨防 int 爆
+		s.mdf(y,a[i].y+a[i].x,i);
+	}
+	memcpy(a+1,b+1,sizeof(Q)*n);
+}
+int getf(int x) {return f[x]==x?x:f[x]=getf(f[x]);}
+int main()
+{
+	cin>>n;
+	for (i=1;i<=n;i++) {cin>>a[f[i]=a[i].id=i].x>>a[i].y;
+		swap(a[i].x,a[i].y);a[i]=Q(a[i].x+a[i].y,a[i].x-a[i].y,i);}
+	cal();for (i=1;i<=n;i++) swap(a[i].x,a[i].y);
+	cal();for (i=1;i<=n;i++) a[i].y=-a[i].y;
+	cal();for (i=1;i<=n;i++) swap(a[i].x,a[i].y);
+	cal();sort(lb+1,lb+m+1);
+	for (i=1;i<=m;i++) if ((x=getf(lb[i].u))!=(y=getf(lb[i].v))) f[x]=y,ans+=lb[i].w;
+	cout<<ans/2<<endl;
+}
+\end{lstlisting}
+
+\subsubsection{最小乘积生成树}
+
+题意：每条边有两个属性 $x_i,y_i$，你需要最小化 $(\sum x_i)(\sum y_i)$。
+
+你需要实现的是 \verb|sol1|，即按照 $val$ 为权值的答案。$val_i$ 是根据 $x_i,y_i$ 计算的。
 
 \begin{lstlisting}
 #include "bits/stdc++.h"
 using namespace std;
-const int N=3e3+5,M=1e4+5;
-const double inf=1e18;
-int u[M],v[M];
-double f[N][N],w[M];
+typedef long long ll;
+const int N = 202, M = 10002;
+struct P
+{
+	int x, y;
+	P(int a = 0, int b = 0) :x(a), y(b) { }
+	bool operator<(const P &o) const { return (ll)x * y < (ll)o.x * o.y || (ll)x * y == (ll)o.x * o.y && x < o.x; }
+};
+struct Q
+{
+	int u, v, x, y, val;
+	bool operator<(const Q &o) const { return val < o.val; }
+};
+P ans = P(1e9, 1e9), l, r;
+Q a[M];
+int f[N];
+int n, m, i;
+int getf(int x)
+{
+	if (f[x] == x) return x;
+	return f[x] = getf(f[x]);
+}
+P sol1()
+{
+	P r = P(0, 0);
+	for (i = 1; i <= n; i++) f[i] = i;
+	sort(a + 1, a + m + 1);
+	for (i = 1; i <= m; i++) if (getf(a[i].u) != getf(a[i].v))
+	{
+		f[f[a[i].u]] = f[a[i].v];
+		r.x += a[i].x, r.y += a[i].y;
+	}
+	return r;
+}
+void sol2(P l, P r)
+{
+	for (i = 1; i <= m; i++) a[i].val = (r.x - l.x) * a[i].y + (l.y - r.y) * a[i].x;
+	P np = sol1();
+	ans = min(ans, np);
+	if ((ll)(r.x - l.x) * (np.y - l.y) - (ll)(r.y - l.y) * (np.x - l.x) >= 0) return;
+	sol2(l, np); sol2(np, r);
+}
 int main()
 {
-	ios::sync_with_stdio(0);cin.tie(0);
-	cout<<setiosflags(ios::fixed)<<setprecision(8);
-	int n,m,i,j;
-	cin>>n>>m;
-	for (i=1;i<=m;i++) cin>>u[i]>>v[i]>>w[i];
-	++n;
-	for (i=1;i<=n;i++)
-	{
-		fill_n(f[i]+1,n,inf);
-		for (j=1;j<=m;j++) f[i][v[j]]=min(f[i][v[j]],f[i-1][u[j]]+w[j]);
-	}
-	double ans=inf;
-	for (i=1;i<n;i++) if (f[n][i]!=inf)
-	{
-		double r=-inf;
-		for (j=1;j<n;j++) r=max(r,(f[n][i]-f[j][i])/(n-j));
-		ans=min(ans,r);
-	}
-	cout<<ans<<endl;
+	cin >> n >> m;
+	for (i = 1; i <= m; i++) cin >> a[i].u >> a[i].v >> a[i].x >> a[i].y, ++a[i].u, ++a[i].v;
+	for (i = 1; i <= m; i++) a[i].val = a[i].x; l = sol1();
+	for (i = 1; i <= m; i++) a[i].val = a[i].y; r = sol1();
+	ans = min(ans, min(l, r)); sol2(l, r);
+	cout<<ans.x<<' '<<ans.y<<endl;
 }
 \end{lstlisting}
 
-\subsection{全源最短路与判负环}
+\subsubsection{最小斯坦纳树}
 
-使用 floyd 实现全源最短路与判负环。注意边权较大时可能需要考虑 int128.
+题意：让给定点集连通的最小生成树（不要求全图连通）
+
+$O(3^kn+2^km\log m)$。
+
+\begin{lstlisting}
+const int N = 102, M = 1002, K = 1024;
+typedef long long ll;
+typedef pair<ll, int> pa;
+priority_queue<pa, vector<pa>, greater<pa> > heap;
+pa cr;
+ll f[K][N], inf;
+int lj[M], len[M], nxt[M], fir[N];
+int n, m, q, i, j, k, x, y, z, bs, c;
+void add()
+{
+	lj[++bs] = y;
+	len[bs] = z;
+	nxt[bs] = fir[x];
+	fir[x] = bs;
+	lj[++bs] = x;
+	len[bs] = z;
+	nxt[bs] = fir[y];
+	fir[y] = bs;
+}
+void dijk(int s)
+{
+	int i;
+	while (!heap.empty())
+	{
+		x = heap.top().second; heap.pop();
+		for (i = fir[x]; i; i = nxt[i]) if (f[s][lj[i]] > f[s][x] + len[i])
+		{
+			cr.first = f[s][cr.second = lj[i]] = f[s][x] + len[i];
+			heap.push(cr);
+		}
+		while ((!heap.empty()) && (heap.top().first != f[s][heap.top().second])) heap.pop();
+	}
+}
+int main()
+{
+	memset(f, 0x3f, sizeof(f)); inf = f[0][0];
+	cin >> n >> m >> q;
+	while (m--)
+	{
+		cin >> x >> y >> z;
+		add();
+	}
+	for (i = 1; i <= q; i++)
+	{
+		cin >> x;
+		f[1 << i - 1][x] = 0;
+	}
+	q = (1 << q) - 1;
+	for (i = 1; i <= q; i++)
+	{
+		for (k = 1; k <= n; k++)
+		{
+			for (j = i & (i - 1); j; j = i & (j - 1)) f[i][k] = min(f[i][k], f[j][k] + f[i ^ j][k]);
+			if (f[i][k] < inf) heap.push(pa(f[i][k], k));
+		}
+		dijk(i);
+	}
+	for (i = 1; i <= n; i++) inf = min(inf, f[q][i]);
+	cout << inf << endl;
+}
+\end{lstlisting}
+
+
+\subsection{最短路相关}
+
+\subsubsection{全源最短路与判负环}
+
+使用 floyd 实现全源最短路与判负环。注意边权较大时可能需要考虑 \verb|int128|.
 
 \begin{lstlisting}
 #include "bits/stdc++.h"
@@ -8174,133 +8352,7 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{三/四元环计数}
-
-不能处理有重边和自环的情况。
-
-$O(m\sqrt m)$，$O(n+m)$。
-
-注意四元环数的是边四元环。点四元环需要去掉四点完全图个数*2，似乎不太能做？
-
-三元环是可以枚举的，你可以在 ans 改变处记录三元环 $(i,u,v)$。
-
-\begin{lstlisting}
-ll triple(const vector<pair<int,int>> &edges)//start from 0
-{
-	int n=0,i;
-	for (auto [u,v]:edges) n=max({n,u,v});
-	++n;
-	vector<int> d(n),id(n),rk(n),cnt(n);
-	vector<vector<int>> e(n);
-	for (auto [u,v]:edges) ++d[u],++d[v];
-	iota(all(id),0); sort(all(id),[&](int x,int y) { return d[x]<d[y]; });
-	for (i=0; i<n; i++) rk[id[i]]=i;
-	for (auto [u,v]:edges)
-	{
-		if (rk[u]>rk[v]) swap(u,v);
-		e[u].push_back(v);
-	}
-	ll ans=0;
-	for (i=0; i<n; i++)
-	{
-		for (int u:e[i]) cnt[u]=1;
-		for (int u:e[i]) for (int v:e[u]) ans+=cnt[v];
-		for (int u:e[i]) cnt[u]=0;
-	}
-	return ans;
-}
-ll quadruple(const vector<pair<int,int>> &edges)
-{
-	int n=0,i;
-	for (auto [u,v]:edges) n=max({n,u,v});
-	++n;
-	vector<int> d(n),id(n),rk(n),cnt(n);
-	vector<vector<int>> e(n),lk(n);
-	for (auto [u,v]:edges) ++d[u],++d[v];
-	iota(all(id),0); sort(all(id),[&](int x,int y) { return d[x]<d[y]; });
-	for (i=0; i<n; i++) rk[id[i]]=i;
-	for (auto [u,v]:edges)
-	{
-		if (rk[u]>rk[v]) swap(u,v);
-		e[u].push_back(v);
-		lk[u].push_back(v);
-		lk[v].push_back(u);
-	}
-	ll ans=0;
-	for (i=0; i<n; i++)
-	{
-		for (int u:lk[i]) for (int v:e[u]) if (rk[v]>rk[i]) ans+=cnt[v]++;
-		for (int u:lk[i]) for (int v:e[u]) cnt[v]=0;
-	}
-	return ans;
-}
-map<pair<int, int>, ll> quadruple(vector<pair<int, int>> edges)
-{
-	int n = 0, i;
-	for (auto [u, v] : edges) n = max({n, u, v});
-	++n;
-	map<pair<int, int>, int> ec;
-	for (auto [u, v] : edges)
-	{
-		if (u > v) swap(u, v);
-		++ec[{u, v}];
-	}
-	vector<ll> c;
-	edges.clear();
-	for (auto [_, cc] : ec) edges.push_back(_), c.push_back(cc);
-	vector d(n, 0), id(d), rk(d);
-	vector<ll> cnt(n);
-	vector<vector<pair<int, int>>> e(n), lk(n);
-	for (auto [u, v] : edges) ++d[u], ++d[v];
-	iota(all(id), 0); sort(all(id), [&](int x, int y) { return d[x] < d[y]; });
-	for (i = 0; i < n; i++) rk[id[i]] = i;
-	i = 0;
-	for (auto [u, v] : edges)
-	{
-		if (rk[u] > rk[v]) swap(u, v);
-		e[u].push_back({v, i});
-		lk[u].push_back({v, i});
-		lk[v].push_back({u, i});
-		++i;
-	}
-	int m = edges.size();
-	vector<ll> ans(m);
-	for (i = 0; i < n; i++)
-	{
-		for (auto [u, w1] : lk[i]) for (auto [v, w2] : e[u]) if (rk[v] > rk[i])
-		{
-			cnt[v] += c[w1] * c[w2];
-		}
-		for (auto [u, w1] : lk[i]) for (auto [v, w2] : e[u]) if (rk[v] > rk[i])
-		{
-			ans[w1] += (cnt[v] - c[w1] * c[w2]) * c[w2];
-			ans[w2] += (cnt[v] - c[w1] * c[w2]) * c[w1];
-		}
-		for (auto [u, w1] : lk[i]) for (auto [v, w2] : e[u]) if (rk[v] > rk[i]) cnt[v] = 0;
-	}
-	map<pair<int, int>, ll> mp;
-	for (i = 0;i < m;i++) mp[edges[i]] = ans[i];
-	return mp;
-}
-int main()
-{
-	ios::sync_with_stdio(0); cin.tie(0);
-	cout << fixed << setprecision(15);
-	int n, m, i;
-	cin >> n >> m;
-	vector<pair<int, int>> eg(m);
-	cin >> eg;
-	auto mp = quadruple(eg);
-	for (i = 0;i < m;i++)
-	{
-		auto [u, v] = eg[i];
-		if (u > v) swap(u, v);
-		cout << mp[{u, v}] << " \n"[i + 1 == m];
-	}
-}
-\end{lstlisting}
-
-\subsection{最短路系列}
+\subsubsection{Dijkstra/SPFA/Johnson}
 
 Johnson 不适用于图中存在负环的情况，因为负环不一定是可以经过的。
 
@@ -8392,225 +8444,115 @@ vector<vector<ll>> john(vector<vector<pair<int, ll>>> e)
 	return r;
 }
 \end{lstlisting}
+\subsubsection{无向图最小环}
 
-\subsection{弦图}
+原理：floyd 外层循环本质是计算只经过 $\le k$ 的点的最短路。因此枚举环上标号最大的，在做这一轮转移之前正好是不经过它的最短路。
 
-单纯点：$v$ 和 $v$ 邻点构成团。
-
-完美消除序列：$v_i$ 在 $\{v_i,v_{i+1},\cdots,v_n\}$ 为单纯点。
-
-$N(v_i)=\{v_j|j>i\land (v_i,v_j)\in E\}$，$next(v_i)$ 为 $N(v_i)$ 最靠前的点。
-
-极大团一定是 $\{v\}\cup N(v)$ 。
-
-最大团大小等于色数。
-
-弦图判定：等价于是否存在完美消除序列。首先求出一个完美消除序列，然后判定是否合法。
-
-判定方法：设 $v_{i+1},\cdots,v_n$ 中与 $v_i$ 相邻的依次为 $v'_1,\cdots,v'_m$。只需判断是否 $v_1'$ 与 $v'_2,\cdots,v'_m$ 相邻。
-
-LexBFS 算法（我不会写）
-
-每个点有一个字符串 label，初始为 $0$。从 $i=n$ 到 $i=1$ 确定，选 label 字典序最大的 $u$，再把 $u$ 邻点的 label 后面接一个 $i$。
-
-最大势算法：从 $v_n$ 求到 $v_1$，设 $label_i$ 表示 $i$ 与多少个已选点相邻，每次选 $label_i$ 最大的点。
-
-弦图极大团：$\{v|\forall next(w)=v,|N(v)|\ge |N(w)|\}$。选出的集合为基本点，按上述极大团构造。
-
-弦图染色：从 $v_n$ 到 $v_1$ 依次选最小可染的色。
-
-最大独立集：从 $v_1$ 到 $v_n$ 能选就选。
-
-最小团覆盖：设最大独立集为 $\{p_m\}$，最小团覆盖为 $\{\{p_i\}\cup N(p_i)\}$。
-
-区间图：两个区间有边当且仅当交集非空。
-
-区间图是弦图。
-
-\subsubsection{代码}
+$O(n^3)$，$O(n^2)$。
 
 \begin{lstlisting}
-namespace chordal_graph//下标从 1 开始
+int f[N][N],jl[N][N];
+int n,m,c,ans=inf,i,j,k,x,y,z;
+int main()
 {
-	const int N=1e5+2;//点数
-	bool ed[N];
-	vector<int> e[N];
-	int n;
-	void init(const vector<pair<int,int>> &edges)
+	cin>>n>>m;
+	memset(f,0x3f,sizeof(f));
+	memset(jl,0x3f,sizeof(jl));
+	while (m--)
 	{
-		n=0;
-		for (auto [u,v]:edges) n=max({n,u,v});
-		for (int i=1;i<=n;i++) e[i].clear();
-		for (auto [u,v]:edges) e[u].push_back(v),e[v].push_back(u);
+		cin>>x>>y>>z;
+		jl[x][y]=jl[y][x]=f[x][y]=f[y][x]=min(f[y][x],z);
 	}
-	vector<int> perfect_seq(const vector<pair<int,int>> &edges)//MCS
+	for (k=1;k<=n;k++)
 	{
-		init(edges);
-		static int d[N];
-		static vector<int> buc[N];
-		int i,mx=0;
-		memset(d+1,0,n*sizeof d[0]);
-		memset(ed+1,0,n*sizeof ed[0]);
-		for (i=1;i<=n;i++) buc[i].clear();
-		buc[0].resize(n);
-		iota(all(buc[0]),1);
-		vector<int> r(n);
-		for (i=n-1;i>=0;i--)
-		{
-			int u=0;
-			while (!u)
-			{
-				while (buc[mx].size()) if (ed[buc[mx].back()]) buc[mx].pop_back();
-				else
-				{
-					ed[u=buc[mx].back()]=1;
-					buc[mx].pop_back();
-					goto yes;
-				}
-				--mx;
-			}
-			yes:;
-			r[i]=u;
-			for (int v:e[u]) if (!ed[v]) buc[++d[v]].push_back(v),mx=max(mx,d[v]);
-		}
-		return r;
+		for (i=1;i<k;i++) if (jl[k][i]!=jl[0][0]) for (j=1;j<i;j++)
+			if (jl[k][j]!=jl[0][0]) ans=min(ans,jl[k][i]+jl[k][j]+f[i][j]);
+		for (i=1;i<=n;i++) if (i!=k) for (j=1;j<=n;j++)
+			if ((j!=i)&&(j!=k)) f[i][j]=min(f[i][j],f[i][k]+f[k][j]);
 	}
-	bool check_perfect_seq(vector<int> a)
-	{
-		static bool ee[N];
-		memset(ed+1,0,n*sizeof ed[0]);
-		memset(ee+1,0,n*sizeof ee[0]);
-		reverse(all(a));
-		for (int u:a)
-		{
-			ed[u]=1;
-			int w=0;
-			for (int v:e[u]) if (ed[v]) {w=v;break;}
-			if (!w) continue;
-			ee[w]=1;
-			for (int v:e[w]) ee[v]=1;
-			for (int v:e[u]) if (ed[v]&&!ee[v]) return 0;
-			ee[w]=0;
-			for (int v:e[w]) ee[v]=0;
-		}
-		return 1;
-	}
-	bool check_chordal(const vector<pair<int,int>> &edges) {return check_perfect_seq(perfect_seq(edges));}
-	vector<int> color(int _n,const vector<pair<int,int>> &edges)//返回长度为 _n+1。其中 0 无意义
-	{
-		auto a=perfect_seq(edges);
-		reverse(all(a));
-		memset(ed+1,0,n*sizeof ed[0]);
-		vector<int> r(_n+1);
-		for (int u:a)
-		{
-			for (int v:e[u]) ed[r[v]]=1;
-			int x=1;
-			while (ed[x]) ++x;
-			r[u]=x;
-			for (int v:e[u]) ed[r[v]]=0;
-		}
-        for (int i=n+1;i<=_n;i++) r[i]=1;
-		return r;
-	}
-	vector<int> max_independent(int _n,const vector<pair<int,int>> &edges)//注意有孤立点这种奇怪东西
-	{
-		auto a=perfect_seq(edges);
-		memset(ed+1,0,n*sizeof ed[0]);
-		vector<int> r;
-		for (int u:a) if (!ed[u])
-		{
-			r.push_back(u);
-			for (int v:e[u]) ed[v]=1;
-		}
-		for (int i=n+1;i<=_n;i++) r.push_back(i);
-		return r;
-	}
+	if (ans==inf) cout<<"No solution.\n"; else cout<<ans<<endl;
 }
-using chordal_graph::check_chordal,chordal_graph::color,chordal_graph::max_independent;
 \end{lstlisting}
 
-\subsection{最小割树}
-
-结论：两个点之间的最小割等于最小割树上两点间最小边权。
-
-直接返回任意两点最小割。
+\subsubsection{输出负环}
 
 \begin{lstlisting}
-template<class T> vector<vector<T>> min_cut(int n, const vector<tuple<int, int, T>> &edges)//[0,n)
+#include "bits/stdc++.h"
+using namespace std;
+const int N=34;
+struct Q
 {
-	int m=edges.size(), i, s, t, cnt=0;
-	vector<int> fir(n, -1), nxt(m*2, -1), fc(n), q(n);
-	vector<pair<int, T>> e(m*2);
-	vector<tuple<T, int, int>> eg;
-	auto add=[&](int u, int v, T w)
-		{
-			e[cnt]={v, w};
-			nxt[cnt]=fir[u];
-			fir[u]=cnt++;
-		};
-	for (auto [u, v, w]:edges) add(u, v, w), add(v, u, w);
-	auto E=e;
-	auto bfs=[&]()
-		{
-			fill(all(fc), 0);
-			int ql=0, qr=0, u, i;
-			fc[q[0]=s]=1;
-			while (ql<=qr)
-			{
-				u=q[ql++];
-				for (int i=fir[u]; i!=-1; i=nxt[i])
-					if (auto &[v, w]=e[i]; w&&!fc[v]) fc[q[++qr]=v]=fc[u]+1;
-			}
-			return fc[t];
-		};
-	function<T(int, T)> dfs=[&](int u, T maxf)
-		{
-			if (u==t) return maxf;
-			T j=0, k;
-			for (int i=fir[u]; i!=-1; i=nxt[i])
-				if (auto &[v, w]=e[i]; w&&fc[v]==fc[u]+1&&(k=dfs(v, min(maxf-j, w))))
-				{
-					j+=k;
-					w-=k;
-					e[i^1].second+=k;
-					if (j==maxf) return j;
-				}
-			fc[u]=0;
-			return j;
-		};
-	function<void(vector<int>)> solve=[&](vector<int> id)
-		{
-			static mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
-			if (id.size()<=1) return;
-			vector<int> u(2);
-			sample(all(id), u.begin(), 2, rnd);
-			s=u[0], t=u[1], e=E;
-			T ans=0;
-			while (bfs()) ans+=dfs(s, numeric_limits<T>::max());
-			auto it=partition(all(id), [&](int u) { return fc[u]; });
-			eg.emplace_back(ans, s, t);
-			solve(vector(id.begin(), it));
-			solve(vector(it, id.end()));
-		};
-	solve(range(0, n));
-	sort(all(eg), greater<>());
-	vector<basic_string<int>> ver(n);
-	vector ans(n, vector<T>(n));
-	vector<int> f(n);
-	for (i=0; i<n; i++) ver[i]={f[i]=i};
-	function<int(int)> getf=[&](int u) { return f[u]==u?u:f[u]=getf(f[u]); };
-	for (auto [w, u, v]:eg)
+	int v,w,c;
+	Q(){}
+	Q(int x,int y,int z):v(x),w(y),c(z){}
+};
+vector<Q> lj[N];
+int dis[N],cnt[N],pt[N],S;
+Q pre[N],st[N];
+int n,m,ans,tp;
+bool ed[N];
+int main()
+{
+	freopen("arbitrage.in","r",stdin);
+	freopen("arbitrage.out","w",stdout);
+	ios::sync_with_stdio(0);cin.tie(0);
+	cin>>n>>m;
+	while (m--)
 	{
-		u=getf(u);
-		v=getf(v);
-		for (int w1:ver[u]) for (int w2:ver[v]) ans[w1][w2]=ans[w2][w1]=w;
-		ver[u]+=ver[v];
-		f[v]=u;
+		int x,y,z,w;
+		cin>>x>>y>>z>>w;
+		lj[x].emplace_back(y,w,z);
+		lj[y].emplace_back(x,0,-z);
 	}
-	return ans;
+	for (int i=1;i<=n;i++) lj[0].emplace_back(i,1,0);
+	while (1)
+	{
+		memset(dis,-0x3f,sizeof dis);dis[0]=0;
+		for (int i=0;i<=n;i++) ed[i]=cnt[i]=0;S=-1;
+		queue<int> q;q.push(0);
+		while (!q.empty())
+		{
+			int u=q.front();q.pop();ed[u]=0;
+			for (auto &[v,w,c]:lj[u]) if (w&&dis[v]<dis[u]+c)
+			{
+				dis[v]=dis[u]+c;pre[v]=Q(u,w,c);
+				if (!ed[v])
+				{
+					if (++cnt[v]>n+1) {S=v;goto aa;}
+					ed[v]=1;q.push(v);
+				}
+			}
+		}
+		aa:;
+		if (S==-1) break;
+		{
+			static bool ed[N];
+			memset(ed,0,sizeof ed);
+			while (!ed[S]) ed[S]=1,S=pre[S].v;
+		}
+		st[tp=1]=pre[S];pt[1]=S;
+		int x=pre[S].v;
+		while (x!=S)
+		{
+			st[++tp]=pre[x];pt[tp]=x;
+			x=pre[x].v;
+			assert(tp<=n+5);
+		}
+		int fl=1e9;
+		for (int j=1;j<=tp;j++) fl=min(fl,st[j].w);
+		assert(fl);
+		for (int j=1;j<=tp;j++)
+		{
+			ans+=fl*st[j].c;
+			int nn=0;
+			for (auto &[v,w,c]:lj[st[j].v]) if (v==pt[j]&&st[j].c==c&&st[j].w==w) {++nn;w-=fl;break;}
+			for (auto &[v,w,c]:lj[pt[j]]) if (v==st[j].v&&st[j].c+c==0) {++nn;w+=fl;break;}assert(nn==2);
+		}
+	}
+	cout<<ans<<endl;
 }
 \end{lstlisting}
+
 
 \subsection{二分图与网络流建图}
 
@@ -8736,7 +8678,9 @@ $ans=n-\text{maxmatch}$，其中二分图建图方法是拆入点和出点（实
 
 若 $v_i>0$，$s\to i$ 流量 $v_i$；若 $v_i<0$，$i\to t$ 流量 $-v_i$。若原图 $u\to v$ 可花费 $w$ 代价违抗，流量 $w$，否则 $+\infty$ 。答案为 $\sum\limits_{v_i>0} v_i-\text{maxflow}$。方案？
 
-\subsection{二分图最大权匹配}
+\subsection{匹配与网络流相关代码}
+
+\subsubsection{二分图最大权匹配}
 
 \begin{lstlisting}
 namespace KM
@@ -8796,7 +8740,7 @@ namespace KM
 using KM::max_weighted_match,KM::lk,KM::kl,KM::e;
 \end{lstlisting}
 
-\subsection{一般图最大匹配}
+\subsubsection{一般图最大匹配}
 
 \begin{lstlisting}
 namespace blossom_tree
@@ -8885,7 +8829,7 @@ namespace blossom_tree
 using blossom_tree::max_general_match,blossom_tree::lk;
 \end{lstlisting}
 
-\subsection{一般图最大权匹配}
+\subsubsection{一般图最大权匹配}
 
 $n=400$：UOJ 600ms, Luogu 135ms
 
@@ -9075,7 +9019,7 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{网络流代码}
+\subsubsection{网络流}
 
 \begin{lstlisting}
 namespace net
@@ -9411,7 +9355,7 @@ namespace net
 \end{lstlisting}
 
 
-\subsection{假带花树}
+\subsubsection{假带花树}
 
 一种错误的一般图最大匹配算法，但较难卡掉。推荐在时间不足时作为乱搞使用。
 
@@ -9447,7 +9391,7 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{Stoer-Wagner 全局最小割}
+\subsubsection{Stoer-Wagner 全局最小割}
 
 无向图 $G$ 的最小割为：一个去掉后可以使 $G$ 变成两个连通分量，且边权和最小的边集的边权和。
 
@@ -9514,8 +9458,91 @@ int main()
 }
 \end{lstlisting}
 
+\subsubsection{最小割树}
 
-\subsection{双极分解}
+结论：两个点之间的最小割等于最小割树上两点间最小边权。
+
+直接返回任意两点最小割。
+
+\begin{lstlisting}
+template<class T> vector<vector<T>> min_cut(int n, const vector<tuple<int, int, T>> &edges)//[0,n)
+{
+	int m=edges.size(), i, s, t, cnt=0;
+	vector<int> fir(n, -1), nxt(m*2, -1), fc(n), q(n);
+	vector<pair<int, T>> e(m*2);
+	vector<tuple<T, int, int>> eg;
+	auto add=[&](int u, int v, T w)
+		{
+			e[cnt]={v, w};
+			nxt[cnt]=fir[u];
+			fir[u]=cnt++;
+		};
+	for (auto [u, v, w]:edges) add(u, v, w), add(v, u, w);
+	auto E=e;
+	auto bfs=[&]()
+		{
+			fill(all(fc), 0);
+			int ql=0, qr=0, u, i;
+			fc[q[0]=s]=1;
+			while (ql<=qr)
+			{
+				u=q[ql++];
+				for (int i=fir[u]; i!=-1; i=nxt[i])
+					if (auto &[v, w]=e[i]; w&&!fc[v]) fc[q[++qr]=v]=fc[u]+1;
+			}
+			return fc[t];
+		};
+	function<T(int, T)> dfs=[&](int u, T maxf)
+		{
+			if (u==t) return maxf;
+			T j=0, k;
+			for (int i=fir[u]; i!=-1; i=nxt[i])
+				if (auto &[v, w]=e[i]; w&&fc[v]==fc[u]+1&&(k=dfs(v, min(maxf-j, w))))
+				{
+					j+=k;
+					w-=k;
+					e[i^1].second+=k;
+					if (j==maxf) return j;
+				}
+			fc[u]=0;
+			return j;
+		};
+	function<void(vector<int>)> solve=[&](vector<int> id)
+		{
+			static mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
+			if (id.size()<=1) return;
+			vector<int> u(2);
+			sample(all(id), u.begin(), 2, rnd);
+			s=u[0], t=u[1], e=E;
+			T ans=0;
+			while (bfs()) ans+=dfs(s, numeric_limits<T>::max());
+			auto it=partition(all(id), [&](int u) { return fc[u]; });
+			eg.emplace_back(ans, s, t);
+			solve(vector(id.begin(), it));
+			solve(vector(it, id.end()));
+		};
+	solve(range(0, n));
+	sort(all(eg), greater<>());
+	vector<basic_string<int>> ver(n);
+	vector ans(n, vector<T>(n));
+	vector<int> f(n);
+	for (i=0; i<n; i++) ver[i]={f[i]=i};
+	function<int(int)> getf=[&](int u) { return f[u]==u?u:f[u]=getf(f[u]); };
+	for (auto [w, u, v]:eg)
+	{
+		u=getf(u);
+		v=getf(v);
+		for (int w1:ver[u]) for (int w2:ver[v]) ans[w1][w2]=ans[w2][w1]=w;
+		ver[u]+=ver[v];
+		f[v]=u;
+	}
+	return ans;
+}
+\end{lstlisting}
+
+\subsection{缩点相关}
+
+\subsubsection{双极分解}
 
 无向图，图点双连通时对任意 $s,t$ 存在。
 
@@ -9595,7 +9622,7 @@ vector<int> bipolar_orientation(const vector<pair<int, int>> &edges, int n, int 
 
 \end{lstlisting}
 
-\subsection{点双}
+\subsubsection{点双}
 
 一些结论：
 
@@ -9674,7 +9701,7 @@ struct node_bcc
 };
 \end{lstlisting}
 
-\subsection{边双}
+\subsubsection{边双}
 
 $O(n+m)$，$O(n+m)$。
 
@@ -9762,314 +9789,1466 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{输出负环}
+\subsubsection{Kosaraju 强连通分量（bitset 优化）}
+
+实用意义不大。
+
+$O(\frac{n^2}w)$，$O(\frac {n^2}w)$。
+
+\begin{lstlisting}
+void dfs1(int x)
+{
+	int i; ed[x] = 0;
+	for (i = (lj[x] & ed)._Find_first(); i <= n; i = (lj[x] & ed)._Find_next(i)) dfs1(i);
+	sx[--tp] = x;
+}
+void dfs2(int x)
+{
+	int i; ed[x] = 0; tv[f[x] = f[0]] += v[x];
+	for (i = (fj[x] & ed)._Find_first(); i <= n; i = (fj[x] & ed)._Find_next(i)) dfs2(i);
+}
+int main()
+{
+	cin >> n >> m;
+	tp = n + 1;
+	for (i = 1; i <= n; i++) { ed[i] = 1; cin >> v[i]; }
+	for (i = 1; i <= m; i++)
+	{
+		cin >> x >> y;
+		lj[x][y] = 1; fj[y][x] = 1; lb[i][0] = x; lb[i][1] = y;
+	}
+	for (i = 1; i <= n; i++) if (ed[i]) dfs1(i);
+	ed.set();
+	for (i = 1; i <= n; i++) if (ed[sx[i]]) { ++f[0]; dfs2(sx[i]); }
+	for (i = 1; i <= m; i++) if (f[lb[i][0]] != f[lb[i][1]])
+	{
+		flj[f[lb[i][0]]].push_back(f[lb[i][1]]); ++rd[f[lb[i][1]]];
+	}
+	for (i = 1; i <= f[0]; i++) if (!rd[i]) dl[++wei] = i;
+	while (tou <= wei)
+	{
+		x = dl[tou++]; g[x] += tv[x];
+		for (i = 0; i < flj[x].size(); i++)
+		{
+			g[flj[x][i]] = max(g[flj[x][i]], g[x]);
+			if (--rd[flj[x][i]] == 0) dl[++wei] = flj[x][i];
+		}
+	}
+	for (i = 1; i <= f[0]; i++) ans = max(ans, g[i]); printf("%d", ans);
+}
+\end{lstlisting}
+
+\subsubsection{Tarjan 强连通分量}
+
+$O(n+m)$，$O(n+m)$。
+
+\begin{lstlisting}
+int dfn[N],low[N],st[N],f[N],fs,tp,id;
+bool ed[N];
+void tarjan(int u)
+{
+	dfn[u]=low[u]=++id;
+	ed[u]=1;st[++tp]=u;
+	for (int v:e[u]) if (dfn[v])
+	{
+		if (ed[v]) low[u]=min(low[u],dfn[v]);
+	} else tarjan(v),low[u]=min(low[u],low[v]);
+	if (dfn[u]==low[u])
+	{
+		++fs;
+		do
+		{
+			f[st[tp]]=fs;
+			ed[st[tp]]=0;
+		} while (st[tp--]!=u);
+	}
+}
+
+\end{lstlisting}
+
+\subsubsection{动态强连通分量}
+
+给出一个加边序列，\verb|solve| 会返回每个时间进入强连通分量的边。点标号范围是 $[0,n)$
+
+\begin{lstlisting}
+
+struct union_set
+{
+	vector<int> f;
+	int n;
+	union_set() { }
+	union_set(int nn) :n(nn), f(nn+1)
+	{
+		iota(all(f), 0);
+	}
+	int getf(int u) { return f[u]==u ? u : f[u] = getf(f[u]); }
+	bool merge(int u, int v)
+	{
+		u = getf(u); v = getf(v);
+		if (u==v) return 0;
+		f[u] = v;
+		return 1;
+	}
+	bool connected(int u, int v) { return getf(u)==getf(v); }
+};
+struct edge
+{
+	int u, v, t;
+};
+vector<vector<edge>> solve(int n, const auto& eg)//[0,n)
+{
+	int m = eg.size(), tp = -1, id = 0, fs = 0;
+	vector<vector<edge>> res(m);
+	vector e(n, vector<int>());
+	vector<int> dfn(n, -1), low(n, -1), st(n), ed(n), blk(n), node;
+	union_set s(n-1);
+	function<void(int)> dfs = [&](int u)
+		{
+			dfn[u] = low[u] = id++;
+			ed[st[++tp] = u] = 1;
+			for (int v : e[u]) if (dfn[v]!=-1)
+			{
+				if (ed[v]) cmin(low[u], dfn[v]);
+			}
+			else dfs(v), cmin(low[u], low[v]);
+			if (dfn[u]==low[u])
+			{
+				do
+				{
+					ed[st[tp]] = 0;
+					blk[st[tp]] = fs;
+				} while (st[tp--]!=u);
+				++fs;
+			}
+		};
+	auto ztef = [&](auto ztef, int l, int r, const vector<edge>& q)
+		{
+			if (eg.size()==0) return;
+			if (l+1==r)
+			{
+				if (l<m)
+				{
+					res[l].insert(res[l].end(), all(q));
+					for (auto [u, v, t]:q) s.merge(u, v);
+				}
+				return;
+			}
+			int m = (l+r)/2;
+			node.clear();
+			for (auto [u, v, t]:q) if (t<m)
+			{
+				u = s.getf(u);
+				v = s.getf(v);
+				e[u].push_back(v);
+				node.push_back(u);
+				node.push_back(v);
+			}
+			else break;
+			for (int u : node) if (dfn[u]==-1) dfs(u);
+			vector<vector<edge>> g(2);
+			for (auto [u, v, t]:q) g[t<m&&blk[s.f[u]]==blk[s.f[v]]].push_back({u, v, t});
+			for (int u : node)
+			{
+				e[u].clear();
+				dfn[u] = low[u] = -1;
+			}
+			id = fs = 0;
+			ztef(ztef, l, m, g[1]);
+			ztef(ztef, m, r, g[0]);
+		};
+	ztef(ztef, 0, m+1, eg);
+	return res;
+}
+int main()
+{
+	ios::sync_with_stdio(0); cin.tie(0);
+	cout<<fixed<<setprecision(15);
+	int n, m, i, j;
+	cin>>n>>m;
+	vector<ll> x(n);
+	cin>>x;
+	vector<edge> edges(m);
+	for (i = 0;i<m;i++)
+	{
+		auto& [u, v, t] = edges[i];
+		cin>>u>>v;
+		t = i;
+	}
+	auto event = solve(n, edges);
+	union_set s(n-1);
+	ll ans = 0;
+	for (auto e:event)
+	{
+		for (auto [u, v, t]:e)
+		{
+			u = s.getf(u);
+			v = s.getf(v);
+			if (u==v) continue;
+			s.f[v] = u;
+			(ans += x[u]*x[v]) %= p;
+			(x[u] += x[v]) %= p;
+		}
+		cout<<ans<<'\n';
+	}
+}
+\end{lstlisting}
+
+\subsubsection{圆方树}
+
+题意：求仙人掌上两点最短路。
+
+$O(n+m)$，$O(n+m)$。
 
 \begin{lstlisting}
 #include "bits/stdc++.h"
 using namespace std;
-const int N=34;
+#if !defined(ONLINE_JUDGE)&&defined(LOCAL)
+#include "my_header\debug.h"
+#else
+#define dbg(...); 1;
+#endif
+typedef unsigned int ui;
+typedef long long ll;
+#define all(x) (x).begin(),(x).end()
+const int N=3e4+2,M=3e4+2;//M 包括方点
+struct P
+{
+	int v,w,id;
+	P(int a,int b,int c):v(a),w(b),id(c){}
+};
 struct Q
 {
-	int v,w,c;
-	Q(){}
-	Q(int x,int y,int z):v(x),w(y),c(z){}
+	int v,w;
+	Q(int a,int b):v(a),w(b){}
 };
-vector<Q> lj[N];
-int dis[N],cnt[N],pt[N],S;
-Q pre[N],st[N];
-int n,m,ans,tp;
-bool ed[N];
-int main()
+vector<P> e[N];
+vector<Q> fe[M];
+int dfn[M],low[N],st[N],len[M],top[M],siz[M],hc[M],dep[M],f[M],rb[N];
+bool ed[M];//ed,dfn,loop,sum,fe,hc,tp,id,cnt,dep[1] 需初始化（注意倍率），ed 大小为边数
+int tp,id,cnt,n;
+void dfs1(int u)
 {
-	freopen("arbitrage.in","r",stdin);
-	freopen("arbitrage.out","w",stdout);
-	ios::sync_with_stdio(0);cin.tie(0);
-	cin>>n>>m;
-	while (m--)
+	dfn[u]=low[u]=++id;
+	st[++tp]=u;
+	for (auto [v,w,id]:e[u]) if (!ed[id])
 	{
-		int x,y,z,w;
-		cin>>x>>y>>z>>w;
-		lj[x].emplace_back(y,w,z);
-		lj[y].emplace_back(x,0,-z);
-	}
-	for (int i=1;i<=n;i++) lj[0].emplace_back(i,1,0);
-	while (1)
-	{
-		memset(dis,-0x3f,sizeof dis);dis[0]=0;
-		for (int i=0;i<=n;i++) ed[i]=cnt[i]=0;S=-1;
-		queue<int> q;q.push(0);
-		while (!q.empty())
+		if (dfn[v]) low[u]=min(low[u],dfn[v]),rb[v]=w; else
 		{
-			int u=q.front();q.pop();ed[u]=0;
-			for (auto &[v,w,c]:lj[u]) if (w&&dis[v]<dis[u]+c)
+			ed[id]=1;
+			dfs1(v);
+			if (dfn[u]>low[v]) low[u]=min(low[u],low[v]),rb[v]=w; else
 			{
-				dis[v]=dis[u]+c;pre[v]=Q(u,w,c);
-				if (!ed[v])
+				int ntp=tp;
+				while (st[ntp]!=v) --ntp;
+				if (ntp==tp)//圆圆边
 				{
-					if (++cnt[v]>n+1) {S=v;goto aa;}
-					ed[v]=1;q.push(v);
+					--tp;
+					fe[u].emplace_back(v,w);
+					f[v]=u;
+					continue;
 				}
+				++cnt;f[cnt]=u;
+				for (int i=ntp;i<=tp;i++) f[st[i]]=cnt;
+				len[st[ntp]]=w;
+				for (int i=ntp+1;i<=tp;i++) len[st[i]]=len[st[i-1]]+rb[st[i]];
+				len[cnt]=len[st[tp]]+rb[u];
+				fe[u].emplace_back(cnt,0);
+				for (int i=ntp;i<=tp;i++) fe[cnt].emplace_back(st[i],min(len[st[i]],len[cnt]-len[st[i]]));
+				tp=ntp-1;
 			}
-		}
-		aa:;
-		if (S==-1) break;
-		{
-			static bool ed[N];
-			memset(ed,0,sizeof ed);
-			while (!ed[S]) ed[S]=1,S=pre[S].v;
-		}
-		st[tp=1]=pre[S];pt[1]=S;
-		int x=pre[S].v;
-		while (x!=S)
-		{
-			st[++tp]=pre[x];pt[tp]=x;
-			x=pre[x].v;
-			assert(tp<=n+5);
-		}
-		int fl=1e9;
-		for (int j=1;j<=tp;j++) fl=min(fl,st[j].w);
-		assert(fl);
-		for (int j=1;j<=tp;j++)
-		{
-			ans+=fl*st[j].c;
-			int nn=0;
-			for (auto &[v,w,c]:lj[st[j].v]) if (v==pt[j]&&st[j].c==c&&st[j].w==w) {++nn;w-=fl;break;}
-			for (auto &[v,w,c]:lj[pt[j]]) if (v==st[j].v&&st[j].c+c==0) {++nn;w+=fl;break;}assert(nn==2);
 		}
 	}
-	cout<<ans<<endl;
 }
-\end{lstlisting}
-
-\subsection{（基环）树哈希}
-
-有根树返回每个子树的哈希值，无根树返回树的哈希值（长度至多为 $2$ 的 \verb|vector|），基环树返回图的哈希值（长度等于环长的 \verb|vector|）。
-
-\begin{lstlisting}
-vector<int> tree_hash(const vector<vector<int>>& e, int root)//[0,n)
+void dfs2(int u)
 {
-	int n = e.size();
-	static map<vector<int>, int> mp;
-	static int id = 0;
-	vector<int> h(n), ed(n);
-	function<void(int)> dfs = [&](int u)
-		{
-			ed[u] = 1;
-			vector<int> c;
-			for (int v : e[u]) if (!ed[v])
-			{
-				dfs(v);
-				c.push_back(h[v]);
-			}
-			sort(all(c));
-			if (!mp.count(c)) mp[c] = id++;
-			h[u] = mp[c];
-		};
-	dfs(root);
-	return h;
-}
-vector<int> tree_hash(const vector<vector<int>>& e)//[0,n)
-{
-	int n = e.size();
-	if (n == 0) return { };
-	vector<int> sz(n), mx(n);
-	function<void(int)> dfs = [&](int u)
-		{
-			sz[u] = 1;
-			for (int v : e[u]) if (!sz[v])
-			{
-				dfs(v);
-				sz[u] += sz[v];
-				cmax(mx[u], sz[v]);
-			}
-			cmax(mx[u], n - sz[u]);
-		};
-	dfs(0);
-	int m = *min_element(all(mx)), i;
-	vector<int> rt;
-	for (i = 0;i < n;i++) if (mx[i] == m) rt.push_back(i);
-	for (int& u : rt) u = tree_hash(e, u)[u];
-	sort(all(rt));
-	return rt;
-}
-template<class T> void min_order(vector<T>& a)
-{
-	int n = a.size(), i, j, k;
-	a.resize(n * 2);
-	for (i = 0;i < n;i++) a[i + n] = a[i];
-	i = k = 0;j = 1;
-	while (i < n && j < n && k < n)
+	siz[u]=1;
+	for (auto [v,w]:fe[u])
 	{
-		T x = a[i + k], y = a[j + k];
-		if (x == y) ++k; else
-		{
-			(x > y ? i : j) += k + 1;
-			j += (i == j);
-			k = 0;
-		}
+		dep[v]=dep[u]+w;
+		dfs2(v);
+		siz[u]+=siz[v];
+		if (siz[v]>siz[hc[u]]) hc[u]=v;
 	}
-	a.resize(n);
-	//[min(i,j),n)+[0,min(i,j))
-	rotate(a.begin(), min(i, j) + all(a));
 }
-vector<int> pseudotree_hash(const vector<vector<int>>& e)//[0,n)
+void dfs3(int u)
 {
-	int n = e.size();
-	static map<vector<int>, int> mp;
-	static int id = 0;
-	vector<int> f(n), ed(n), h(n);
-	pair lp{-1, -1};
-	function<void(int)> dfs = [&](int u)
-		{
-			ed[u] = 1;
-			for (int v : e[u]) if (!ed[v])
-			{
-				f[v] = u;
-				dfs(v);
-			}
-			else if (v != f[u]) lp = {u, v};
-		};
-	dfs(0);
-	auto [x, y] = lp;
-	vector<int> node = {y};
-	do node.push_back(y = f[y]); while (y != x);
-	fill(all(ed), 0);
-	for (int u : node) ed[u] = 1;
-	dfs = [&](int u)
-		{
-			ed[u] = 1;
-			vector<int> c;
-			for (int v : e[u]) if (!ed[v])
-			{
-				dfs(v);
-				c.push_back(h[v]);
-			}
-			sort(all(c));
-			if (!mp.count(c)) mp[c] = id++;
-			h[u] = mp[c];
-		};
-	vector<int> r0;
-	for (int u : node)
+	dfn[u]=++id;
+	if (hc[u])
 	{
-		dfs(u);
-		r0.push_back(h[u]);
+		top[hc[u]]=top[u];
+		dfs3(hc[u]);
+		for (auto [v,w]:fe[u]) if (v!=hc[u]) dfs3(top[v]=v);
 	}
-	auto r1 = r0;
-	reverse(all(r1));
-	min_order(r0);
-	min_order(r1);
-	return min(r0, r1);
 }
-\end{lstlisting}
-
-\subsection{无向图最小环}
-
-原理：floyd 外层循环本质是计算只经过 $\le k$ 的点的最短路。因此枚举环上标号最大的，在做这一轮转移之前正好是不经过它的最短路。
-
-$O(n^3)$，$O(n^2)$。
-
-\begin{lstlisting}
-int f[N][N],jl[N][N];
-int n,m,c,ans=inf,i,j,k,x,y,z;
+int lca(int u,int v)
+{
+	while (top[u]!=top[v]) if (dfn[top[u]]>dfn[top[v]]) u=f[top[u]]; else v=f[top[v]];//注意不能用 dep
+	return dfn[u]<dfn[v]?u:v;
+}
+int find(int u,int v)//u 是根
+{
+	if (dfn[hc[u]]+siz[hc[u]]>dfn[v]) return hc[u];
+	while (f[top[v]]!=u) v=f[top[v]];
+	return top[v];
+}
+int dis(int u,int v)
+{
+	int o=lca(u,v),r=dep[u]+dep[v];
+	if (o<=n) return r-(dep[o]<<1);
+	u=find(o,u);v=find(o,v);
+	if (len[u]>len[v]) swap(u,v);
+	return r+min(len[v]-len[u],len[o]-(len[v]-len[u]))-dep[u]-dep[v];
+}
 int main()
 {
-	cin>>n>>m;
-	memset(f,0x3f,sizeof(f));
-	memset(jl,0x3f,sizeof(jl));
-	while (m--)
+	ios::sync_with_stdio(0);cin.tie(0);
+	int m,q,i;
+	cin>>n>>m>>q;cnt=n;
+	for (i=1;i<=m;i++)
 	{
-		cin>>x>>y>>z;
-		jl[x][y]=jl[y][x]=f[x][y]=f[y][x]=min(f[y][x],z);
+		int u,v,w;
+		cin>>u>>v>>w;
+		e[u].emplace_back(v,w,i);
+		e[v].emplace_back(u,w,i);
 	}
-	for (k=1;k<=n;k++)
+	mt19937 rnd(time(0));
+	for (i=1;i<=n;i++) shuffle(all(e[i]),rnd);
+	dfs1(1);id=0;
+	dfs2(1);
+	dfs3(top[1]=1);
+	while (q--)
 	{
-		for (i=1;i<k;i++) if (jl[k][i]!=jl[0][0]) for (j=1;j<i;j++)
-			if (jl[k][j]!=jl[0][0]) ans=min(ans,jl[k][i]+jl[k][j]+f[i][j]);
-		for (i=1;i<=n;i++) if (i!=k) for (j=1;j<=n;j++)
-			if ((j!=i)&&(j!=k)) f[i][j]=min(f[i][j],f[i][k]+f[k][j]);
+		int u,v;
+		cin>>u>>v;
+		cout<<dis(u,v)<<'\n';
 	}
-	if (ans==inf) cout<<"No solution.\n"; else cout<<ans<<endl;
 }
 \end{lstlisting}
 
-\subsection{切比雪夫距离最小生成树}
+\subsubsection{广义圆方树}
 
-原理：先转曼哈顿距离，再用曼哈顿的板子。
+$O(n+m)$，$O(n+m)$。
+
+\begin{lstlisting}
+void dfs(int u)
+{
+	dfn[u]=low[u]=++id;
+	st[++tp]=u;
+	for (int v:e[u]) if (dfn[v]) low[u]=min(low[u],dfn[v]); else
+	{
+		dfs(v);
+		low[u]=min(low[u],low[v]);
+		if (dfn[u]<=low[v])
+		{
+			vector cur={u};
+			do
+			{
+				cur.push_back(st[tp]);
+			} while (st[tp--]!=v);
+			ans.push_back(cur);
+		}
+	}
+}
+\end{lstlisting}
+
+\subsubsection{$2$-sat}
+
+支持添加一个条件 \verb|add(u,x,v,y)|，表示 $a_u=x\Rightarrow a_v=y$。支持设定一个变量的值。
+
+$O(n+m)$，$O(n+m)$。
+
+\begin{lstlisting}
+struct sat
+{
+	vector<vector<int>> e;
+	vector<int> dfn,low,st,f,ed;
+	int fs,tp,id,n;
+	sat(int n):n(n),e(n*2),dfn(n*2,-1),low(n*2),st(n*2),f(n*2,-1),ed(n*2),fs(0),tp(-1),id(0){}
+	void dfs(int u)
+	{
+		dfn[u]=low[u]=id++;
+		ed[u]=1;st[++tp]=u;
+		for (int v:e[u]) if (dfn[v]!=-1)
+		{
+			if (ed[v]) low[u]=min(low[u],dfn[v]);
+		} else dfs(v),low[u]=min(low[u],low[v]);
+		if (dfn[u]==low[u])
+		{
+			do
+			{
+				f[st[tp]]=fs;
+				ed[st[tp]]=0;
+			} while (st[tp--]!=u);
+			++fs;
+		}
+	}
+	void add(int u,bool x,int v,bool y)
+	{
+		assert(u>=0&&u<n&&v>=0&&v<n);
+		e[u+x*n].push_back(v+y*n);
+		e[v+(y^1)*n].push_back(u+(x^1)*n);
+	}
+	void set(int u,bool x)
+	{
+		assert(u>=0&&u<n);
+		e[u+(x^1)*n].push_back(u+x*n);
+	}
+	vector<int> getans()
+	{
+		int i;
+		for (i=0;i<n*2;i++) if (dfn[i]==-1) dfs(i);
+		vector<int> r(n);
+		for (i=0;i<n;i++)
+		{
+			if (f[i]==f[i+n]) return {};
+			r[i]=f[i]>f[i+n];
+		}
+		return r;
+	}
+};
+\end{lstlisting}
+
+
+\subsection{树上问题}
+
+\subsubsection{轻重链剖分/DFS 序 LCA}
+
+首先 \verb|init(n)|，然后正常存边（$[1,n]$），然后 \verb|fun(root)|。
+
+\verb|get_path| 会返回这条路径上的 \verb|dfn| 区间。
+
+\begin{lstlisting}
+namespace HLD
+{
+	const int N = 5e5 + 2;
+	vector<int> e[N];
+	int dfn[N], nfd[N], dep[N], f[N], siz[N], hc[N], top[N];
+	int id, n;
+	void dfs1(int u)
+	{
+		siz[u] = 1;
+		for (int v : e[u]) if (v != f[u])
+		{
+			dep[v] = dep[f[v] = u] + 1;
+			dfs1(v);
+			siz[u] += siz[v];
+			if (siz[v] > siz[hc[u]]) hc[u] = v;
+		}
+	}
+	void dfs2(int u)
+	{
+		dfn[u] = ++id;
+		nfd[id] = u;
+		if (hc[u])
+		{
+			top[hc[u]] = top[u];
+			dfs2(hc[u]);
+			for (int v : e[u]) if (v != hc[u] && v != f[u]) dfs2(top[v] = v);
+		}
+	}
+	int lca(int u, int v)
+	{
+		while (top[u] != top[v])
+		{
+			if (dep[top[u]] < dep[top[v]]) swap(u, v);
+			u = f[top[u]];
+		}
+		if (dep[u] > dep[v]) swap(u, v);
+		return u;
+	}
+	int dis(int u, int v)
+	{
+		return dep[u] + dep[v] - (dep[lca(u, v)] << 1);
+	}
+	void init(int _n)
+	{
+		n = _n;
+		for (int i = 1; i <= n; i++)
+		{
+			e[i].clear();
+			f[i] = hc[i] = 0;
+		}
+		id = 0;
+	}
+	void fun(int root)
+	{
+		dep[root] = 1; dfs1(root); dfs2(top[root] = root);
+	}
+	vector<pair<int, int>> get_path(int u, int v)//u->v，注意可能出现 [r>l]（表示反过来走）
+	{
+		//cerr<<"path from "<<u<<" to "<<v<<": ";
+		vector<pair<int, int>> v1, v2;
+		while (top[u] != top[v])
+		{
+			if (dep[top[u]] > dep[top[v]]) v1.push_back({dfn[u], dfn[top[u]]}), u = f[top[u]];
+			else v2.push_back({dfn[top[v]], dfn[v]}), v = f[top[v]];
+		}
+		v1.reserve(v1.size() + v2.size() + 1);
+		v1.push_back({dfn[u], dfn[v]});
+		reverse(v2.begin(), v2.end());
+		for (auto v : v2) v1.push_back(v);
+		//for (auto [x,y]:v1) cerr<<"["<<x<<','<<y<<"] ";cerr<<endl;
+		return v1;
+	}
+}
+using HLD::e, HLD::dfn, HLD::nfd, HLD::dep, HLD::f, HLD::siz, HLD::get_path;
+using HLD::init;//5e5
+namespace LCA
+{
+	using HLD::N, HLD::n;
+	int st[__lg(N) + 1][N];
+	int cmp(const int &x, const int &y) { return dep[x] < dep[y] ? x : y; }
+	void fun(int rt)
+	{
+		HLD::fun(rt);
+		assert(f[rt] == 0);
+		for (int i = 1; i <= n; i++) st[0][dfn[i] - 1] = f[i];
+		for (int j = 0; j < __lg(n); j++)
+			for (int i = 1, k = n - (1 << j + 1); i <= k; i++) st[j + 1][i] = cmp(st[j][i], st[j][i + (1 << j)]);
+	}
+	int lca(int u, int v)
+	{
+		if (u == v) return u;
+		u = dfn[u], v = dfn[v];
+		if (u > v) swap(u, v);
+		int g = __lg(v - u);
+		return cmp(st[g][u], st[g][v - (1 << g)]);
+	}
+	int dis(int u, int v)
+	{
+		return dep[u] + dep[v] - (dep[lca(u, v)] << 1);
+	}
+}
+using LCA::lca, LCA::fun, LCA::dis;
+\end{lstlisting}
+
+\subsubsection{换根树剖}
+
+本质是对普通树剖在换根后的子树进行分类讨论。
+
+设预处理的根是 $u$，当前根是 $v$，那么 $w$ 的子树如下：
+
+\begin{enumerate}
+	\item $w=v$，\verb|dfn| 区间为 $[1,n]$。
+	\item $w$ 在 $u,v$ 之间，\verb|dfn| 区间为 $[1,n]$ 去掉 $w$ 前往 $v$ 方向的子树。找到这个子树的方法见 \verb|find| 函数。
+	\item 其余情况，\verb|dfn| 区间和原来一致。
+\end{enumerate}
+
+\begin{lstlisting}
+
+int find(int x,int y)//找到 y 向 x 的子树
+{
+	while ((top[x]!=top[y])&&(f[top[x]]!=y)) x=f[top[x]];
+	if (top[x]==top[y]) return hc[y];
+	return top[x];
+}
+\end{lstlisting}
+$O(n+q\log n)$，$O(n)$。
+
+\subsubsection{树上启发式合并，DSU on tree}
+
+一种过时的、基于两次 \verb|dfs| 的写法，在复杂度要求不严时不如直接存储 \verb|set|。
+
+流程：
+
+\begin{enumerate}
+	\item \verb|dfs| 轻子树计算答案，并清空全局统计信息。
+	\item \verb|dfs| 重子树统计答案和全局信息。
+	\item \verb|dfs| 轻子树统计全局信息。
+\end{enumerate}
+
+\begin{lstlisting}
+void dfs1(int x)
+{
+	siz[x]=zdep[x]=1;
+	int i;
+	for (i=fir[x];i;i=nxt[i]) if (lj[i]!=f[x])
+	{
+		dep[lj[i]]=dep[f[lj[i]]=x]+1;
+		dfs1(lj[i]);
+		siz[x]+=siz[lj[i]];
+		if (siz[hc[x]]<siz[lj[i]]) hc[x]=lj[i];
+		zdep[x]=max(zdep[x],zdep[lj[i]]+1);
+	}
+}
+void cal(int x)
+{
+	int i;
+	dl[tou=wei=1]=x;
+	while (tou<=wei)
+	{
+		++dp[dep[x=dl[tou++]]];
+		if ((dp[dep[x]]>dp[zd])||(dp[dep[x]]==dp[zd])&&(dep[x]<zd)) zd=dep[x];
+		for (i=fir[x];i;i=nxt[i]) if (lj[i]!=f[x]) dl[++wei]=lj[i];
+	}
+}
+void dfs2(int x)
+{
+	if (!hc[x])
+	{
+		if (++dp[dep[x]]>dp[zd]) zd=dep[x];
+		return;
+	}
+	int i;
+	for (i=fir[x];i;i=nxt[i]) if ((lj[i]!=f[x])&&(lj[i]!=hc[x]))
+	{
+		dfs2(lj[i]);
+		memset(dp+dep[lj[i]],0,zdep[lj[i]]<<2);
+	}
+	dfs2(hc[x]);
+	dp[dep[x]]=1;
+	if (dp[zd]<=1) zd=dep[x];
+	for (i=fir[x];i;i=nxt[i]) if ((lj[i]!=f[x])&&(lj[i]!=hc[x])) cal(lj[i]);
+	ans[x]=zd-dep[x];
+}
+\end{lstlisting}
+
+\subsubsection{长链剖分（$k$ 级祖先）}
+
+$O(n\log n+q)$，$O(n)$。
+
+\begin{lstlisting}
+void dfs1(int x)
+{
+	int i;
+	for (i = 1; i <= er[dep[x] - 1]; i++) f[x][i] = f[f[x][i - 1]][i - 1]; md[x] = dep[x];
+	for (i = fir[x]; i; i = nxt[i]) { dep[lj[i]] = dep[x] + 1; dfs1(lj[i]); if (md[lj[i]] > md[dc[x]]) dc[x] = lj[i]; }
+	if (dc[x]) md[x] = md[dc[x]];
+}
+void dfs2(int x)
+{
+	int i;
+	if (dc[x])
+	{
+		top[dc[x]] = top[x];
+		dfs2(dc[x]);
+		for (i = fir[x]; i; i = nxt[i]) if (lj[i] != dc[x]) dfs2(top[lj[i]] = lj[i]);
+	}
+	if (x == top[x])
+	{
+		c = md[x] - dep[x]; y = x; up[x].push_back(x); down[x].push_back(x);
+		for (i = 1; (i <= c) && (y = f[y][0]); i++) up[x].push_back(y); y = x;
+		for (i = 1; i <= c; i++) down[x].push_back(y = dc[y]);
+	}
+}
+int main()
+{
+	int n, q, ans = 0, x, y, c, i;
+	ll ta = 0;
+	cin >> n >> q >> s;
+	for (i = 1; i <= n; i++) { cin >> f[i][0]; if (f[i][0] == 0) rt = i; else add(f[i][0], i); }
+	for (i = 2; i <= n; i++) er[i] = er[i >> 1] + 1; dep[rt] = 1;
+	dfs1(rt); dfs2(top[rt] = rt);
+	for (i = 1; i <= q; i++)
+	{
+		x = (get(s) ^ ans) % n + 1; y = (get(s) ^ ans) % dep[x];
+		//此时计算 x 的 y 级祖先。结果在 ans 中。
+		if (y == 0) { ans = x; ta ^= (ll)i * ans; continue; }
+		c = dep[x] - y; x = top[f[x][er[y]]];
+		if (dep[x] > c) ans = up[x][dep[x] - c]; else ans = down[x][c - dep[x]];
+		ta ^= (ll)i * ans;
+	}
+	cout << ta << endl;
+}
+\end{lstlisting}
+
+\subsubsection{长链剖分（dp 合并）}
+
+一种常见的实现方法是用指针指向同一片数组区域，使得从链头到链尾正好指向连续的一段数组，就不需要计算偏移量了。
+
+$O(n)$，$O(n)$。
+
+\begin{lstlisting}
+void dfs1(int x)
+{
+	top[x]=1;
+	for (int i=fir[x];i;i=nxt[i]) if (!top[lj[i]])
+	{
+		dfs1(lj[i]);
+		if (len[lj[i]]>len[hc[x]]) hc[x]=lj[i];
+	}
+	len[x]=len[hc[x]]+1;top[hc[x]]=0;
+}
+void dfs2(int x)
+{
+	*f[x]=1;gs[x]=1;
+	if (!hc[x]) return;
+	ed[x]=1;f[hc[x]]=f[x]+1;
+	for (int i=fir[x];i;i=nxt[i]) if (!ed[lj[i]]) dfs2(lj[i]);
+	ans[x]=ans[hc[x]]+1;gs[x]=gs[hc[x]];
+	if (gs[x]==1) ans[x]=0;
+	for (int i=fir[x];i;i=nxt[i]) if ((!ed[lj[i]])&&(lj[i]!=hc[x]))
+	{
+		int v=lj[i],*p;
+		for (int j=0;j<len[v];j++)
+		{
+			*(p=f[x]+j+1)+=*(f[v]+j);
+			if (j+1==ans[x]) {gs[x]=*p;continue;}
+			if ((*p>gs[x])||(*p==gs[x])&&(j+1<ans[x])) {gs[x]=*p;ans[x]=j+1;}
+		}
+	}
+	gs[x]=*(f[x]+ans[x]);
+	ed[x]=0;
+}
+\end{lstlisting}
+\subsubsection{LCT}
 
 $O(n\log n)$，$O(n)$。
 
+\verb|makeroot| 会变根，\verb|split| 会把 $y$ 变根，\verb|findroot| 会把根变根，\verb|link| 会把 $x,y$ 变根（$y$ 是新的），\verb|cut| 会把 $x,y$ 变根（$x$ 是新的），注意 \verb|swap| 子节点可能要 \verb|pushup|。
+
+代码为动态割边割点。
+
 \begin{lstlisting}
-const int N=3e5+2,M=N<<2;
-struct P
+#include "bits/stdc++.h"
+using namespace std;
+template<int N,class info,class tag> struct LCT
 {
-	int u,v,w;
-	P(int a=0,int b=0,int c=0):u(a),v(b),w(c){}
-	bool operator<(const P &o) const {return w<o.w;}
+	int f[N],c[N][2];
+	info s[N],v[N];
+#ifdef Rev
+	info rs[N];
+#endif
+	tag tg[N];
+	bool rev[N],lz[N];
+	void init(int n,info *a)
+	{
+		for (int i=0; i<=n; i++)
+		{
+			rev[i]=lz[i]=0;
+			f[i]=c[i][0]=c[i][1]=0;
+			s[i]=v[i]=a[i];
+#ifdef Rev
+			rs[i]=a[i];
+#endif
+		}
+	}
+	bool nroot(int x) const
+	{
+		return c[f[x]][0]==x||c[f[x]][1]==x;
+	}
+	void pushup(int x)
+	{
+		int lc=c[x][0],rc=c[x][1];
+		s[x]=v[x];
+#ifdef Rev
+		rs[x]=v[x];
+#endif
+		if (lc)
+		{
+			s[x]=s[lc]+s[x];
+#ifdef Rev
+			rs[x]=rs[x]+rs[lc];
+#endif
+		}
+		if (rc)
+		{
+			s[x]=s[x]+s[rc];
+#ifdef Rev
+			rs[x]=rs[rc]+rs[x];
+#endif
+		}
+	}
+	void swp(int x)
+	{
+		swap(c[x][0],c[x][1]);
+#ifdef Rev
+		swap(s[x],rs[x]);
+#endif
+		rev[x]^=1;
+	}
+	void pushdown(int x)
+	{
+		if (rev[x])
+		{
+			for (int y:c[x]) if (y) swp(y);
+			rev[x]=0;
+		}
+		if (lz[x])
+		{
+			for (int y:c[x]) if (y)
+			{
+				if (lz[y]) tg[y]+=tg[x]; else tg[y]=tg[x],lz[y]=1;
+				s[y]+=tg[x];
+			}
+			lz[x]=0;
+		}
+	}
+	void zigzag(int x)
+	{
+		int y=f[x],z=f[y],typ=(c[y][0]==x);
+		if (nroot(y)) c[z][c[z][1]==y]=x;
+		f[x]=z; f[y]=x;
+		if (c[x][typ]) f[c[x][typ]]=y;
+		c[y][typ^1]=c[x][typ]; c[x][typ]=y;
+		pushup(y);
+	}
+	void splay(int x)
+	{
+		static int st[N];
+		int y,tp;
+		st[tp=1]=y=x;
+		while (nroot(y)) st[++tp]=y=f[y];
+		while (tp) pushdown(st[tp--]);
+		for (; nroot(x); zigzag(x)) if (nroot(y=f[x])) zigzag((c[y][0]==x)^(c[f[y]][0]==y)?x:f[x]);
+		pushup(x);
+	}
+	int access(int x)
+	{
+		int y=0;
+		for (; x; x=f[y=x]) splay(x),c[x][1]=y,pushup(x);
+		return y;
+	}
+	int findroot(int x)//splay 根为树根，splay 维护树根到 x 的链
+	{
+		access(x); splay(x); pushdown(x);
+		while (c[x][0]) pushdown(x=c[x][0]);
+		splay(x); return x;
+	}
+	void split(int x,int y)//x 为树新根，y 为 splay 新根
+	{ makeroot(x); access(y); splay(y); }
+	void makeroot(int x)//x 为树、splay 新根
+	{ access(x); splay(x); swp(x); }
+	void modify(int x,const info &o)
+	{ makeroot(x); v[x]=o; pushup(x); }
+	void modify(int x,int y,const tag &o)
+	{
+		split(x,y); s[y]+=o;
+		if (lz[y]) tg[y]+=o; else tg[y]=o,lz[y]=1;
+	}
+	info ask(int x,int y) { split(x,y); return s[y]; }
+	bool connected(int x,int y)//注意会改变形态
+	{ makeroot(x); return findroot(y)==x; }
+	void link(int x,int y)//y 为新根
+	{ if (!connected(x,y)) makeroot(f[x]=y); }
+	void cut(int x,int y)
+	{
+		if (connected(x,y))//可能本不连通
+		{
+			pushdown(x);
+			if (c[x][1]==y&&!c[y][0]&&!c[y][1])//可能连通但无边
+			{
+				c[x][1]=f[y]=0;
+				pushup(x);
+			}
+		}
+	}
+	int lca(int x,int y) { access(x); return access(y); }
+	vector<int> res;
+	void dfs(int x)
+	{
+		if (!x) return;
+		pushdown(x);
+		dfs(c[x][0]); res.push_back(x); dfs(c[x][1]);
+	}
+	vector<int> get_path(int x,int y)
+	{
+		res.clear(); split(x,y); dfs(y);
+		if (res[0]!=x) return {};
+		return res;
+	}
 };
+const int N=2e5+5,M=4e5+5;
 struct Q
 {
-	int x,y,id;
-	Q(int a=0,int b=0,int c=0):x(a),y(b),id(c){}
-	bool operator<(const Q &o) const {return x!=o.x?x>o.x:y>o.y;}
+	void operator+=(const Q &o) const {}
 };
-ll ans;
-P lb[M];
-Q a[N],b[N];
-int f[N],c[N];
-int n,m,i,x,y;
-struct bit
-{
-	int a[N],pos[N],n;
-	void init(int &nn)
-	{
-		memset(a+1,0x7f,(n=nn)*sizeof a[0]);
-		memset(pos+1,0,n*sizeof pos[0]);
-	}
-	void mdf(int x,const int y,const int z)
-	{
-		if (a[x]>y) a[x]=y,pos[x]=z;
-		while (x-=x&-x) if (a[x]>y) a[x]=y,pos[x]=z;
-	}
-	int sum(int x)
-	{
-		int r=a[x],rr=pos[x];
-		while ((x+=x&-x)<=n) if (a[x]<r) r=a[x],rr=pos[x];
-		return rr;
-	}
-};
-bit s;
-void cal()
-{
-	int i,x,y;
-	s.init(n);
-	memcpy(b+1,a+1,sizeof(Q)*n);
-	sort(a+1,a+n+1);
-	for (i=1;i<=n;i++) c[i]=a[i].y-a[i].x;
-	sort(c+1,c+n+1);
-	for (i=1;i<=n;i++)
-	{
-		if (x=s.sum(y=lower_bound(c+1,c+n+1,a[i].y-a[i].x)-c))
-			lb[++m]=P(a[x].id,a[i].id,a[x].x+a[x].y-a[i].x-a[i].y);//谨防 int 爆
-		s.mdf(y,a[i].y+a[i].x,i);
-	}
-	memcpy(a+1,b+1,sizeof(Q)*n);
-}
-int getf(int x) {return f[x]==x?x:f[x]=getf(f[x]);}
+void operator+=(int &x,const Q &o) { x=0; }
+LCT<N,int,Q> s;
+LCT<M,int,Q> t;
+int a[N],b[M];
 int main()
 {
-	cin>>n;
-	for (i=1;i<=n;i++) {cin>>a[f[i]=a[i].id=i].x>>a[i].y;
-		swap(a[i].x,a[i].y);a[i]=Q(a[i].x+a[i].y,a[i].x-a[i].y,i);}
-	cal();for (i=1;i<=n;i++) swap(a[i].x,a[i].y);
-	cal();for (i=1;i<=n;i++) a[i].y=-a[i].y;
-	cal();for (i=1;i<=n;i++) swap(a[i].x,a[i].y);
-	cal();sort(lb+1,lb+m+1);
-	for (i=1;i<=m;i++) if ((x=getf(lb[i].u))!=(y=getf(lb[i].v))) f[x]=y,ans+=lb[i].w;
-	cout<<ans/2<<endl;
+	ios::sync_with_stdio(0); cin.tie(0);
+	int n,m,i,r=0;
+	cin>>n>>m;
+	fill_n(a+n+1,n,1);
+	fill_n(b+1,n,1);
+	s.init(n*2,a);
+	t.init(n+m,b);
+	int bs=n,ds=n;
+	while (m--)
+	{
+		int op,u,v;
+		cin>>op>>u>>v;
+		u^=r; v^=r;
+		// dbg(op,u,v);
+		if (u<1||u>n||v<1||v>n) return 0;
+		if (op==1)
+		{
+			if (s.connected(u,v))
+			{
+				s.modify(u,v,{});
+				auto c=t.get_path(u,v);
+				for (i=1; i<c.size(); i++) t.cut(c[i-1],c[i]);
+				++ds;
+				for (int x:c) t.link(ds,x);
+			}
+			else
+			{
+				s.link(++bs,u);
+				s.link(bs,v);
+				t.link(++ds,u);
+				t.link(ds,v);
+			}
+		}
+		else
+		{
+			if (!s.connected(u,v))
+			{
+				cout<<"-1\n";
+				continue;
+			}
+			r=op==2?s.ask(u,v):t.ask(u,v);
+			cout<<r<<'\n';
+		}
+	}
 }
 \end{lstlisting}
 
-\subsection{点分治}
+
+\subsubsection{带子树的 LCT}
+
+$O(n\log n)$，$O(n)$。
+
+你需要实现的是 \verb|info| 类的 \verb|+,+=,-=|。
+
+\begin{enumerate}
+	\item \verb|info| 维护的是从上往下的一条链以及这条链挂着的所有轻子树的信息。
+	\item \verb|a+b| 表示两条链合并后的信息，其中 $a$ 接近根。
+	\item \verb|a+=b| 表示一条链合并了一个轻子树，即 $b$ 是 $a$ 链尾的子结点。
+	\item \verb|a-=b| 表示一条链移除了一个轻子树，即 $b$ 是 $a$ 链尾的子节点。
+\end{enumerate}
+
+如果有边权，将边 $(u,v)$ 当成点并与 $u,v$ 分别连边。
+
+代码对应题意：
+
+对于满足 $0 \leq e \leq N - 2$ 的整数 $e$，定义 $f_e(x) = b_e x + c_e$。
+
+设 $e_0, e_1, \ldots, e_k$ 为从顶点 $x$ 到顶点 $y$ 的简单路径上的边，按顺序排列，并定义
+\[
+	P(x, y) = f_{e_0}(f_{e_1}(\ldots f_{e_k}(a_y) \ldots)).
+\]
+
+按给定顺序处理 $Q$ 个查询。查询有两种类型：
+
+\begin{itemize}
+	\item $\texttt{0 w x r}$：将 $a_w$ 更新为 $x$，然后输出
+	      \[
+		      \left( \sum_{v=0}^{N-1} P(r, v) \right) \mod 998244353.
+	      \]
+	\item $\texttt{1 e y z r}$：将 $(b_e, c_e)$ 更新为 $(y, z)$，然后输出
+	      \[
+		      \left( \sum_{v=0}^{N-1} P(r, v) \right) \mod 998244353.
+	      \]
+\end{itemize}
+
+\begin{lstlisting}
+template<class info> struct LCT
+{
+	int n;
+	vector<info> sum, sum_rev, val, sum_oth;
+	vector<int> f, lz;
+	vector<array<int, 2>> c;
+	LCT(int _n, const info &o) :n(_n + 1), sum(n, o), sum_rev(n, o), val(n, o), sum_oth(n, o), f(n), lz(n), c(n) { }
+	bool nroot(int x) const
+	{
+		return c[f[x]][0] == x || c[f[x]][1] == x;
+	}
+	void pushup(int x)
+	{
+		sum[x] = val[x];
+		sum[x] += sum_oth[x];
+		sum_rev[x] = sum[x];
+		sum[x] = sum[c[x][0]] + sum[x] + sum[c[x][1]];
+		sum_rev[x] = sum_rev[c[x][1]] + sum_rev[x] + sum_rev[c[x][0]];
+	}
+	void rev(int x)
+	{
+		if (x)
+		{
+			swap(c[x][0], c[x][1]);
+			swap(sum[x], sum_rev[x]);
+			lz[x] ^= 1;
+		}
+	}
+	void pushdown(int x)
+	{
+		if (lz[x])
+		{
+			rev(c[x][0]);
+			rev(c[x][1]);
+			lz[x] = 0;
+		}
+	}
+	void zigzag(int x)
+	{
+		int y = f[x], z = f[y], typ = (c[y][0] == x);
+		if (nroot(y)) c[z][c[z][1] == y] = x;
+		f[x] = z; f[y] = x;
+		if (c[x][typ]) f[c[x][typ]] = y;
+		c[y][typ ^ 1] = c[x][typ]; c[x][typ] = y;
+		pushup(y);
+	}
+	void splay(int x)
+	{
+		static vector<int> st(n);
+		int y, tp;
+		st[tp = 1] = y = x;
+		while (nroot(y)) st[++tp] = y = f[y];
+		while (tp) pushdown(st[tp--]);
+		for (; nroot(x); zigzag(x)) if (!nroot(f[x])) continue; else zigzag((c[f[x]][0] == x) ^ (c[f[f[x]]][0] == f[x]) ? x : f[x]);
+		pushup(x);
+	}
+	void access(int x)
+	{
+		for (int y = 0; x; x = f[y = x])
+		{
+			splay(x);
+			sum_oth[x] -= sum[y];
+			sum_oth[x] += sum[c[x][1]];
+			c[x][1] = y; pushup(x);
+		}
+	}
+	int findroot(int x)
+	{
+		access(x); splay(x); pushdown(x);
+		while (c[x][0]) pushdown(x = c[x][0]);
+		splay(x);
+		return x;
+	}
+	void split(int x, int y)
+	{
+		makeroot(x);
+		access(y);
+		splay(y);
+	}
+	void makeroot(int x)
+	{
+		access(x);
+		splay(x);
+		rev(x);
+	}
+	void link(int x, int y)
+	{
+		makeroot(x);
+		if (x != findroot(y))//可能已经连通
+		{
+			makeroot(y); f[x] = y;
+			sum_oth[y] += sum[x];
+			pushup(y);
+		}
+	}
+	void cut(int x, int y)
+	{
+		makeroot(x);
+		if (x == findroot(y))//可能本不连通
+		{
+			pushdown(x);
+			if (c[x][1] == y && !c[y][0] && !c[y][1])//可能连通但无边
+			{
+				c[x][1] = f[y] = 0;
+				pushup(x);
+			}
+		}
+	}
+	void set(int x, info y)
+	{
+		makeroot(x);
+		val[x] = y;
+		pushup(x);
+	}
+};
+const ll p = 998244353;
+struct Q
+{
+	ll k, b, sum, sz;
+	Q operator+(const Q &o) const
+	{
+		return {k * o.k % p, (b + k * o.b) % p, (sum + k * o.sum + b * o.sz) % p, sz + o.sz};
+	}
+	void operator+=(const Q &o)
+	{
+		(sum += k * o.sum + b * o.sz) %= p;
+		sz += o.sz;
+	}
+	void operator-=(const Q &o)
+	{
+		(sum += p * p * 2 - k * o.sum - b * o.sz) %= p;
+		sz -= o.sz;
+	}
+};
+int main()
+{
+	ios::sync_with_stdio(0); cin.tie(0);
+	int n, m, i;
+	cin >> n >> m;
+	vector<Q> a(n * 2 + 1);
+	for (i = 1; i <= n; i++)
+	{
+		ll x;
+		cin >> x;
+		a[i] = {1, 0, x, 1};
+	}
+	vector<pair<int, int>> edges(n);
+	for (i = 1; i < n; i++)
+	{
+		auto &[u, v] = edges[i];
+		ll k, b;
+		cin >> u >> v >> k >> b;
+		++u, ++v;
+		a[i + n] = {k, b, 0, 0};
+	}
+	LCT<Q> s(n * 2 - 1, Q{1, 0, 0, 0});
+	for (i = 1; i < n * 2; i++) s.set(i, a[i]);
+	for (i = 1; i < n; i++)
+	{
+		auto [u, v] = edges[i];
+		s.link(u, n + i);
+		s.link(v, n + i);
+	}
+	while (m--)
+	{
+		int op;
+		cin >> op;
+		if (op == 0)
+		{
+			int u;
+			ll x;
+			cin >> u >> x;
+			++u;
+			a[u] = {1, 0, x, 1};
+			s.set(u, a[u]);
+		}
+		else
+		{
+			int id;
+			ll k, b;
+			cin >> id >> k >> b;
+			++id;
+			a[id + n] = {k, b, 0, 0};
+			s.set(id + n, a[id + n]);
+		}
+		int rt;
+		cin >> rt;
+		++rt;
+		s.makeroot(rt);
+		cout << s.sum[rt].sum << '\n';
+	}
+}
+\end{lstlisting}
+
+\subsubsection{动态 dp（全局平衡二叉树）}
+
+意义不大。
+
+$O((n+q)\log n)$，$O(n)$。
+
+\begin{lstlisting}
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <fstream>
+using namespace std;
+const int N=1e6+2,M=6e7+2,INF=-1e9;
+struct matrix
+{
+	int a[2][2];
+};
+matrix s[N],js;
+matrix operator *(matrix x,matrix y)
+{
+	js.a[0][0]=max(x.a[0][0]+y.a[0][0],x.a[0][1]+y.a[1][0]);
+	js.a[0][1]=max(x.a[0][0]+y.a[0][1],x.a[0][1]+y.a[1][1]);
+	js.a[1][0]=max(x.a[1][0]+y.a[0][0],x.a[1][1]+y.a[1][0]);
+	js.a[1][1]=max(x.a[1][0]+y.a[0][1],x.a[1][1]+y.a[1][1]);
+	return js;
+}
+int st[N],c[N][2],hc[N],lj[N<<1],nxt[N<<1],fir[N],siz[N],v[N],g[N][2],fa[N],f[N],val[N];
+int n,m,i,j,x,y,z,dtp,stp,tp,fh,bs,rt,aaa,la;
+char dr[M+5],sc[M];
+void pushup(int x)
+{
+	s[x].a[0][0]=s[x].a[0][1]=g[x][0];
+	s[x].a[1][0]=g[x][1];s[x].a[1][1]=INF;
+	if (c[x][0]) s[x]=s[c[x][0]]*s[x];
+	if (c[x][1]) s[x]=s[x]*s[c[x][1]];
+}
+void add(int x,int y)
+{
+	lj[++bs]=y;
+	nxt[bs]=fir[x];
+	fir[x]=bs;
+	lj[++bs]=x;
+	nxt[bs]=fir[y];
+	fir[y]=bs;
+}
+bool nroot(int x)
+{
+	return ((c[f[x]][0]==x)||(c[f[x]][1]==x));
+}
+void dfs1(int x)
+{
+	siz[x]=1;
+	int i;
+	for (i=fir[x];i;i=nxt[i]) if (lj[i]!=fa[x])
+	{
+		fa[lj[i]]=x;
+		dfs1(lj[i]);
+		siz[x]+=siz[lj[i]];
+		if (siz[hc[x]]<siz[lj[i]]) hc[x]=lj[i];
+	}
+}
+int build(int l,int r)
+{
+	if (l>r) return 0;
+	int i,tot=0,upn=0;
+	for (i=l;i<=r;i++) tot+=val[i];tot>>=1;
+	for (i=l;i<=r;i++)
+	{
+		upn+=val[i];
+		if (upn>=tot)
+		{
+			f[c[st[i]][0]=build(l,i-1)]=st[i];
+			f[c[st[i]][1]=build(i+1,r)]=st[i];
+			pushup(st[i]);
+			++aaa;
+			return st[i];
+		}
+	}
+}
+int dfs2(int x)
+{
+	int i,j;
+	for (i=x;i;i=hc[i]) for (j=fir[i];j;j=nxt[j]) if ((lj[j]!=fa[i])&&(lj[j]!=hc[i]))
+	{
+		f[y=dfs2(lj[j])]=i;
+		g[i][0]+=max(s[y].a[0][0],s[y].a[1][0]);
+		g[i][1]+=s[y].a[0][0];
+	}
+	tp=0;
+	for (i=x;i;i=hc[i]) st[++tp]=i;
+	for (i=1;i<tp;i++) val[i]=siz[st[i]]-siz[st[i+1]];
+	val[tp]=siz[st[tp]];
+	return build(1,tp);
+}
+void change(int x,int y)
+{
+	g[x][1]+=y-v[x];v[x]=y;
+	while (f[x])
+	{
+		if (nroot(x)) pushup(x);
+		else
+		{
+			g[f[x]][0]-=max(s[x].a[0][0],s[x].a[1][0]);
+			g[f[x]][1]-=s[x].a[0][0];
+			pushup(x);
+			g[f[x]][0]+=max(s[x].a[0][0],s[x].a[1][0]);
+			g[f[x]][1]+=s[x].a[0][0];
+		}
+		x=f[x];
+	}
+	pushup(x);
+}
+int main()
+{
+	scanf("%d%d",&n,&m);
+	fread(dr+1,1,min(M,n*20+m*20),stdin);
+	for (i=1;i<=n;i++)
+	{
+		read(g[i][1]);
+		v[i]=g[i][1];
+	}
+	for (i=1;i<n;i++)
+	{
+		read(x);read(y);
+		add(x,y);
+	}
+	dfs1(1);
+	rt=dfs2(1);tp=0;
+	while (m--)
+	{
+		read(x);read(y);
+		change(x^la,y);
+		x=la=max(s[rt].a[0][0],s[rt].a[1][0]);
+		while (x)
+		{
+			st[++tp]=x%10;
+			x/=10;
+		}
+		while (tp) sc[++stp]=st[tp--]|48;
+		sc[++stp]=10;
+	}
+	fwrite(sc+1,1,stp,stdout);
+}
+\end{lstlisting}
+
+\subsubsection{全局平衡二叉树（修改版）}
+
+$O((n+q)\log n)$，$O(n)$。
+
+\begin{lstlisting}
+#include "bits/stdc++.h"
+using namespace std;
+typedef long long ll;
+typedef pair<int, int> pa;
+const int N = 1e6 + 2, M = 1e6 + 2;
+ll ans;
+pa w[N];
+int c[N][2], f[N], fa[N], v[N], s[N], lz[N], lj[M], nxt[M], siz[N], hc[N], fir[N], st[N];
+int a[N], top[N];
+int n, i, x, y, z, bs, tp, rt;
+void add()
+{
+	lj[++bs] = y; nxt[bs] = fir[x]; fir[x] = bs;
+	lj[++bs] = x; nxt[bs] = fir[y]; fir[y] = bs;
+}
+void pushup(int &x)
+{
+	s[x] = min(v[x], min(s[c[x][0]], s[c[x][1]]));
+}
+void pushdown(int &x)
+{
+	if (lz[x] < 0)
+	{
+		int cc = c[x][0];
+		if (cc)
+		{
+			lz[cc] += lz[x]; s[cc] += lz[x]; v[cc] += lz[x];
+		}
+		cc = c[x][1];
+		if (cc)
+		{
+			v[cc] += lz[x]; lz[cc] += lz[x]; s[cc] += lz[x];
+		}lz[x] = 0;
+		return;
+	}
+}
+bool nroot(int &x) { return c[f[x]][0] == x || c[f[x]][1] == x; }
+bool cmp(pa &o, pa &p) { return o > p; }
+void dfs1(int x)
+{
+	siz[x] = 1;
+	for (int i = fir[x]; i; i = nxt[i]) if (lj[i] != fa[x])
+	{
+		fa[lj[i]] = x; dfs1(lj[i]); siz[x] += siz[lj[i]];
+		if (siz[hc[x]] < siz[lj[i]]) hc[x] = lj[i];
+	}
+}
+int build(int l, int r)
+{
+	if (l > r) return 0;
+	if (l == r)
+	{
+		l = st[l]; s[l] = v[l] = siz[l] >> 1;
+		return l;
+	}
+	int x = lower_bound(a + l, a + r + 1, a[l] + a[r] >> 1) - a, y = st[x];
+	c[y][0] = build(l, x - 1);
+	c[y][1] = build(x + 1, r);
+	v[y] = siz[y] >> 1;
+	if (c[y][0]) f[c[y][0]] = y;
+	if (c[y][1]) f[c[y][1]] = y;
+	pushup(y);
+	return y;
+}
+void dfs2(int x)
+{
+	if (!hc[x]) return;
+	int i;
+	top[hc[x]] = top[x];
+	if (top[x] == x)
+	{
+		st[tp = 1] = x;
+		for (i = hc[x]; i; i = hc[i]) st[++tp] = i;
+		for (i = 1; i <= tp; i++) a[i] = siz[st[i]] - siz[hc[st[i]]] + a[i - 1];
+		f[build(1, tp)] = fa[x];
+	}
+	dfs2(hc[x]);
+	for (i = fir[x]; i; i = nxt[i]) if (lj[i] != fa[x] && lj[i] != hc[x]) dfs2(top[lj[i]] = lj[i]);
+}
+void mdf(int x)
+{
+	int y = x;
+	st[tp = 1] = x;
+	while (y = f[y]) st[++tp] = y; y = x;
+	while (tp) pushdown(st[tp--]);
+	while (x)
+	{
+		--v[x]; --lz[c[x][0]]; --v[c[x][0]]; --s[c[x][0]];
+		while (c[f[x]][0] == x) x = f[x]; x = f[x];
+	}
+	pushup(y);
+	while (y = f[y]) pushup(y);
+}
+int ask(int x)
+{
+	int y = x;
+	st[tp = 1] = x;
+	while (y = f[y]) st[++tp] = y;
+	while (tp) pushdown(st[tp--]);
+	int r = v[x];
+	while (x)
+	{
+		r = min(r, min(v[x], s[c[x][0]]));
+		while (c[f[x]][0] == x) x = f[x]; x = f[x];
+	}
+	return r;
+}
+signed main()
+{
+	cin >> n; s[0] = 1e9;
+	for (i = 1; i <= n; i++) cin >> w[w[i].second = i].first;
+	for (i = 1; i < n; i++) cin >> x >> y, add();
+	sort(w + 1, w + n + 1, cmp); dfs1(1); dfs2(top[1] = 1); rt = 1; while (f[rt]) rt = f[rt];
+	for (i = 1; i <= n && v[rt]; i++) if (ask(w[i].second)) mdf(w[i].second), ans += w[i].first;
+	cout << ans << endl;
+}
+\end{lstlisting}
+
+\subsubsection{虚树}
+
+传入点标号列表，返回虚树边表。自动认为 $1$ 是根，标号从 $1$ 开始。
+
+需要注意的是：在清空的时候需要同时考虑点列表和边表，都清空一下。
+
+你需要提供的是：\verb|dep|,\verb|lca|,\verb|dfn|。
+
+$O(n+\sum k\log n)$，$O(n)$。
+
+\begin{lstlisting}
+vector<pair<int, int>> get_tree(vector<int> a)
+{
+	vector<pair<int, int>> edges;
+	sort(all(a), [&](int u, int v) { return dfn[u]<dfn[v]; });
+	vector<int> st(a.size()+2);
+	int tp=0;
+	auto ins=[&](int u)
+		{
+			if (tp==0)
+			{
+				st[tp=1]=u;
+				return;
+			}
+			int v=lca(st[tp], u);
+			while (tp>1&&dep[v]<dep[st[tp-1]])
+			{
+				edges.emplace_back(st[tp-1], st[tp]);
+				--tp;
+			}
+			if (dep[v]<dep[st[tp]]) edges.emplace_back(v, st[tp--]);
+			if (!tp||st[tp]!=v) st[++tp]=v;
+			st[++tp]=u;
+		};
+	if (a[0]!=1) st[tp=1]=1;//先行添加根节点
+	for (int u:a) ins(u);
+	if (tp) while (--tp) edges.emplace_back(st[tp], st[tp+1]);//回溯
+	return edges;
+}
+\end{lstlisting}
+
+\subsubsection{点分治}
 
 点分治板子的参考意义不大。
 
@@ -10140,7 +11319,7 @@ void solve(int u)
 }
 \end{lstlisting}
 
-\subsection{点分树}
+\subsubsection{点分树}
 
 核心结论：点分树上 lca 出现在原树路径上。
 
@@ -10445,1837 +11624,130 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{prufer 与树的互相转化}
+\subsubsection{（基环）树哈希}
 
-$O(n)$，$O(n)$。
-
-\begin{lstlisting}
-vector<int> edges_to_prufer(const vector<pair<int,int>> &eg)//[1,n]，定根为 n
-{
-	int n=eg.size()+1,i,j,k;
-	vector<int> fir(n+1),nxt(n*2+1),e(n*2+1),rd(n+1);
-	int cnt=0;
-	for (auto [u,v]:eg)
-	{
-		e[++cnt]=v;nxt[cnt]=fir[u];fir[u]=cnt;++rd[v];
-		e[++cnt]=u;nxt[cnt]=fir[v];fir[v]=cnt;++rd[u];
-	}
-	for (i=1;i<=n;i++) if (rd[i]==1) break;
-	int u=i;
-	vector<int> r;r.reserve(n-2);
-	for (j=1;j<n-1;j++)
-	{	
-		for (k=fir[u],u=rd[u]=0;k;k=nxt[k]) if (rd[e[k]]) 
-		{
-			r.push_back(e[k]);
-			if ((--rd[e[k]]==1)&&(e[k]<i)) u=e[k];
-		}
-		if (!u) { while (rd[i]!=1) ++i;u=i;}
-	}
-	return r;
-}
-vector<pair<int,int>> prufer_to_edges(const vector<int> &p)//[1,n]，定根为 n
-{
-	int n=p.size(),i,j,k;
-	int m=n+3;
-	vector<int> cs(m);
-	for (i=0;i<n;i++) ++cs[p[i]];
-	i=0;
-	while (cs[++i]);
-	int u=i,v;
-	vector<pair<int,int>> r;
-	r.reserve(n-2);
-	for (j=0;j<n;j++)
-	{
-		cs[u]=1e9;
-		r.push_back({u,v=p[j]});
-		if ((--cs[v]==0)&&(v<i)) u=v;
-		if (v!=u) {while (cs[i]) ++i;u=i;}
-	}
-	r.push_back({u,n+2});
-	return r;
-}
-
-\end{lstlisting}
-
-
-
-\subsection{LCT}
-
-$O(n\log n)$，$O(n)$。
-
-\verb|makeroot| 会变根，\verb|split| 会把 $y$ 变根，\verb|findroot| 会把根变根，\verb|link| 会把 $x,y$ 变根（$y$ 是新的），\verb|cut| 会把 $x,y$ 变根（$x$ 是新的），注意 \verb|swap| 子节点可能要 \verb|pushup|。
+有根树返回每个子树的哈希值，无根树返回树的哈希值（长度至多为 $2$ 的 \verb|vector|），基环树返回图的哈希值（长度等于环长的 \verb|vector|）。
 
 \begin{lstlisting}
-template<int N,class Q> struct LCT
-{
-	int f[N],c[N][2],siz[N],st[N];
-	Q s[N],v[N];
-	#ifdef Rev
-	Q rs[N];
-	#endif
-	//heap g[N]; //虚子树
-	bool lz[N];
-	void init(int n)
-	{
-		++n;
-		for (int i=0;i<n;i++)
-		{
-			f[i]=c[i][0]=c[i][1]=lz[i]=0;
-			s[i]=v[i]=Q();
-			#ifdef Rev
-			rs[i]=Q();
-			#endif
-			siz[i]=!!i;
-		}
-	}
-	void modify(int x,const Q &o)
-	{
-		makeroot(x);
-		v[x]=o;
-		pushup(x);
-	}
-	bool nroot(int x) const
-	{
-		return c[f[x]][0]==x||c[f[x]][1]==x;
-	}
-	void pushup(int x)
-	{
-		int lc=c[x][0],rc=c[x][1];
-		s[x]=v[x];siz[x]=1;
-		#ifdef Rev
-		rs[x]=v[x];
-		#endif
-		if (lc)
-		{
-			s[x]=s[lc]+s[x];
-			siz[x]+=siz[lc];
-			#ifdef Rev
-			rs[x]=rs[x]+rs[lc];
-			#endif
-		}
-		if (rc)
-		{
-			s[x]=s[x]+s[rc];
-			siz[x]+=siz[rc];
-			#ifdef Rev
-			rs[x]=rs[rc]+rs[x];
-			#endif
-		}
-	}
-	void swp(int x)
-	{
-		swap(c[x][0],c[x][1]);
-		#ifdef Rev
-		swap(s[x],rs[x]);
-		#endif
-		lz[x]^=1;
-	}
-	void pushdown(int x)
-	{
-		int lc=c[x][0],rc=c[x][1];
-		if (lz[x])
-		{
-			if (lc) swp(lc);
-			if (rc) swp(rc);
-			lz[x]=0;
-		}
-	}
-	void zigzag(int x)
-	{
-		int y=f[x],z=f[y],typ=(c[y][0]==x);
-		if (nroot(y)) c[z][c[z][1]==y]=x;
-		f[x]=z;f[y]=x;
-		if (c[x][typ]) f[c[x][typ]]=y;
-		c[y][typ^1]=c[x][typ];c[x][typ]=y;
-		pushup(y);
-	}
-	void splay(int x)
-	{
-		int y,tp=0;
-		st[tp=1]=y=x;
-		while (nroot(y)) st[++tp]=y=f[y];
-		while (tp) pushdown(st[tp--]);
-		for (;nroot(x);zigzag(x)) if (!nroot(f[x])) continue; else zigzag((c[f[x]][0]==x)^(c[f[f[x]]][0]==f[x]) ? x:f[x]);
-		pushup(x);
-	}
-	void access(int x)
-	{
-		for (int y=0;x;x=f[y=x])
-		{
-			splay(x);
-			//g[x].ins(s[c[x][1]]);g[x].del(s[y]);虚子树变化
-			c[x][1]=y;pushup(x);
-		}
-	}
-	int findroot(int x)
-	{
-		access(x);splay(x);pushdown(x);
-		while (c[x][0]) pushdown(x=c[x][0]);
-		splay(x);
-		return x;
-	}
-	void split(int x,int y)//x 为树新根，y 为 splay 新根
-	{
-		makeroot(x);
-		access(y);
-		splay(y);
-	}
-	void makeroot(int x)
-	{
-		access(x);splay(x);
-		swp(x);
-	}
-	void link(int x,int y)//y 为新根
-	{
-		makeroot(x);
-		if (x!=findroot(y))//可能已经连通
-		{
-			makeroot(y);f[x]=y;//虚子树变化
-		}
-	}
-	void cut(int x,int y)
-	{
-		makeroot(x);
-		if (x==findroot(y))//可能本不连通
-		{
-			pushdown(x);
-			if (c[x][1]==y&&!c[y][0]&&!c[y][1])//可能连通但无边
-			{
-				c[x][1]=f[y]=0;//可能需要修改
-				pushup(x);
-			}
-		}
-	}
-};
-\end{lstlisting}
-
-\subsection{LCT（重构，代码为动态割边割点）}
-
-\begin{lstlisting}
-#include "bits/stdc++.h"
-using namespace std;
-template<int N,class info,class tag> struct LCT
-{
-	int f[N],c[N][2];
-	info s[N],v[N];
-#ifdef Rev
-	info rs[N];
-#endif
-	tag tg[N];
-	bool rev[N],lz[N];
-	void init(int n,info *a)
-	{
-		for (int i=0; i<=n; i++)
-		{
-			rev[i]=lz[i]=0;
-			f[i]=c[i][0]=c[i][1]=0;
-			s[i]=v[i]=a[i];
-#ifdef Rev
-			rs[i]=a[i];
-#endif
-		}
-	}
-	bool nroot(int x) const
-	{
-		return c[f[x]][0]==x||c[f[x]][1]==x;
-	}
-	void pushup(int x)
-	{
-		int lc=c[x][0],rc=c[x][1];
-		s[x]=v[x];
-#ifdef Rev
-		rs[x]=v[x];
-#endif
-		if (lc)
-		{
-			s[x]=s[lc]+s[x];
-#ifdef Rev
-			rs[x]=rs[x]+rs[lc];
-#endif
-		}
-		if (rc)
-		{
-			s[x]=s[x]+s[rc];
-#ifdef Rev
-			rs[x]=rs[rc]+rs[x];
-#endif
-		}
-	}
-	void swp(int x)
-	{
-		swap(c[x][0],c[x][1]);
-#ifdef Rev
-		swap(s[x],rs[x]);
-#endif
-		rev[x]^=1;
-	}
-	void pushdown(int x)
-	{
-		if (rev[x])
-		{
-			for (int y:c[x]) if (y) swp(y);
-			rev[x]=0;
-		}
-		if (lz[x])
-		{
-			for (int y:c[x]) if (y)
-			{
-				if (lz[y]) tg[y]+=tg[x]; else tg[y]=tg[x],lz[y]=1;
-				s[y]+=tg[x];
-			}
-			lz[x]=0;
-		}
-	}
-	void zigzag(int x)
-	{
-		int y=f[x],z=f[y],typ=(c[y][0]==x);
-		if (nroot(y)) c[z][c[z][1]==y]=x;
-		f[x]=z; f[y]=x;
-		if (c[x][typ]) f[c[x][typ]]=y;
-		c[y][typ^1]=c[x][typ]; c[x][typ]=y;
-		pushup(y);
-	}
-	void splay(int x)
-	{
-		static int st[N];
-		int y,tp;
-		st[tp=1]=y=x;
-		while (nroot(y)) st[++tp]=y=f[y];
-		while (tp) pushdown(st[tp--]);
-		for (; nroot(x); zigzag(x)) if (nroot(y=f[x])) zigzag((c[y][0]==x)^(c[f[y]][0]==y)?x:f[x]);
-		pushup(x);
-	}
-	int access(int x)
-	{
-		int y=0;
-		for (; x; x=f[y=x]) splay(x),c[x][1]=y,pushup(x);
-		return y;
-	}
-	int findroot(int x)//splay 根为树根，splay 维护树根到 x 的链
-	{
-		access(x); splay(x); pushdown(x);
-		while (c[x][0]) pushdown(x=c[x][0]);
-		splay(x); return x;
-	}
-	void split(int x,int y)//x 为树新根，y 为 splay 新根
-	{ makeroot(x); access(y); splay(y); }
-	void makeroot(int x)//x 为树、splay 新根
-	{ access(x); splay(x); swp(x); }
-	void modify(int x,const info &o)
-	{ makeroot(x); v[x]=o; pushup(x); }
-	void modify(int x,int y,const tag &o)
-	{
-		split(x,y); s[y]+=o;
-		if (lz[y]) tg[y]+=o; else tg[y]=o,lz[y]=1;
-	}
-	info ask(int x,int y) { split(x,y); return s[y]; }
-	bool connected(int x,int y)//注意会改变形态
-	{ makeroot(x); return findroot(y)==x; }
-	void link(int x,int y)//y 为新根
-	{ if (!connected(x,y)) makeroot(f[x]=y); }
-	void cut(int x,int y)
-	{
-		if (connected(x,y))//可能本不连通
-		{
-			pushdown(x);
-			if (c[x][1]==y&&!c[y][0]&&!c[y][1])//可能连通但无边
-			{
-				c[x][1]=f[y]=0;
-				pushup(x);
-			}
-		}
-	}
-	int lca(int x,int y) { access(x); return access(y); }
-	vector<int> res;
-	void dfs(int x)
-	{
-		if (!x) return;
-		pushdown(x);
-		dfs(c[x][0]); res.push_back(x); dfs(c[x][1]);
-	}
-	vector<int> get_path(int x,int y)
-	{
-		res.clear(); split(x,y); dfs(y);
-		if (res[0]!=x) return {};
-		return res;
-	}
-};
-const int N=2e5+5,M=4e5+5;
-struct Q
-{
-	void operator+=(const Q &o) const {}
-};
-void operator+=(int &x,const Q &o) { x=0; }
-LCT<N,int,Q> s;
-LCT<M,int,Q> t;
-int a[N],b[M];
-int main()
-{
-	ios::sync_with_stdio(0); cin.tie(0);
-	int n,m,i,r=0;
-	cin>>n>>m;
-	fill_n(a+n+1,n,1);
-	fill_n(b+1,n,1);
-	s.init(n*2,a);
-	t.init(n+m,b);
-	int bs=n,ds=n;
-	while (m--)
-	{
-		int op,u,v;
-		cin>>op>>u>>v;
-		u^=r; v^=r;
-		// dbg(op,u,v);
-		if (u<1||u>n||v<1||v>n) return 0;
-		if (op==1)
-		{
-			if (s.connected(u,v))
-			{
-				s.modify(u,v,{});
-				auto c=t.get_path(u,v);
-				for (i=1; i<c.size(); i++) t.cut(c[i-1],c[i]);
-				++ds;
-				for (int x:c) t.link(ds,x);
-			}
-			else
-			{
-				s.link(++bs,u);
-				s.link(bs,v);
-				t.link(++ds,u);
-				t.link(ds,v);
-			}
-		}
-		else
-		{
-			if (!s.connected(u,v))
-			{
-				cout<<"-1\n";
-				continue;
-			}
-			r=op==2?s.ask(u,v):t.ask(u,v);
-			cout<<r<<'\n';
-		}
-	}
-}
-\end{lstlisting}
-
-
-\subsection{带子树的 LCT}
-
-$O(n\log n)$，$O(n)$。
-
-\begin{lstlisting}
-#include "bits/stdc++.h"
-using namespace std;
-typedef long long ll;
-template<int N> struct LCT
-{
-	ll s[N],v[N],sg[N];
-	int f[N],c[N][2],siz[N],st[N];
-	//heap g[N]; //虚子树
-	bool lz[N];
-	void init(int n)
-	{
-		memset(f,0,n+1<<2);
-		memset(c,0,n+1<<3);
-		memset(s,0,n+1<<3);
-		memset(v,0,n+1<<3);
-		memset(lz,0,n+1);
-	}
-	bool nroot(int x)
-	{
-		return c[f[x]][0]==x||c[f[x]][1]==x;
-	}
-	void pushup(int x)
-	{
-		s[x]=s[c[x][0]]+s[c[x][1]]+v[x]+sg[x];
-		siz[x]=siz[c[x][0]]+siz[c[x][1]]+1;
-	}
-	void pushdown(int x)
-	{
-		if (lz[x])
-		{
-			swap(c[c[x][0]][0],c[c[x][0]][1]);
-			swap(c[c[x][1]][0],c[c[x][1]][1]);
-			lz[c[x][0]]^=1;
-			lz[c[x][1]]^=1;
-			lz[x]=0;
-		}
-	}
-	void zigzag(int x)
-	{
-		int y=f[x],z=f[y],typ=(c[y][0]==x);
-		if (nroot(y)) c[z][c[z][1]==y]=x;
-		f[x]=z;f[y]=x;
-		if (c[x][typ]) f[c[x][typ]]=y;
-		c[y][typ^1]=c[x][typ];c[x][typ]=y;
-		pushup(y);
-	}
-	void splay(int x)
-	{
-		int y,tp=0;
-		st[tp=1]=y=x;
-		while (nroot(y)) st[++tp]=y=f[y];
-		while (tp) pushdown(st[tp--]);
-		for (;nroot(x);zigzag(x)) if (!nroot(f[x])) continue; else zigzag((c[f[x]][0]==x)^(c[f[f[x]]][0]==f[x]) ? x:f[x]);
-		pushup(x);
-	}
-	void access(int x)
-	{
-		for (int y=0;x;x=f[y=x])
-		{
-			splay(x);sg[x]-=s[y];s[x]-=s[y];
-			sg[x]+=s[c[x][1]];s[x]+=s[c[x][1]];
-			//g[x].ins(s[c[x][1]]);g[x].del(s[y]);虚子树变化
-			c[x][1]=y;pushup(x);
-		}
-	}
-	int findroot(int x)
-	{
-		access(x);splay(x);pushdown(x);
-		while (c[x][0]) pushdown(x=c[x][0]);
-		splay(x);
-		return x;
-	}
-	void split(int x,int y)
-	{
-		makeroot(x);
-		access(y);
-		splay(y);
-	}
-	void makeroot(int x)
-	{
-		access(x);splay(x);lz[x]^=1;swap(c[x][0],c[x][1]); pushup(x);
-	}
-	void link(int x,int y)
-	{
-		makeroot(x);
-		if (x!=findroot(y))//可能已经连通
-		{
-			makeroot(y);f[x]=y;//虚子树变化
-			sg[y]+=s[x];s[y]+=s[x];
-		}
-	}
-	void cut(int x,int y)
-	{
-		makeroot(x);
-		if (x==findroot(y))//可能本不连通
-		{
-			pushdown(x);
-			if (c[x][1]==y&&!c[y][0]&&!c[y][1])//可能连通但无边
-			{
-				c[x][1]=f[y]=0;//可能需要修改
-				pushup(x);
-			}
-		}
-	}
-};
-const int N=2e5+2;
-LCT<N> s;
-int n,q,i,x,y,z,w;
-int main()
-{
-	cin>>n>>q;s.init(n);
-	for (i=1;i<=n;i++) cin>>x,s.s[i]=s.v[i]=x;
-	for (i=1;i<n;i++)
-	{
-		cin>>x>>y;++x;++y;
-		s.link(x,y);
-	}
-	while (q--)
-	{
-		cin>>x>>y>>z;++y;
-		if (x==0)
-		{
-			cin>>x>>w;
-			++z;++x;++w;
-			s.cut(y,z);s.link(x,w);
-			continue;
-		}
-		if (x==1)
-		{
-			s.split(y,y);
-			s.s[y]=(s.v[y]+=z);
-		}
-		else
-		{
-			++z;
-			s.split(y,z);
-			printf("%lld\n",s.s[y]);
-		}
-	}
-}
-\end{lstlisting}
-
-\subsection{轻重链剖分/DFS 序 LCA}
-
-首先 \verb|init(n)|，然后正常存边（$[1,n]$），然后 \verb|fun(root)|。
-
-\verb|get_path| 会返回这条路径上的 \verb|dfn| 区间。
-
-\begin{lstlisting}
-namespace HLD
-{
-	const int N = 5e5 + 2;
-	vector<int> e[N];
-	int dfn[N], nfd[N], dep[N], f[N], siz[N], hc[N], top[N];
-	int id, n;
-	void dfs1(int u)
-	{
-		siz[u] = 1;
-		for (int v : e[u]) if (v != f[u])
-		{
-			dep[v] = dep[f[v] = u] + 1;
-			dfs1(v);
-			siz[u] += siz[v];
-			if (siz[v] > siz[hc[u]]) hc[u] = v;
-		}
-	}
-	void dfs2(int u)
-	{
-		dfn[u] = ++id;
-		nfd[id] = u;
-		if (hc[u])
-		{
-			top[hc[u]] = top[u];
-			dfs2(hc[u]);
-			for (int v : e[u]) if (v != hc[u] && v != f[u]) dfs2(top[v] = v);
-		}
-	}
-	int lca(int u, int v)
-	{
-		while (top[u] != top[v])
-		{
-			if (dep[top[u]] < dep[top[v]]) swap(u, v);
-			u = f[top[u]];
-		}
-		if (dep[u] > dep[v]) swap(u, v);
-		return u;
-	}
-	int dis(int u, int v)
-	{
-		return dep[u] + dep[v] - (dep[lca(u, v)] << 1);
-	}
-	void init(int _n)
-	{
-		n = _n;
-		for (int i = 1; i <= n; i++)
-		{
-			e[i].clear();
-			f[i] = hc[i] = 0;
-		}
-		id = 0;
-	}
-	void fun(int root)
-	{
-		dep[root] = 1; dfs1(root); dfs2(top[root] = root);
-	}
-	vector<pair<int, int>> get_path(int u, int v)//u->v，注意可能出现 [r>l]（表示反过来走）
-	{
-		//cerr<<"path from "<<u<<" to "<<v<<": ";
-		vector<pair<int, int>> v1, v2;
-		while (top[u] != top[v])
-		{
-			if (dep[top[u]] > dep[top[v]]) v1.push_back({dfn[u], dfn[top[u]]}), u = f[top[u]];
-			else v2.push_back({dfn[top[v]], dfn[v]}), v = f[top[v]];
-		}
-		v1.reserve(v1.size() + v2.size() + 1);
-		v1.push_back({dfn[u], dfn[v]});
-		reverse(v2.begin(), v2.end());
-		for (auto v : v2) v1.push_back(v);
-		//for (auto [x,y]:v1) cerr<<"["<<x<<','<<y<<"] ";cerr<<endl;
-		return v1;
-	}
-}
-using HLD::e, HLD::dfn, HLD::nfd, HLD::dep, HLD::f, HLD::siz, HLD::get_path;
-using HLD::init;//5e5
-namespace LCA
-{
-	using HLD::N, HLD::n;
-	int st[__lg(N) + 1][N];
-	int cmp(const int &x, const int &y) { return dep[x] < dep[y] ? x : y; }
-	void fun(int rt)
-	{
-		HLD::fun(rt);
-		assert(f[rt] == 0);
-		for (int i = 1; i <= n; i++) st[0][dfn[i] - 1] = f[i];
-		for (int j = 0; j < __lg(n); j++)
-			for (int i = 1, k = n - (1 << j + 1); i <= k; i++) st[j + 1][i] = cmp(st[j][i], st[j][i + (1 << j)]);
-	}
-	int lca(int u, int v)
-	{
-		if (u == v) return u;
-		u = dfn[u], v = dfn[v];
-		if (u > v) swap(u, v);
-		int g = __lg(v - u);
-		return cmp(st[g][u], st[g][v - (1 << g)]);
-	}
-	int dis(int u, int v)
-	{
-		return dep[u] + dep[v] - (dep[lca(u, v)] << 1);
-	}
-}
-using LCA::lca, LCA::fun, LCA::dis;
-\end{lstlisting}
-
-\subsection{换根树剖}
-
-本质是对普通树剖在换根后的子树进行分类讨论。
-
-设预处理的根是 $u$，当前根是 $v$，那么 $w$ 的子树如下：
-
-\begin{enumerate}
-	\item $w=v$，\verb|dfn| 区间为 $[1,n]$。
-	\item $w$ 在 $u,v$ 之间，\verb|dfn| 区间为 $[1,n]$ 去掉 $w$ 前往 $v$ 方向的子树。找到这个子树的方法见 \verb|find| 函数。
-	\item 其余情况，\verb|dfn| 区间和原来一致。
-\end{enumerate}
-
-$O(n+q\log n)$，$O(n)$。
-
-\subsection{树上启发式合并，DSU on tree}
-
-一种过时的、基于两次 \verb|dfs| 的写法，在复杂度要求不严时不如直接存储 \verb|set|。
-
-流程：
-
-\begin{enumerate}
-	\item \verb|dfs| 轻子树计算答案，并清空全局统计信息。
-	\item \verb|dfs| 重子树统计答案和全局信息。
-	\item \verb|dfs| 轻子树统计全局信息。
-\end{enumerate}
-
-\begin{lstlisting}
-void dfs1(int x)
-{
-	siz[x]=zdep[x]=1;
-	int i;
-	for (i=fir[x];i;i=nxt[i]) if (lj[i]!=f[x])
-	{
-		dep[lj[i]]=dep[f[lj[i]]=x]+1;
-		dfs1(lj[i]);
-		siz[x]+=siz[lj[i]];
-		if (siz[hc[x]]<siz[lj[i]]) hc[x]=lj[i];
-		zdep[x]=max(zdep[x],zdep[lj[i]]+1);
-	}
-}
-void cal(int x)
-{
-	int i;
-	dl[tou=wei=1]=x;
-	while (tou<=wei)
-	{
-		++dp[dep[x=dl[tou++]]];
-		if ((dp[dep[x]]>dp[zd])||(dp[dep[x]]==dp[zd])&&(dep[x]<zd)) zd=dep[x];
-		for (i=fir[x];i;i=nxt[i]) if (lj[i]!=f[x]) dl[++wei]=lj[i];
-	}
-}
-void dfs2(int x)
-{
-	if (!hc[x])
-	{
-		if (++dp[dep[x]]>dp[zd]) zd=dep[x];
-		return;
-	}
-	int i;
-	for (i=fir[x];i;i=nxt[i]) if ((lj[i]!=f[x])&&(lj[i]!=hc[x]))
-	{
-		dfs2(lj[i]);
-		memset(dp+dep[lj[i]],0,zdep[lj[i]]<<2);
-	}
-	dfs2(hc[x]);
-	dp[dep[x]]=1;
-	if (dp[zd]<=1) zd=dep[x];
-	for (i=fir[x];i;i=nxt[i]) if ((lj[i]!=f[x])&&(lj[i]!=hc[x])) cal(lj[i]);
-	ans[x]=zd-dep[x];
-}
-\end{lstlisting}
-
-\subsection{长链剖分（$k$ 级祖先）}
-
-$O(n\log n+q)$，$O(n)$。
-
-\begin{lstlisting}
-void dfs1(int x)
-{
-	int i;
-	for (i = 1; i <= er[dep[x] - 1]; i++) f[x][i] = f[f[x][i - 1]][i - 1]; md[x] = dep[x];
-	for (i = fir[x]; i; i = nxt[i]) { dep[lj[i]] = dep[x] + 1; dfs1(lj[i]); if (md[lj[i]] > md[dc[x]]) dc[x] = lj[i]; }
-	if (dc[x]) md[x] = md[dc[x]];
-}
-void dfs2(int x)
-{
-	int i;
-	if (dc[x])
-	{
-		top[dc[x]] = top[x];
-		dfs2(dc[x]);
-		for (i = fir[x]; i; i = nxt[i]) if (lj[i] != dc[x]) dfs2(top[lj[i]] = lj[i]);
-	}
-	if (x == top[x])
-	{
-		c = md[x] - dep[x]; y = x; up[x].push_back(x); down[x].push_back(x);
-		for (i = 1; (i <= c) && (y = f[y][0]); i++) up[x].push_back(y); y = x;
-		for (i = 1; i <= c; i++) down[x].push_back(y = dc[y]);
-	}
-}
-int main()
-{
-	int n, q, ans = 0, x, y, c, i;
-	ll ta = 0;
-	cin >> n >> q >> s;
-	for (i = 1; i <= n; i++) { cin >> f[i][0]; if (f[i][0] == 0) rt = i; else add(f[i][0], i); }
-	for (i = 2; i <= n; i++) er[i] = er[i >> 1] + 1; dep[rt] = 1;
-	dfs1(rt); dfs2(top[rt] = rt);
-	for (i = 1; i <= q; i++)
-	{
-		x = (get(s) ^ ans) % n + 1; y = (get(s) ^ ans) % dep[x];
-		//此时计算 x 的 y 级祖先。结果在 ans 中。
-		if (y == 0) { ans = x; ta ^= (ll)i * ans; continue; }
-		c = dep[x] - y; x = top[f[x][er[y]]];
-		if (dep[x] > c) ans = up[x][dep[x] - c]; else ans = down[x][c - dep[x]];
-		ta ^= (ll)i * ans;
-	}
-	cout << ta << endl;
-}
-\end{lstlisting}
-
-\subsection{长链剖分（dp 合并）}
-
-一种常见的实现方法是用指针指向同一片数组区域，使得从链头到链尾正好指向连续的一段数组，就不需要计算偏移量了。
-
-$O(n)$，$O(n)$。
-
-\begin{lstlisting}
-void dfs1(int x)
-{
-	top[x]=1;
-	for (int i=fir[x];i;i=nxt[i]) if (!top[lj[i]])
-	{
-		dfs1(lj[i]);
-		if (len[lj[i]]>len[hc[x]]) hc[x]=lj[i];
-	}
-	len[x]=len[hc[x]]+1;top[hc[x]]=0;
-}
-void dfs2(int x)
-{
-	*f[x]=1;gs[x]=1;
-	if (!hc[x]) return;
-	ed[x]=1;f[hc[x]]=f[x]+1;
-	for (int i=fir[x];i;i=nxt[i]) if (!ed[lj[i]]) dfs2(lj[i]);
-	ans[x]=ans[hc[x]]+1;gs[x]=gs[hc[x]];
-	if (gs[x]==1) ans[x]=0;
-	for (int i=fir[x];i;i=nxt[i]) if ((!ed[lj[i]])&&(lj[i]!=hc[x]))
-	{
-		int v=lj[i],*p;
-		for (int j=0;j<len[v];j++)
-		{
-			*(p=f[x]+j+1)+=*(f[v]+j);
-			if (j+1==ans[x]) {gs[x]=*p;continue;}
-			if ((*p>gs[x])||(*p==gs[x])&&(j+1<ans[x])) {gs[x]=*p;ans[x]=j+1;}
-		}
-	}
-	gs[x]=*(f[x]+ans[x]);
-	ed[x]=0;
-}
-\end{lstlisting}
-
-\subsection{动态 dp（全局平衡二叉树）}
-
-意义不大。
-
-$O((n+q)\log n)$，$O(n)$。
-
-\begin{lstlisting}
-#include <stdio.h>
-#include <string.h>
-#include <algorithm>
-#include <fstream>
-using namespace std;
-const int N=1e6+2,M=6e7+2,INF=-1e9;
-struct matrix
-{
-	int a[2][2];
-};
-matrix s[N],js;
-matrix operator *(matrix x,matrix y)
-{
-	js.a[0][0]=max(x.a[0][0]+y.a[0][0],x.a[0][1]+y.a[1][0]);
-	js.a[0][1]=max(x.a[0][0]+y.a[0][1],x.a[0][1]+y.a[1][1]);
-	js.a[1][0]=max(x.a[1][0]+y.a[0][0],x.a[1][1]+y.a[1][0]);
-	js.a[1][1]=max(x.a[1][0]+y.a[0][1],x.a[1][1]+y.a[1][1]);
-	return js;
-}
-int st[N],c[N][2],hc[N],lj[N<<1],nxt[N<<1],fir[N],siz[N],v[N],g[N][2],fa[N],f[N],val[N];
-int n,m,i,j,x,y,z,dtp,stp,tp,fh,bs,rt,aaa,la;
-char dr[M+5],sc[M];
-void pushup(int x)
-{
-	s[x].a[0][0]=s[x].a[0][1]=g[x][0];
-	s[x].a[1][0]=g[x][1];s[x].a[1][1]=INF;
-	if (c[x][0]) s[x]=s[c[x][0]]*s[x];
-	if (c[x][1]) s[x]=s[x]*s[c[x][1]];
-}
-void add(int x,int y)
-{
-	lj[++bs]=y;
-	nxt[bs]=fir[x];
-	fir[x]=bs;
-	lj[++bs]=x;
-	nxt[bs]=fir[y];
-	fir[y]=bs;
-}
-bool nroot(int x)
-{
-	return ((c[f[x]][0]==x)||(c[f[x]][1]==x));
-}
-void dfs1(int x)
-{
-	siz[x]=1;
-	int i;
-	for (i=fir[x];i;i=nxt[i]) if (lj[i]!=fa[x])
-	{
-		fa[lj[i]]=x;
-		dfs1(lj[i]);
-		siz[x]+=siz[lj[i]];
-		if (siz[hc[x]]<siz[lj[i]]) hc[x]=lj[i];
-	}
-}
-int build(int l,int r)
-{
-	if (l>r) return 0;
-	int i,tot=0,upn=0;
-	for (i=l;i<=r;i++) tot+=val[i];tot>>=1;
-	for (i=l;i<=r;i++)
-	{
-		upn+=val[i];
-		if (upn>=tot)
-		{
-			f[c[st[i]][0]=build(l,i-1)]=st[i];
-			f[c[st[i]][1]=build(i+1,r)]=st[i];
-			pushup(st[i]);
-			++aaa;
-			return st[i];
-		}
-	}
-}
-int dfs2(int x)
-{
-	int i,j;
-	for (i=x;i;i=hc[i]) for (j=fir[i];j;j=nxt[j]) if ((lj[j]!=fa[i])&&(lj[j]!=hc[i]))
-	{
-		f[y=dfs2(lj[j])]=i;
-		g[i][0]+=max(s[y].a[0][0],s[y].a[1][0]);
-		g[i][1]+=s[y].a[0][0];
-	}
-	tp=0;
-	for (i=x;i;i=hc[i]) st[++tp]=i;
-	for (i=1;i<tp;i++) val[i]=siz[st[i]]-siz[st[i+1]];
-	val[tp]=siz[st[tp]];
-	return build(1,tp);
-}
-void change(int x,int y)
-{
-	g[x][1]+=y-v[x];v[x]=y;
-	while (f[x])
-	{
-		if (nroot(x)) pushup(x);
-		else
-		{
-			g[f[x]][0]-=max(s[x].a[0][0],s[x].a[1][0]);
-			g[f[x]][1]-=s[x].a[0][0];
-			pushup(x);
-			g[f[x]][0]+=max(s[x].a[0][0],s[x].a[1][0]);
-			g[f[x]][1]+=s[x].a[0][0];
-		}
-		x=f[x];
-	}
-	pushup(x);
-}
-int main()
-{
-	scanf("%d%d",&n,&m);
-	fread(dr+1,1,min(M,n*20+m*20),stdin);
-	for (i=1;i<=n;i++)
-	{
-		read(g[i][1]);
-		v[i]=g[i][1];
-	}
-	for (i=1;i<n;i++)
-	{
-		read(x);read(y);
-		add(x,y);
-	}
-	dfs1(1);
-	rt=dfs2(1);tp=0;
-	while (m--)
-	{
-		read(x);read(y);
-		change(x^la,y);
-		x=la=max(s[rt].a[0][0],s[rt].a[1][0]);
-		while (x)
-		{
-			st[++tp]=x%10;
-			x/=10;
-		}
-		while (tp) sc[++stp]=st[tp--]|48;
-		sc[++stp]=10;
-	}
-	fwrite(sc+1,1,stp,stdout);
-}
-\end{lstlisting}
-
-\subsection{全局平衡二叉树（修改版）}
-
-$O((n+q)\log n)$，$O(n)$。
-
-\begin{lstlisting}
-#include "bits/stdc++.h"
-using namespace std;
-typedef long long ll;
-typedef pair<int, int> pa;
-const int N = 1e6 + 2, M = 1e6 + 2;
-ll ans;
-pa w[N];
-int c[N][2], f[N], fa[N], v[N], s[N], lz[N], lj[M], nxt[M], siz[N], hc[N], fir[N], st[N];
-int a[N], top[N];
-int n, i, x, y, z, bs, tp, rt;
-void add()
-{
-	lj[++bs] = y; nxt[bs] = fir[x]; fir[x] = bs;
-	lj[++bs] = x; nxt[bs] = fir[y]; fir[y] = bs;
-}
-void pushup(int &x)
-{
-	s[x] = min(v[x], min(s[c[x][0]], s[c[x][1]]));
-}
-void pushdown(int &x)
-{
-	if (lz[x] < 0)
-	{
-		int cc = c[x][0];
-		if (cc)
-		{
-			lz[cc] += lz[x]; s[cc] += lz[x]; v[cc] += lz[x];
-		}
-		cc = c[x][1];
-		if (cc)
-		{
-			v[cc] += lz[x]; lz[cc] += lz[x]; s[cc] += lz[x];
-		}lz[x] = 0;
-		return;
-	}
-}
-bool nroot(int &x) { return c[f[x]][0] == x || c[f[x]][1] == x; }
-bool cmp(pa &o, pa &p) { return o > p; }
-void dfs1(int x)
-{
-	siz[x] = 1;
-	for (int i = fir[x]; i; i = nxt[i]) if (lj[i] != fa[x])
-	{
-		fa[lj[i]] = x; dfs1(lj[i]); siz[x] += siz[lj[i]];
-		if (siz[hc[x]] < siz[lj[i]]) hc[x] = lj[i];
-	}
-}
-int build(int l, int r)
-{
-	if (l > r) return 0;
-	if (l == r)
-	{
-		l = st[l]; s[l] = v[l] = siz[l] >> 1;
-		return l;
-	}
-	int x = lower_bound(a + l, a + r + 1, a[l] + a[r] >> 1) - a, y = st[x];
-	c[y][0] = build(l, x - 1);
-	c[y][1] = build(x + 1, r);
-	v[y] = siz[y] >> 1;
-	if (c[y][0]) f[c[y][0]] = y;
-	if (c[y][1]) f[c[y][1]] = y;
-	pushup(y);
-	return y;
-}
-void dfs2(int x)
-{
-	if (!hc[x]) return;
-	int i;
-	top[hc[x]] = top[x];
-	if (top[x] == x)
-	{
-		st[tp = 1] = x;
-		for (i = hc[x]; i; i = hc[i]) st[++tp] = i;
-		for (i = 1; i <= tp; i++) a[i] = siz[st[i]] - siz[hc[st[i]]] + a[i - 1];
-		f[build(1, tp)] = fa[x];
-	}
-	dfs2(hc[x]);
-	for (i = fir[x]; i; i = nxt[i]) if (lj[i] != fa[x] && lj[i] != hc[x]) dfs2(top[lj[i]] = lj[i]);
-}
-void mdf(int x)
-{
-	int y = x;
-	st[tp = 1] = x;
-	while (y = f[y]) st[++tp] = y; y = x;
-	while (tp) pushdown(st[tp--]);
-	while (x)
-	{
-		--v[x]; --lz[c[x][0]]; --v[c[x][0]]; --s[c[x][0]];
-		while (c[f[x]][0] == x) x = f[x]; x = f[x];
-	}
-	pushup(y);
-	while (y = f[y]) pushup(y);
-}
-int ask(int x)
-{
-	int y = x;
-	st[tp = 1] = x;
-	while (y = f[y]) st[++tp] = y;
-	while (tp) pushdown(st[tp--]);
-	int r = v[x];
-	while (x)
-	{
-		r = min(r, min(v[x], s[c[x][0]]));
-		while (c[f[x]][0] == x) x = f[x]; x = f[x];
-	}
-	return r;
-}
-signed main()
-{
-	cin >> n; s[0] = 1e9;
-	for (i = 1; i <= n; i++) cin >> w[w[i].second = i].first;
-	for (i = 1; i < n; i++) cin >> x >> y, add();
-	sort(w + 1, w + n + 1, cmp); dfs1(1); dfs2(top[1] = 1); rt = 1; while (f[rt]) rt = f[rt];
-	for (i = 1; i <= n && v[rt]; i++) if (ask(w[i].second)) mdf(w[i].second), ans += w[i].first;
-	cout << ans << endl;
-}
-\end{lstlisting}
-
-\subsection{虚树}
-
-传入点标号列表，返回虚树边表。自动认为 $1$ 是根，标号从 $1$ 开始。
-
-需要注意的是：在清空的时候需要同时考虑点列表和边表，都清空一下。
-
-你需要提供的是：\verb|dep|,\verb|lca|,\verb|dfn|。
-
-$O(n+\sum k\log n)$，$O(n)$。
-
-\begin{lstlisting}
-vector<pair<int, int>> get_tree(vector<int> a)
-{
-	vector<pair<int, int>> edges;
-	sort(all(a), [&](int u, int v) { return dfn[u]<dfn[v]; });
-	vector<int> st(a.size()+2);
-	int tp=0;
-	auto ins=[&](int u)
-		{
-			if (tp==0)
-			{
-				st[tp=1]=u;
-				return;
-			}
-			int v=lca(st[tp], u);
-			while (tp>1&&dep[v]<dep[st[tp-1]])
-			{
-				edges.emplace_back(st[tp-1], st[tp]);
-				--tp;
-			}
-			if (dep[v]<dep[st[tp]]) edges.emplace_back(v, st[tp--]);
-			if (!tp||st[tp]!=v) st[++tp]=v;
-			st[++tp]=u;
-		};
-	if (a[0]!=1) st[tp=1]=1;//先行添加根节点
-	for (int u:a) ins(u);
-	if (tp) while (--tp) edges.emplace_back(st[tp], st[tp+1]);//回溯
-	return edges;
-}
-\end{lstlisting}
-
-\subsection{圆方树}
-
-题意：求仙人掌上两点最短路。
-
-$O(n+m)$，$O(n+m)$。
-
-\begin{lstlisting}
-#include "bits/stdc++.h"
-using namespace std;
-#if !defined(ONLINE_JUDGE)&&defined(LOCAL)
-#include "my_header\debug.h"
-#else
-#define dbg(...); 1;
-#endif
-typedef unsigned int ui;
-typedef long long ll;
-#define all(x) (x).begin(),(x).end()
-const int N=3e4+2,M=3e4+2;//M 包括方点
-struct P
-{
-	int v,w,id;
-	P(int a,int b,int c):v(a),w(b),id(c){}
-};
-struct Q
-{
-	int v,w;
-	Q(int a,int b):v(a),w(b){}
-};
-vector<P> e[N];
-vector<Q> fe[M];
-int dfn[M],low[N],st[N],len[M],top[M],siz[M],hc[M],dep[M],f[M],rb[N];
-bool ed[M];//ed,dfn,loop,sum,fe,hc,tp,id,cnt,dep[1] 需初始化（注意倍率），ed 大小为边数
-int tp,id,cnt,n;
-void dfs1(int u)
-{
-	dfn[u]=low[u]=++id;
-	st[++tp]=u;
-	for (auto [v,w,id]:e[u]) if (!ed[id])
-	{
-		if (dfn[v]) low[u]=min(low[u],dfn[v]),rb[v]=w; else
-		{
-			ed[id]=1;
-			dfs1(v);
-			if (dfn[u]>low[v]) low[u]=min(low[u],low[v]),rb[v]=w; else
-			{
-				int ntp=tp;
-				while (st[ntp]!=v) --ntp;
-				if (ntp==tp)//圆圆边
-				{
-					--tp;
-					fe[u].emplace_back(v,w);
-					f[v]=u;
-					continue;
-				}
-				++cnt;f[cnt]=u;
-				for (int i=ntp;i<=tp;i++) f[st[i]]=cnt;
-				len[st[ntp]]=w;
-				for (int i=ntp+1;i<=tp;i++) len[st[i]]=len[st[i-1]]+rb[st[i]];
-				len[cnt]=len[st[tp]]+rb[u];
-				fe[u].emplace_back(cnt,0);
-				for (int i=ntp;i<=tp;i++) fe[cnt].emplace_back(st[i],min(len[st[i]],len[cnt]-len[st[i]]));
-				tp=ntp-1;
-			}
-		}
-	}
-}
-void dfs2(int u)
-{
-	siz[u]=1;
-	for (auto [v,w]:fe[u])
-	{
-		dep[v]=dep[u]+w;
-		dfs2(v);
-		siz[u]+=siz[v];
-		if (siz[v]>siz[hc[u]]) hc[u]=v;
-	}
-}
-void dfs3(int u)
-{
-	dfn[u]=++id;
-	if (hc[u])
-	{
-		top[hc[u]]=top[u];
-		dfs3(hc[u]);
-		for (auto [v,w]:fe[u]) if (v!=hc[u]) dfs3(top[v]=v);
-	}
-}
-int lca(int u,int v)
-{
-	while (top[u]!=top[v]) if (dfn[top[u]]>dfn[top[v]]) u=f[top[u]]; else v=f[top[v]];//注意不能用 dep
-	return dfn[u]<dfn[v]?u:v;
-}
-int find(int u,int v)//u 是根
-{
-	if (dfn[hc[u]]+siz[hc[u]]>dfn[v]) return hc[u];
-	while (f[top[v]]!=u) v=f[top[v]];
-	return top[v];
-}
-int dis(int u,int v)
-{
-	int o=lca(u,v),r=dep[u]+dep[v];
-	if (o<=n) return r-(dep[o]<<1);
-	u=find(o,u);v=find(o,v);
-	if (len[u]>len[v]) swap(u,v);
-	return r+min(len[v]-len[u],len[o]-(len[v]-len[u]))-dep[u]-dep[v];
-}
-int main()
-{
-	ios::sync_with_stdio(0);cin.tie(0);
-	int m,q,i;
-	cin>>n>>m>>q;cnt=n;
-	for (i=1;i<=m;i++)
-	{
-		int u,v,w;
-		cin>>u>>v>>w;
-		e[u].emplace_back(v,w,i);
-		e[v].emplace_back(u,w,i);
-	}
-	mt19937 rnd(time(0));
-	for (i=1;i<=n;i++) shuffle(all(e[i]),rnd);
-	dfs1(1);id=0;
-	dfs2(1);
-	dfs3(top[1]=1);
-	while (q--)
-	{
-		int u,v;
-		cin>>u>>v;
-		cout<<dis(u,v)<<'\n';
-	}
-}
-\end{lstlisting}
-
-\subsection{广义圆方树}
-
-$O(n+m)$，$O(n+m)$。
-
-\begin{lstlisting}
-void dfs(int u)
-{
-	dfn[u]=low[u]=++id;
-	st[++tp]=u;
-	for (int v:e[u]) if (dfn[v]) low[u]=min(low[u],dfn[v]); else
-	{
-		dfs(v);
-		low[u]=min(low[u],low[v]);
-		if (dfn[u]<=low[v])
-		{
-			vector cur={u};
-			do
-			{
-				cur.push_back(st[tp]);
-			} while (st[tp--]!=v);
-			ans.push_back(cur);
-		}
-	}
-}
-\end{lstlisting}
-
-\subsection{支配树（DAG 版）}
-
-其定义见一般图版。
-
-$O(m\log n)$，$O(n\log n)$。
-
-\begin{lstlisting}
-int lca(int x, int y)
-{
-	int i;
-	if (dep[x] < dep[y]) swap(x, y);
-	for (i = lm[x]; dep[x] != dep[y]; i--) if (dep[f[x][i]] >= dep[y]) x = f[x][i];
-	if (x == y) return x;
-	for (i = lm[x]; f[x][0] != f[y][0]; i--) if (f[x][i] != f[y][i])
-	{
-		x = f[x][i]; y = f[y][i];
-	}
-	return f[x][0];
-}
-void dfs(int x)
-{
-	s[x] = 1;
-	int i;
-	for (i = sfir[x]; i; i = snxt[i])
-	{
-		dfs(slj[i]);
-		s[x] += s[slj[i]];
-	}
-}
-int main()
-{
-	dep[0] = -1;
-	cin >> n;
-	for (i = 1; i <= n; i++)
-	{
-		cin >> x;
-		while (x)
-		{
-			add(x, i);
-			cin >> x;
-		}
-	}
-	dl[tou = wei = 1] = ++n;
-	for (i = 1; i < n; i++) if (!rd[i]) add(n, i);
-	while (tou <= wei)
-	{
-		for (i = fir[x = dl[tou++]]; i; i = nxt[i]) if (--rd[lj[i]] == 0) dl[++wei] = lj[i];
-		if (i = ffir[x])
-		{
-			y = flj[i];
-			while (i = fnxt[i]) y = lca(y, flj[i]);
-			f[x][0] = y;
-		}
-		else y = 0;
-		sadd(y, x);
-		f[x][0] = y;
-		for (i = 1; i <= 16; i++) if (0 == (f[x][i] = f[f[x][i - 1]][i - 1]))
-		{
-			lm[x] = i;
-			break;
-		}
-		dep[x] = dep[y] + 1;
-	}
-	dfs(n);
-	for (i = 1; i < n; i++) printf("%d\n", s[i] - 1);
-}
-\end{lstlisting}
-
-\subsection{支配树（一般图）}
-
-$u$ 支配 $v$ 指的是从 $S$ 到 $v$ 的路径必然经过 $u$。支配树是保持支配关系不变的树，其中 $s$ 是根，$idom[u]$ 是 $u$ 的父节点。
-
-\begin{lstlisting}
-vector<int> dom_tree(vector<vector<int>> e, int s)//[1,n]
-{
-	int n = e.size() - 1, i, id = 0;
-	vector<vector<int>> c(n + 1), buc(c), ie(c);
-	vector<int> mn(n + 1), f(n + 1), sdom(n + 1), idom(n + 1), dfn(n + 1), nfd(n + 1), pv(n + 1), ed(n + 1);
-	auto cmp = [&](int x, int y) {return dfn[x] < dfn[y] ? x : y; };
-	auto cmp2 = [&](int x, int y) {return dfn[sdom[x]] < dfn[sdom[y]] ? x : y; };
-	function<void(int)> getf = [&](int u) {
-		if (f[u] == u) return;
-		getf(f[u]);
-		mn[u] = cmp2(mn[u], mn[f[u]]);
-		f[u] = f[f[u]];
-	};
-	for (i = 1; i <= n; i++) mn[i] = f[i] = i;
-	function<void(int)> dfs = [&](int u) {
-		ed[u] = 1;
-		for (int v : e[u]) if (!ed[v]) dfs(v);
-	};
-	dfs(s);
-	for (i = 1; i <= n; i++) if (ed[i]) erase_if(e[i], [&](int v) { return !ed[v]; });
-	else e[i].clear();
-	for (i = 1; i <= n; i++) for (int v : e[i]) ie[v].push_back(i);
-	dfs = [&](int u) {
-		nfd[dfn[u] = ++id] = u;
-		for (int v : e[u]) if (!dfn[v]) dfs(v), c[u].push_back(v);
-	};
-	dfs(s); dfn[0] = 1e9;
-	for (i = id; i; i--)
-	{
-		int u = nfd[i], w = 0;
-		for (int v : ie[u])
-		{
-			sdom[u] = cmp(sdom[u], v);
-			if (dfn[v] > dfn[u])
-			{
-				getf(v);
-				w = cmp2(w, mn[v]);
-			}
-		}
-		sdom[u] = cmp(sdom[u], sdom[w]);
-		buc[sdom[u]].push_back(u);
-		for (int v : buc[u]) getf(v), pv[v] = mn[v];
-		for (int v : c[u]) f[v] = u, mn[v] = cmp2(mn[v], mn[u]);
-	}
-	for (i = 1; i <= n; i++) idom[nfd[i]] = (sdom[pv[nfd[i]]] == sdom[nfd[i]]) ? sdom[nfd[i]] : idom[pv[nfd[i]]];
-	idom[s] = s;
-	return idom;
-}
-int main()
-{
-	int n, m, s;
-	cin >> n >> m >> s; ++s;
-	vector<vector<int>> e(n + 1);
-	for (int i = 1; i <= m; i++)
-	{
-		int u, v;
-		cin >> u >> v; ++u; ++v;
-		e[u].push_back(v);
-	}
-	auto r = dom_tree(e, s);
-	for (int i = 1; i <= n; i++) cout << r[i] - 1 << " \n"[i == n];
-}
-
-\end{lstlisting}
-
-\subsection{最小乘积生成树}
-
-题意：每条边有两个属性 $x_i,y_i$，你需要最小化 $(\sum x_i)(\sum y_i)$。
-
-你需要实现的是 \verb|sol1|，即按照 $val$ 为权值的答案。$val_i$ 是根据 $x_i,y_i$ 计算的。
-
-\begin{lstlisting}
-#include "bits/stdc++.h"
-using namespace std;
-typedef long long ll;
-const int N = 202, M = 10002;
-struct P
-{
-	int x, y;
-	P(int a = 0, int b = 0) :x(a), y(b) { }
-	bool operator<(const P &o) const { return (ll)x * y < (ll)o.x * o.y || (ll)x * y == (ll)o.x * o.y && x < o.x; }
-};
-struct Q
-{
-	int u, v, x, y, val;
-	bool operator<(const Q &o) const { return val < o.val; }
-};
-P ans = P(1e9, 1e9), l, r;
-Q a[M];
-int f[N];
-int n, m, i;
-int getf(int x)
-{
-	if (f[x] == x) return x;
-	return f[x] = getf(f[x]);
-}
-P sol1()
-{
-	P r = P(0, 0);
-	for (i = 1; i <= n; i++) f[i] = i;
-	sort(a + 1, a + m + 1);
-	for (i = 1; i <= m; i++) if (getf(a[i].u) != getf(a[i].v))
-	{
-		f[f[a[i].u]] = f[a[i].v];
-		r.x += a[i].x, r.y += a[i].y;
-	}
-	return r;
-}
-void sol2(P l, P r)
-{
-	for (i = 1; i <= m; i++) a[i].val = (r.x - l.x) * a[i].y + (l.y - r.y) * a[i].x;
-	P np = sol1();
-	ans = min(ans, np);
-	if ((ll)(r.x - l.x) * (np.y - l.y) - (ll)(r.y - l.y) * (np.x - l.x) >= 0) return;
-	sol2(l, np); sol2(np, r);
-}
-int main()
-{
-	cin >> n >> m;
-	for (i = 1; i <= m; i++) cin >> a[i].u >> a[i].v >> a[i].x >> a[i].y, ++a[i].u, ++a[i].v;
-	for (i = 1; i <= m; i++) a[i].val = a[i].x; l = sol1();
-	for (i = 1; i <= m; i++) a[i].val = a[i].y; r = sol1();
-	ans = min(ans, min(l, r)); sol2(l, r);
-	cout<<ans.x<<' '<<ans.y<<endl;
-}
-\end{lstlisting}
-
-\subsection{最小斯坦纳树}
-
-题意：让给定点集连通的最小生成树（不要求全图连通）
-
-$O(3^kn+2^km\log m)$。
-
-\begin{lstlisting}
-const int N = 102, M = 1002, K = 1024;
-typedef long long ll;
-typedef pair<ll, int> pa;
-priority_queue<pa, vector<pa>, greater<pa> > heap;
-pa cr;
-ll f[K][N], inf;
-int lj[M], len[M], nxt[M], fir[N];
-int n, m, q, i, j, k, x, y, z, bs, c;
-void add()
-{
-	lj[++bs] = y;
-	len[bs] = z;
-	nxt[bs] = fir[x];
-	fir[x] = bs;
-	lj[++bs] = x;
-	len[bs] = z;
-	nxt[bs] = fir[y];
-	fir[y] = bs;
-}
-void dijk(int s)
-{
-	int i;
-	while (!heap.empty())
-	{
-		x = heap.top().second; heap.pop();
-		for (i = fir[x]; i; i = nxt[i]) if (f[s][lj[i]] > f[s][x] + len[i])
-		{
-			cr.first = f[s][cr.second = lj[i]] = f[s][x] + len[i];
-			heap.push(cr);
-		}
-		while ((!heap.empty()) && (heap.top().first != f[s][heap.top().second])) heap.pop();
-	}
-}
-int main()
-{
-	memset(f, 0x3f, sizeof(f)); inf = f[0][0];
-	cin >> n >> m >> q;
-	while (m--)
-	{
-		cin >> x >> y >> z;
-		add();
-	}
-	for (i = 1; i <= q; i++)
-	{
-		cin >> x;
-		f[1 << i - 1][x] = 0;
-	}
-	q = (1 << q) - 1;
-	for (i = 1; i <= q; i++)
-	{
-		for (k = 1; k <= n; k++)
-		{
-			for (j = i & (i - 1); j; j = i & (j - 1)) f[i][k] = min(f[i][k], f[j][k] + f[i ^ j][k]);
-			if (f[i][k] < inf) heap.push(pa(f[i][k], k));
-		}
-		dijk(i);
-	}
-	for (i = 1; i <= n; i++) inf = min(inf, f[q][i]);
-	cout << inf << endl;
-}
-\end{lstlisting}
-
-\subsection{$2$-sat}
-
-支持添加一个条件 \verb|add(u,x,v,y)|，表示 $a_u=x\Rightarrow a_v=y$。支持设定一个变量的值。
-
-$O(n+m)$，$O(n+m)$。
-
-\begin{lstlisting}
-struct sat
-{
-	vector<vector<int>> e;
-	vector<int> dfn,low,st,f,ed;
-	int fs,tp,id,n;
-	sat(int n):n(n),e(n*2),dfn(n*2,-1),low(n*2),st(n*2),f(n*2,-1),ed(n*2),fs(0),tp(-1),id(0){}
-	void dfs(int u)
-	{
-		dfn[u]=low[u]=id++;
-		ed[u]=1;st[++tp]=u;
-		for (int v:e[u]) if (dfn[v]!=-1)
-		{
-			if (ed[v]) low[u]=min(low[u],dfn[v]);
-		} else dfs(v),low[u]=min(low[u],low[v]);
-		if (dfn[u]==low[u])
-		{
-			do
-			{
-				f[st[tp]]=fs;
-				ed[st[tp]]=0;
-			} while (st[tp--]!=u);
-			++fs;
-		}
-	}
-	void add(int u,bool x,int v,bool y)
-	{
-		assert(u>=0&&u<n&&v>=0&&v<n);
-		e[u+x*n].push_back(v+y*n);
-		e[v+(y^1)*n].push_back(u+(x^1)*n);
-	}
-	void set(int u,bool x)
-	{
-		assert(u>=0&&u<n);
-		e[u+(x^1)*n].push_back(u+x*n);
-	}
-	vector<int> getans()
-	{
-		int i;
-		for (i=0;i<n*2;i++) if (dfn[i]==-1) dfs(i);
-		vector<int> r(n);
-		for (i=0;i<n;i++)
-		{
-			if (f[i]==f[i+n]) return {};
-			r[i]=f[i]>f[i+n];
-		}
-		return r;
-	}
-};
-\end{lstlisting}
-
-\subsection{Kosaraju 强连通分量（bitset 优化）}
-
-实用意义不大。
-
-$O(\frac{n^2}w)$，$O(\frac {n^2}w)$。
-
-\begin{lstlisting}
-void dfs1(int x)
-{
-	int i; ed[x] = 0;
-	for (i = (lj[x] & ed)._Find_first(); i <= n; i = (lj[x] & ed)._Find_next(i)) dfs1(i);
-	sx[--tp] = x;
-}
-void dfs2(int x)
-{
-	int i; ed[x] = 0; tv[f[x] = f[0]] += v[x];
-	for (i = (fj[x] & ed)._Find_first(); i <= n; i = (fj[x] & ed)._Find_next(i)) dfs2(i);
-}
-int main()
-{
-	cin >> n >> m;
-	tp = n + 1;
-	for (i = 1; i <= n; i++) { ed[i] = 1; cin >> v[i]; }
-	for (i = 1; i <= m; i++)
-	{
-		cin >> x >> y;
-		lj[x][y] = 1; fj[y][x] = 1; lb[i][0] = x; lb[i][1] = y;
-	}
-	for (i = 1; i <= n; i++) if (ed[i]) dfs1(i);
-	ed.set();
-	for (i = 1; i <= n; i++) if (ed[sx[i]]) { ++f[0]; dfs2(sx[i]); }
-	for (i = 1; i <= m; i++) if (f[lb[i][0]] != f[lb[i][1]])
-	{
-		flj[f[lb[i][0]]].push_back(f[lb[i][1]]); ++rd[f[lb[i][1]]];
-	}
-	for (i = 1; i <= f[0]; i++) if (!rd[i]) dl[++wei] = i;
-	while (tou <= wei)
-	{
-		x = dl[tou++]; g[x] += tv[x];
-		for (i = 0; i < flj[x].size(); i++)
-		{
-			g[flj[x][i]] = max(g[flj[x][i]], g[x]);
-			if (--rd[flj[x][i]] == 0) dl[++wei] = flj[x][i];
-		}
-	}
-	for (i = 1; i <= f[0]; i++) ans = max(ans, g[i]); printf("%d", ans);
-}
-\end{lstlisting}
-
-\subsection{Tarjan 强连通分量}
-
-$O(n+m)$，$O(n+m)$。
-
-\begin{lstlisting}
-int dfn[N],low[N],st[N],f[N],fs,tp,id;
-bool ed[N];
-void tarjan(int u)
-{
-	dfn[u]=low[u]=++id;
-	ed[u]=1;st[++tp]=u;
-	for (int v:e[u]) if (dfn[v])
-	{
-		if (ed[v]) low[u]=min(low[u],dfn[v]);
-	} else tarjan(v),low[u]=min(low[u],low[v]);
-	if (dfn[u]==low[u])
-	{
-		++fs;
-		do
-		{
-			f[st[tp]]=fs;
-			ed[st[tp]]=0;
-		} while (st[tp--]!=u);
-	}
-}
-
-\end{lstlisting}
-
-\subsection{动态强连通分量}
-
-给出一个加边序列，\verb|solve| 会返回每个时间进入强连通分量的边。点标号范围是 $[0,n)$
-
-\begin{lstlisting}
-
-struct union_set
-{
-	vector<int> f;
-	int n;
-	union_set() { }
-	union_set(int nn) :n(nn), f(nn+1)
-	{
-		iota(all(f), 0);
-	}
-	int getf(int u) { return f[u]==u ? u : f[u] = getf(f[u]); }
-	bool merge(int u, int v)
-	{
-		u = getf(u); v = getf(v);
-		if (u==v) return 0;
-		f[u] = v;
-		return 1;
-	}
-	bool connected(int u, int v) { return getf(u)==getf(v); }
-};
-struct edge
-{
-	int u, v, t;
-};
-vector<vector<edge>> solve(int n, const auto& eg)//[0,n)
-{
-	int m = eg.size(), tp = -1, id = 0, fs = 0;
-	vector<vector<edge>> res(m);
-	vector e(n, vector<int>());
-	vector<int> dfn(n, -1), low(n, -1), st(n), ed(n), blk(n), node;
-	union_set s(n-1);
+vector<int> tree_hash(const vector<vector<int>>& e, int root)//[0,n)
+{
+	int n = e.size();
+	static map<vector<int>, int> mp;
+	static int id = 0;
+	vector<int> h(n), ed(n);
 	function<void(int)> dfs = [&](int u)
 		{
-			dfn[u] = low[u] = id++;
-			ed[st[++tp] = u] = 1;
-			for (int v : e[u]) if (dfn[v]!=-1)
+			ed[u] = 1;
+			vector<int> c;
+			for (int v : e[u]) if (!ed[v])
 			{
-				if (ed[v]) cmin(low[u], dfn[v]);
+				dfs(v);
+				c.push_back(h[v]);
 			}
-			else dfs(v), cmin(low[u], low[v]);
-			if (dfn[u]==low[u])
-			{
-				do
-				{
-					ed[st[tp]] = 0;
-					blk[st[tp]] = fs;
-				} while (st[tp--]!=u);
-				++fs;
-			}
+			sort(all(c));
+			if (!mp.count(c)) mp[c] = id++;
+			h[u] = mp[c];
 		};
-	auto ztef = [&](auto ztef, int l, int r, const vector<edge>& q)
-		{
-			if (eg.size()==0) return;
-			if (l+1==r)
-			{
-				if (l<m)
-				{
-					res[l].insert(res[l].end(), all(q));
-					for (auto [u, v, t]:q) s.merge(u, v);
-				}
-				return;
-			}
-			int m = (l+r)/2;
-			node.clear();
-			for (auto [u, v, t]:q) if (t<m)
-			{
-				u = s.getf(u);
-				v = s.getf(v);
-				e[u].push_back(v);
-				node.push_back(u);
-				node.push_back(v);
-			}
-			else break;
-			for (int u : node) if (dfn[u]==-1) dfs(u);
-			vector<vector<edge>> g(2);
-			for (auto [u, v, t]:q) g[t<m&&blk[s.f[u]]==blk[s.f[v]]].push_back({u, v, t});
-			for (int u : node)
-			{
-				e[u].clear();
-				dfn[u] = low[u] = -1;
-			}
-			id = fs = 0;
-			ztef(ztef, l, m, g[1]);
-			ztef(ztef, m, r, g[0]);
-		};
-	ztef(ztef, 0, m+1, eg);
-	return res;
+	dfs(root);
+	return h;
 }
-int main()
+vector<int> tree_hash(const vector<vector<int>>& e)//[0,n)
 {
-	ios::sync_with_stdio(0); cin.tie(0);
-	cout<<fixed<<setprecision(15);
-	int n, m, i, j;
-	cin>>n>>m;
-	vector<ll> x(n);
-	cin>>x;
-	vector<edge> edges(m);
-	for (i = 0;i<m;i++)
-	{
-		auto& [u, v, t] = edges[i];
-		cin>>u>>v;
-		t = i;
-	}
-	auto event = solve(n, edges);
-	union_set s(n-1);
-	ll ans = 0;
-	for (auto e:event)
-	{
-		for (auto [u, v, t]:e)
+	int n = e.size();
+	if (n == 0) return { };
+	vector<int> sz(n), mx(n);
+	function<void(int)> dfs = [&](int u)
 		{
-			u = s.getf(u);
-			v = s.getf(v);
-			if (u==v) continue;
-			s.f[v] = u;
-			(ans += x[u]*x[v]) %= p;
-			(x[u] += x[v]) %= p;
+			sz[u] = 1;
+			for (int v : e[u]) if (!sz[v])
+			{
+				dfs(v);
+				sz[u] += sz[v];
+				cmax(mx[u], sz[v]);
+			}
+			cmax(mx[u], n - sz[u]);
+		};
+	dfs(0);
+	int m = *min_element(all(mx)), i;
+	vector<int> rt;
+	for (i = 0;i < n;i++) if (mx[i] == m) rt.push_back(i);
+	for (int& u : rt) u = tree_hash(e, u)[u];
+	sort(all(rt));
+	return rt;
+}
+template<class T> void min_order(vector<T>& a)
+{
+	int n = a.size(), i, j, k;
+	a.resize(n * 2);
+	for (i = 0;i < n;i++) a[i + n] = a[i];
+	i = k = 0;j = 1;
+	while (i < n && j < n && k < n)
+	{
+		T x = a[i + k], y = a[j + k];
+		if (x == y) ++k; else
+		{
+			(x > y ? i : j) += k + 1;
+			j += (i == j);
+			k = 0;
 		}
-		cout<<ans<<'\n';
 	}
+	a.resize(n);
+	//[min(i,j),n)+[0,min(i,j))
+	rotate(a.begin(), min(i, j) + all(a));
+}
+vector<int> pseudotree_hash(const vector<vector<int>>& e)//[0,n)
+{
+	int n = e.size();
+	static map<vector<int>, int> mp;
+	static int id = 0;
+	vector<int> f(n), ed(n), h(n);
+	pair lp{-1, -1};
+	function<void(int)> dfs = [&](int u)
+		{
+			ed[u] = 1;
+			for (int v : e[u]) if (!ed[v])
+			{
+				f[v] = u;
+				dfs(v);
+			}
+			else if (v != f[u]) lp = {u, v};
+		};
+	dfs(0);
+	auto [x, y] = lp;
+	vector<int> node = {y};
+	do node.push_back(y = f[y]); while (y != x);
+	fill(all(ed), 0);
+	for (int u : node) ed[u] = 1;
+	dfs = [&](int u)
+		{
+			ed[u] = 1;
+			vector<int> c;
+			for (int v : e[u]) if (!ed[v])
+			{
+				dfs(v);
+				c.push_back(h[v]);
+			}
+			sort(all(c));
+			if (!mp.count(c)) mp[c] = id++;
+			h[u] = mp[c];
+		};
+	vector<int> r0;
+	for (int u : node)
+	{
+		dfs(u);
+		r0.push_back(h[u]);
+	}
+	auto r1 = r0;
+	reverse(all(r1));
+	min_order(r0);
+	min_order(r1);
+	return min(r0, r1);
 }
 \end{lstlisting}
-\subsection{欧拉路径（字典序最小）}
+
+\subsection{欧拉路相关}
+
+\subsubsection{构造：字典序最小}
 
 \begin{lstlisting}
 #include "bits/stdc++.h"
@@ -12329,7 +11801,7 @@ int main()
 }
 \end{lstlisting}
 
-\subsection{欧拉回/通路构造}
+\subsubsection{回路/通路构造}
 
 $O(n+m)$，$O(n+m)$。
 
@@ -12462,7 +11934,7 @@ optional<vector<int>> directed_euler_trail(int n,const vector<pair<int,int>> &ed
 }
 \end{lstlisting}
 
-\subsection{有向图欧拉回路计数（BEST 定理）/生成树计数}
+\subsubsection{回路计数（BEST 定理）/生成树计数}
 
 $O(n^3)$，$O(n^2)$。
 
@@ -12560,6 +12032,358 @@ ll undirected_spanning_tree_count(vector<vector<int>> a)
 }
 \end{lstlisting}
 
+\subsection{三/四元环计数}
+
+不能处理有重边和自环的情况。
+
+$O(m\sqrt m)$，$O(n+m)$。
+
+注意四元环数的是边四元环。点四元环需要去掉四点完全图个数*2，似乎不太能做？
+
+三元环是可以枚举的，你可以在 \verb|ans| 改变时记录三元环 $(i,u,v)$。
+
+\begin{lstlisting}
+ll triple(const vector<pair<int,int>> &edges)//start from 0
+{
+	int n=0,i;
+	for (auto [u,v]:edges) n=max({n,u,v});
+	++n;
+	vector<int> d(n),id(n),rk(n),cnt(n);
+	vector<vector<int>> e(n);
+	for (auto [u,v]:edges) ++d[u],++d[v];
+	iota(all(id),0); sort(all(id),[&](int x,int y) { return d[x]<d[y]; });
+	for (i=0; i<n; i++) rk[id[i]]=i;
+	for (auto [u,v]:edges)
+	{
+		if (rk[u]>rk[v]) swap(u,v);
+		e[u].push_back(v);
+	}
+	ll ans=0;
+	for (i=0; i<n; i++)
+	{
+		for (int u:e[i]) cnt[u]=1;
+		for (int u:e[i]) for (int v:e[u]) ans+=cnt[v];
+		for (int u:e[i]) cnt[u]=0;
+	}
+	return ans;
+}
+ll quadruple(const vector<pair<int,int>> &edges)
+{
+	int n=0,i;
+	for (auto [u,v]:edges) n=max({n,u,v});
+	++n;
+	vector<int> d(n),id(n),rk(n),cnt(n);
+	vector<vector<int>> e(n),lk(n);
+	for (auto [u,v]:edges) ++d[u],++d[v];
+	iota(all(id),0); sort(all(id),[&](int x,int y) { return d[x]<d[y]; });
+	for (i=0; i<n; i++) rk[id[i]]=i;
+	for (auto [u,v]:edges)
+	{
+		if (rk[u]>rk[v]) swap(u,v);
+		e[u].push_back(v);
+		lk[u].push_back(v);
+		lk[v].push_back(u);
+	}
+	ll ans=0;
+	for (i=0; i<n; i++)
+	{
+		for (int u:lk[i]) for (int v:e[u]) if (rk[v]>rk[i]) ans+=cnt[v]++;
+		for (int u:lk[i]) for (int v:e[u]) cnt[v]=0;
+	}
+	return ans;
+}
+map<pair<int, int>, ll> quadruple(vector<pair<int, int>> edges)
+{
+	int n = 0, i;
+	for (auto [u, v] : edges) n = max({n, u, v});
+	++n;
+	map<pair<int, int>, int> ec;
+	for (auto [u, v] : edges)
+	{
+		if (u > v) swap(u, v);
+		++ec[{u, v}];
+	}
+	vector<ll> c;
+	edges.clear();
+	for (auto [_, cc] : ec) edges.push_back(_), c.push_back(cc);
+	vector d(n, 0), id(d), rk(d);
+	vector<ll> cnt(n);
+	vector<vector<pair<int, int>>> e(n), lk(n);
+	for (auto [u, v] : edges) ++d[u], ++d[v];
+	iota(all(id), 0); sort(all(id), [&](int x, int y) { return d[x] < d[y]; });
+	for (i = 0; i < n; i++) rk[id[i]] = i;
+	i = 0;
+	for (auto [u, v] : edges)
+	{
+		if (rk[u] > rk[v]) swap(u, v);
+		e[u].push_back({v, i});
+		lk[u].push_back({v, i});
+		lk[v].push_back({u, i});
+		++i;
+	}
+	int m = edges.size();
+	vector<ll> ans(m);
+	for (i = 0; i < n; i++)
+	{
+		for (auto [u, w1] : lk[i]) for (auto [v, w2] : e[u]) if (rk[v] > rk[i])
+		{
+			cnt[v] += c[w1] * c[w2];
+		}
+		for (auto [u, w1] : lk[i]) for (auto [v, w2] : e[u]) if (rk[v] > rk[i])
+		{
+			ans[w1] += (cnt[v] - c[w1] * c[w2]) * c[w2];
+			ans[w2] += (cnt[v] - c[w1] * c[w2]) * c[w1];
+		}
+		for (auto [u, w1] : lk[i]) for (auto [v, w2] : e[u]) if (rk[v] > rk[i]) cnt[v] = 0;
+	}
+	map<pair<int, int>, ll> mp;
+	for (i = 0;i < m;i++) mp[edges[i]] = ans[i];
+	return mp;
+}
+int main()
+{
+	ios::sync_with_stdio(0); cin.tie(0);
+	cout << fixed << setprecision(15);
+	int n, m, i;
+	cin >> n >> m;
+	vector<pair<int, int>> eg(m);
+	cin >> eg;
+	auto mp = quadruple(eg);
+	for (i = 0;i < m;i++)
+	{
+		auto [u, v] = eg[i];
+		if (u > v) swap(u, v);
+		cout << mp[{u, v}] << " \n"[i + 1 == m];
+	}
+}
+\end{lstlisting}
+
+\subsection{支配树}
+
+$u$ 支配 $v$ 指的是从 $S$ 到 $v$ 的路径必然经过 $u$。支配树是保持支配关系不变的树，其中 $s$ 是根，$idom[u]$ 是 $u$ 的父节点。
+
+DAG 版：$O(m\log n)$，$O(n\log n)$。
+
+\begin{lstlisting}
+int lca(int x, int y)
+{
+	int i;
+	if (dep[x] < dep[y]) swap(x, y);
+	for (i = lm[x]; dep[x] != dep[y]; i--) if (dep[f[x][i]] >= dep[y]) x = f[x][i];
+	if (x == y) return x;
+	for (i = lm[x]; f[x][0] != f[y][0]; i--) if (f[x][i] != f[y][i])
+	{
+		x = f[x][i]; y = f[y][i];
+	}
+	return f[x][0];
+}
+void dfs(int x)
+{
+	s[x] = 1;
+	int i;
+	for (i = sfir[x]; i; i = snxt[i])
+	{
+		dfs(slj[i]);
+		s[x] += s[slj[i]];
+	}
+}
+int main()
+{
+	dep[0] = -1;
+	cin >> n;
+	for (i = 1; i <= n; i++)
+	{
+		cin >> x;
+		while (x)
+		{
+			add(x, i);
+			cin >> x;
+		}
+	}
+	dl[tou = wei = 1] = ++n;
+	for (i = 1; i < n; i++) if (!rd[i]) add(n, i);
+	while (tou <= wei)
+	{
+		for (i = fir[x = dl[tou++]]; i; i = nxt[i]) if (--rd[lj[i]] == 0) dl[++wei] = lj[i];
+		if (i = ffir[x])
+		{
+			y = flj[i];
+			while (i = fnxt[i]) y = lca(y, flj[i]);
+			f[x][0] = y;
+		}
+		else y = 0;
+		sadd(y, x);
+		f[x][0] = y;
+		for (i = 1; i <= 16; i++) if (0 == (f[x][i] = f[f[x][i - 1]][i - 1]))
+		{
+			lm[x] = i;
+			break;
+		}
+		dep[x] = dep[y] + 1;
+	}
+	dfs(n);
+	for (i = 1; i < n; i++) printf("%d\n", s[i] - 1);
+}
+\end{lstlisting}
+
+一般图：
+
+\begin{lstlisting}
+vector<int> dom_tree(vector<vector<int>> e, int s)//[1,n]
+{
+	int n = e.size() - 1, i, id = 0;
+	vector<vector<int>> c(n + 1), buc(c), ie(c);
+	vector<int> mn(n + 1), f(n + 1), sdom(n + 1), idom(n + 1), dfn(n + 1), nfd(n + 1), pv(n + 1), ed(n + 1);
+	auto cmp = [&](int x, int y) {return dfn[x] < dfn[y] ? x : y; };
+	auto cmp2 = [&](int x, int y) {return dfn[sdom[x]] < dfn[sdom[y]] ? x : y; };
+	function<void(int)> getf = [&](int u) {
+		if (f[u] == u) return;
+		getf(f[u]);
+		mn[u] = cmp2(mn[u], mn[f[u]]);
+		f[u] = f[f[u]];
+	};
+	for (i = 1; i <= n; i++) mn[i] = f[i] = i;
+	function<void(int)> dfs = [&](int u) {
+		ed[u] = 1;
+		for (int v : e[u]) if (!ed[v]) dfs(v);
+	};
+	dfs(s);
+	for (i = 1; i <= n; i++) if (ed[i]) erase_if(e[i], [&](int v) { return !ed[v]; });
+	else e[i].clear();
+	for (i = 1; i <= n; i++) for (int v : e[i]) ie[v].push_back(i);
+	dfs = [&](int u) {
+		nfd[dfn[u] = ++id] = u;
+		for (int v : e[u]) if (!dfn[v]) dfs(v), c[u].push_back(v);
+	};
+	dfs(s); dfn[0] = 1e9;
+	for (i = id; i; i--)
+	{
+		int u = nfd[i], w = 0;
+		for (int v : ie[u])
+		{
+			sdom[u] = cmp(sdom[u], v);
+			if (dfn[v] > dfn[u])
+			{
+				getf(v);
+				w = cmp2(w, mn[v]);
+			}
+		}
+		sdom[u] = cmp(sdom[u], sdom[w]);
+		buc[sdom[u]].push_back(u);
+		for (int v : buc[u]) getf(v), pv[v] = mn[v];
+		for (int v : c[u]) f[v] = u, mn[v] = cmp2(mn[v], mn[u]);
+	}
+	for (i = 1; i <= n; i++) idom[nfd[i]] = (sdom[pv[nfd[i]]] == sdom[nfd[i]]) ? sdom[nfd[i]] : idom[pv[nfd[i]]];
+	idom[s] = s;
+	return idom;
+}
+int main()
+{
+	int n, m, s;
+	cin >> n >> m >> s; ++s;
+	vector<vector<int>> e(n + 1);
+	for (int i = 1; i <= m; i++)
+	{
+		int u, v;
+		cin >> u >> v; ++u; ++v;
+		e[u].push_back(v);
+	}
+	auto r = dom_tree(e, s);
+	for (int i = 1; i <= n; i++) cout << r[i] - 1 << " \n"[i == n];
+}
+
+\end{lstlisting}
+
+\subsection{prufer 与树的互相转化}
+
+$O(n)$，$O(n)$。
+
+\begin{lstlisting}
+vector<int> edges_to_prufer(const vector<pair<int,int>> &eg)//[1,n]，定根为 n
+{
+	int n=eg.size()+1,i,j,k;
+	vector<int> fir(n+1),nxt(n*2+1),e(n*2+1),rd(n+1);
+	int cnt=0;
+	for (auto [u,v]:eg)
+	{
+		e[++cnt]=v;nxt[cnt]=fir[u];fir[u]=cnt;++rd[v];
+		e[++cnt]=u;nxt[cnt]=fir[v];fir[v]=cnt;++rd[u];
+	}
+	for (i=1;i<=n;i++) if (rd[i]==1) break;
+	int u=i;
+	vector<int> r;r.reserve(n-2);
+	for (j=1;j<n-1;j++)
+	{	
+		for (k=fir[u],u=rd[u]=0;k;k=nxt[k]) if (rd[e[k]]) 
+		{
+			r.push_back(e[k]);
+			if ((--rd[e[k]]==1)&&(e[k]<i)) u=e[k];
+		}
+		if (!u) { while (rd[i]!=1) ++i;u=i;}
+	}
+	return r;
+}
+vector<pair<int,int>> prufer_to_edges(const vector<int> &p)//[1,n]，定根为 n
+{
+	int n=p.size(),i,j,k;
+	int m=n+3;
+	vector<int> cs(m);
+	for (i=0;i<n;i++) ++cs[p[i]];
+	i=0;
+	while (cs[++i]);
+	int u=i,v;
+	vector<pair<int,int>> r;
+	r.reserve(n-2);
+	for (j=0;j<n;j++)
+	{
+		cs[u]=1e9;
+		r.push_back({u,v=p[j]});
+		if ((--cs[v]==0)&&(v<i)) u=v;
+		if (v!=u) {while (cs[i]) ++i;u=i;}
+	}
+	r.push_back({u,n+2});
+	return r;
+}
+
+\end{lstlisting}
+
+
+\subsection{最小密度环}
+
+求所有环中边权和除以边数最少的，$O(nm)$。更常用的做法是二分 spfa。
+
+\begin{lstlisting}
+#include "bits/stdc++.h"
+using namespace std;
+const int N=3e3+5,M=1e4+5;
+const double inf=1e18;
+int u[M],v[M];
+double f[N][N],w[M];
+int main()
+{
+	ios::sync_with_stdio(0);cin.tie(0);
+	cout<<setiosflags(ios::fixed)<<setprecision(8);
+	int n,m,i,j;
+	cin>>n>>m;
+	for (i=1;i<=m;i++) cin>>u[i]>>v[i]>>w[i];
+	++n;
+	for (i=1;i<=n;i++)
+	{
+		fill_n(f[i]+1,n,inf);
+		for (j=1;j<=m;j++) f[i][v[j]]=min(f[i][v[j]],f[i-1][u[j]]+w[j]);
+	}
+	double ans=inf;
+	for (i=1;i<n;i++) if (f[n][i]!=inf)
+	{
+		double r=-inf;
+		for (j=1;j<n;j++) r=max(r,(f[n][i]-f[j][i])/(n-j));
+		ans=min(ans,r);
+	}
+	cout<<ans<<endl;
+}
+\end{lstlisting}
+
+
 \subsection{点染色}
 
 结论：$\chi(G)\le \Delta(G)+1$，其中 $\Delta(G)$ 是图的最大度。只有奇圈和完全图取等。
@@ -12642,6 +12466,145 @@ vector<int> indep_set(int n,const vector<pair<int,int>> &edges)//[0,n)
 	return r;
 }
 \end{lstlisting}
+
+\subsection{弦图}
+
+单纯点：$v$ 和 $v$ 邻点构成团。
+
+完美消除序列：$v_i$ 在 $\{v_i,v_{i+1},\cdots,v_n\}$ 为单纯点。
+
+$N(v_i)=\{v_j|j>i\land (v_i,v_j)\in E\}$，$next(v_i)$ 为 $N(v_i)$ 最靠前的点。
+
+极大团一定是 $\{v\}\cup N(v)$ 。
+
+最大团大小等于色数。
+
+弦图判定：等价于是否存在完美消除序列。首先求出一个完美消除序列，然后判定是否合法。
+
+判定方法：设 $v_{i+1},\cdots,v_n$ 中与 $v_i$ 相邻的依次为 $v'_1,\cdots,v'_m$。只需判断是否 $v_1'$ 与 $v'_2,\cdots,v'_m$ 相邻。
+
+LexBFS 算法（我不会写）
+
+每个点有一个字符串 label，初始为 $0$。从 $i=n$ 到 $i=1$ 确定，选 label 字典序最大的 $u$，再把 $u$ 邻点的 label 后面接一个 $i$。
+
+最大势算法：从 $v_n$ 求到 $v_1$，设 $label_i$ 表示 $i$ 与多少个已选点相邻，每次选 $label_i$ 最大的点。
+
+弦图极大团：$\{v|\forall next(w)=v,|N(v)|\ge |N(w)|\}$。选出的集合为基本点，按上述极大团构造。
+
+弦图染色：从 $v_n$ 到 $v_1$ 依次选最小可染的色。
+
+最大独立集：从 $v_1$ 到 $v_n$ 能选就选。
+
+最小团覆盖：设最大独立集为 $\{p_m\}$，最小团覆盖为 $\{\{p_i\}\cup N(p_i)\}$。
+
+区间图：两个区间有边当且仅当交集非空。
+
+区间图是弦图。
+
+代码如下：
+
+\begin{lstlisting}
+namespace chordal_graph//下标从 1 开始
+{
+	const int N=1e5+2;//点数
+	bool ed[N];
+	vector<int> e[N];
+	int n;
+	void init(const vector<pair<int,int>> &edges)
+	{
+		n=0;
+		for (auto [u,v]:edges) n=max({n,u,v});
+		for (int i=1;i<=n;i++) e[i].clear();
+		for (auto [u,v]:edges) e[u].push_back(v),e[v].push_back(u);
+	}
+	vector<int> perfect_seq(const vector<pair<int,int>> &edges)//MCS
+	{
+		init(edges);
+		static int d[N];
+		static vector<int> buc[N];
+		int i,mx=0;
+		memset(d+1,0,n*sizeof d[0]);
+		memset(ed+1,0,n*sizeof ed[0]);
+		for (i=1;i<=n;i++) buc[i].clear();
+		buc[0].resize(n);
+		iota(all(buc[0]),1);
+		vector<int> r(n);
+		for (i=n-1;i>=0;i--)
+		{
+			int u=0;
+			while (!u)
+			{
+				while (buc[mx].size()) if (ed[buc[mx].back()]) buc[mx].pop_back();
+				else
+				{
+					ed[u=buc[mx].back()]=1;
+					buc[mx].pop_back();
+					goto yes;
+				}
+				--mx;
+			}
+			yes:;
+			r[i]=u;
+			for (int v:e[u]) if (!ed[v]) buc[++d[v]].push_back(v),mx=max(mx,d[v]);
+		}
+		return r;
+	}
+	bool check_perfect_seq(vector<int> a)
+	{
+		static bool ee[N];
+		memset(ed+1,0,n*sizeof ed[0]);
+		memset(ee+1,0,n*sizeof ee[0]);
+		reverse(all(a));
+		for (int u:a)
+		{
+			ed[u]=1;
+			int w=0;
+			for (int v:e[u]) if (ed[v]) {w=v;break;}
+			if (!w) continue;
+			ee[w]=1;
+			for (int v:e[w]) ee[v]=1;
+			for (int v:e[u]) if (ed[v]&&!ee[v]) return 0;
+			ee[w]=0;
+			for (int v:e[w]) ee[v]=0;
+		}
+		return 1;
+	}
+	bool check_chordal(const vector<pair<int,int>> &edges) {return check_perfect_seq(perfect_seq(edges));}
+	vector<int> color(int _n,const vector<pair<int,int>> &edges)//返回长度为 _n+1。其中 0 无意义
+	{
+		auto a=perfect_seq(edges);
+		reverse(all(a));
+		memset(ed+1,0,n*sizeof ed[0]);
+		vector<int> r(_n+1);
+		for (int u:a)
+		{
+			for (int v:e[u]) ed[r[v]]=1;
+			int x=1;
+			while (ed[x]) ++x;
+			r[u]=x;
+			for (int v:e[u]) ed[r[v]]=0;
+		}
+        for (int i=n+1;i<=_n;i++) r[i]=1;
+		return r;
+	}
+	vector<int> max_independent(int _n,const vector<pair<int,int>> &edges)//注意有孤立点这种奇怪东西
+	{
+		auto a=perfect_seq(edges);
+		memset(ed+1,0,n*sizeof ed[0]);
+		vector<int> r;
+		for (int u:a) if (!ed[u])
+		{
+			r.push_back(u);
+			for (int v:e[u]) ed[v]=1;
+		}
+		for (int i=n+1;i<=_n;i++) r.push_back(i);
+		return r;
+	}
+}
+using chordal_graph::check_chordal,chordal_graph::color,chordal_graph::max_independent;
+\end{lstlisting}
+
+
 
 
 \newpage
