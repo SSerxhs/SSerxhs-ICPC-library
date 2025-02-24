@@ -3093,8 +3093,8 @@ template<class T, class info> struct range_sort
 		}
 		pushup(x);
 	}
-	range_sort(vector<pair<T, info>> a, int pl, int pr)
-		:n(a.size()), pl(pl), pr(pr - pl), root(n + 1), t(n + 3) {
+	range_sort(vector<pair<T, info>> a, int pl, int _pr)
+		:n(a.size()), pl(pl), pr(_pr - pl), root(n + 1), t(n + 3) {
 		np();
 		for (int i = 0; i < n; i++)
 		{
