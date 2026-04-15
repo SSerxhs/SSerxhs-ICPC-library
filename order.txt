@@ -1,0 +1,167 @@
+templates/前言/前言.cpp
+templates/数据结构/树状数组.cpp
+templates/数据结构/线段树.cpp
+templates/数据结构/线段树_2.cpp
+templates/数据结构/珂朵莉树.cpp
+templates/数据结构/带删堆.cpp
+templates/数据结构/前 k 大的和.cpp
+templates/数据结构/左偏树_可并堆.cpp
+templates/数据结构/树状数组区间加区间求和.cpp
+templates/数据结构/二维树状数组矩形加矩形求和.cpp
+templates/数据结构/带修莫队.cpp
+templates/数据结构/二次离线莫队.cpp
+templates/数据结构/回滚莫队.cpp
+templates/数据结构/李超树.cpp
+templates/数据结构/李超树(动态开点).cpp
+templates/数据结构/线性基.cpp
+templates/数据结构/splay.cpp
+templates/数据结构/fhq-treap.cpp
+templates/数据结构/笛卡尔树的线性建树.cpp
+templates/数据结构/扫描线.cpp
+templates/数据结构/Segmenttree Beats!.cpp
+templates/数据结构/k-d 树(二进制分组).cpp
+templates/数据结构/双端队列全局查询.cpp
+templates/数据结构/静态矩形加矩形和.cpp
+templates/数据结构/线段树分裂.cpp
+templates/数据结构/手写 bitset.cpp
+templates/数据结构/区间众数.cpp
+templates/数据结构/表达式树.cpp
+templates/数据结构/区间排序区间复合.cpp
+templates/数学/矩阵类(较新).cpp
+templates/数学/在线 O(1) 逆元.cpp
+templates/数学/Strassen 矩阵乘法.cpp
+templates/数学/扩展欧拉定理.cpp
+templates/数学/exgcd.cpp
+templates/数学/exgcd_2.cpp
+templates/数学/exCRT.cpp
+templates/数学/exBSGS.cpp
+templates/数学/exLucas.cpp
+templates/数学/杜教筛.cpp
+templates/数学/mu^2(n) 前缀和.cpp
+templates/数学/线性规划.cpp
+templates/数学/线性插值(k 次幂和).cpp
+templates/数学/原根.cpp
+templates/数学/筛全部原根.cpp
+templates/数学/高斯消元(浮点数).cpp
+templates/数学/行列式求值(任意模数).cpp
+templates/数学/BM_稀疏矩阵系列.cpp
+templates/数学/Min__25筛.cpp
+templates/数学/Min__25筛_2.cpp
+templates/数学/扩展 min-max 容斥(重返现世).cpp
+templates/数学/光速乘.cpp
+templates/数学/二次剩余.cpp
+templates/数学/k 次剩余.cpp
+templates/数学/k 次剩余_2.cpp
+templates/数学/FWT_子集卷积.cpp
+templates/数学/NTT.cpp
+templates/数学/MTT.cpp
+templates/数学/FFT.cpp
+templates/数学/约数个数和.cpp
+templates/数学/万能欧几里得_min of mod of linear.cpp
+templates/数学/高斯整数类.cpp
+templates/数学/Miller Rabin_Pollard Rho.cpp
+templates/数学/Miller Rabin_Pollard Rho_2.cpp
+templates/字符串/字典树(trie 树).cpp
+templates/字符串/AC 自动机.cpp
+templates/字符串/hash.cpp
+templates/字符串/hash_2.cpp
+templates/字符串/KMP.cpp
+templates/字符串/manacher.cpp
+templates/字符串/SA.cpp
+templates/字符串/SAM.cpp
+templates/字符串/ukkonen 后缀树.cpp
+templates/字符串/ukkonen 后缀树(重构).cpp
+templates/字符串/Z 函数.cpp
+templates/字符串/最小表示法.cpp
+templates/字符串/带通配符的字符串匹配.cpp
+templates/字符串/带通配符的字符串匹配_2.cpp
+templates/图论/最小生成树相关/切比雪夫距离最小生成树.cpp
+templates/图论/最小生成树相关/最小乘积生成树.cpp
+templates/图论/最小生成树相关/最小斯坦纳树.cpp
+templates/图论/最短路相关/全源最短路与判负环.cpp
+templates/图论/最短路相关/Dijkstra_SPFA_Johnson.cpp
+templates/图论/最短路相关/无向图最小环.cpp
+templates/图论/最短路相关/输出负环.cpp
+templates/图论/二分图与网络流建图/二分图最小点集覆盖.cpp
+templates/图论/二分图与网络流建图/有向无环图最小不相交链覆盖.cpp
+templates/图论/匹配与网络流相关代码/二分图最大权匹配.cpp
+templates/图论/匹配与网络流相关代码/一般图最大匹配.cpp
+templates/图论/匹配与网络流相关代码/一般图最大权匹配.cpp
+templates/图论/匹配与网络流相关代码/网络流.cpp
+templates/图论/匹配与网络流相关代码/假带花树.cpp
+templates/图论/匹配与网络流相关代码/Stoer-Wagner 全局最小割.cpp
+templates/图论/匹配与网络流相关代码/最小割树.cpp
+templates/图论/缩点相关/双极分解.cpp
+templates/图论/缩点相关/点双.cpp
+templates/图论/缩点相关/边双.cpp
+templates/图论/缩点相关/Tarjan 强连通分量.cpp
+templates/图论/缩点相关/动态强连通分量.cpp
+templates/图论/缩点相关/圆方树.cpp
+templates/图论/缩点相关/广义圆方树.cpp
+templates/图论/缩点相关/2-sat.cpp
+templates/图论/缩点相关/Kosaraju 强连通分量(bitset 优化).cpp
+templates/图论/树上问题/换根 dp.cpp
+templates/图论/树上问题/换根 dp_2.cpp
+templates/图论/树上问题/轻重链剖分_DFS 序 LCA.cpp
+templates/图论/树上问题/换根树剖.cpp
+templates/图论/树上问题/毛毛虫剖分.cpp
+templates/图论/树上问题/树上启发式合并，DSU on tree.cpp
+templates/图论/树上问题/长链剖分(k 级祖先).cpp
+templates/图论/树上问题/长链剖分(dp 合并).cpp
+templates/图论/树上问题/LCT.cpp
+templates/图论/树上问题/带子树的 LCT.cpp
+templates/图论/树上问题/动态 dp(全局平衡二叉树).cpp
+templates/图论/树上问题/全局平衡二叉树(修改版).cpp
+templates/图论/树上问题/虚树.cpp
+templates/图论/树上问题/点分治.cpp
+templates/图论/树上问题/点分树.cpp
+templates/图论/树上问题/点分树_2.cpp
+templates/图论/树上问题/点分树_3.cpp
+templates/图论/树上问题/(基环)树哈希.cpp
+templates/图论/欧拉路相关/构造：字典序最小.cpp
+templates/图论/欧拉路相关/回路_通路构造.cpp
+templates/图论/欧拉路相关/回路计数(BEST 定理)_生成树计数.cpp
+templates/图论/三_四元环计数.cpp
+templates/图论/支配树.cpp
+templates/图论/支配树_2.cpp
+templates/图论/prufer 与树的互相转化.cpp
+templates/图论/最小密度环.cpp
+templates/图论/点染色.cpp
+templates/图论/最大独立集.cpp
+templates/图论/弦图.cpp
+templates/计算几何/自适应 simpson 法.cpp
+templates/计算几何/计算几何全.cpp
+templates/计算几何/计算几何全_2.cpp
+templates/杂项/枚举大小为 k 的集合.cpp
+templates/杂项/min plus 卷积.cpp
+templates/杂项/所有区间 GCD.cpp
+templates/杂项/整体二分(区间 k-th).cpp
+templates/杂项/高精度.cpp
+templates/杂项/分散层叠算法(Fractional Cascading).cpp
+templates/杂项/圆上整点(二平方和定理).cpp
+templates/杂项/Stern-Brocot Tree.cpp
+templates/杂项/快速取模.cpp
+templates/杂项/IO 优化.cpp
+templates/杂项/手动开栈.cpp
+templates/杂项/手动开栈_2.cpp
+templates/杂项/德扑.cpp
+templates/语言基础/Makefile.cpp
+templates/语言基础/debug.h.cpp
+templates/语言基础/初始代码.cpp
+templates/语言基础/初始代码_2.cpp
+templates/语言基础/bitset.cpp
+templates/语言基础/pb__ds 和一些奇怪的用法.cpp
+templates/语言基础/python 使用方法.py
+templates/语言基础/python 使用方法_2.py
+templates/语言基础/python 使用方法_3.py
+templates/其他人的板子(补充)/最小树形图.cpp
+templates/其他人的板子(补充)/MTT+exp.cpp
+templates/其他人的板子(补充)/半平面交.cpp
+templates/其他人的板子(补充)/多项式复合 (yurzhang).cpp
+templates/其他人的板子(补充)/下降幂多项式乘法.cpp
+templates/其他人的板子(补充)/弦图找错.cpp
+templates/其他人的板子(补充)/最长公共子序列.cpp
+templates/其他人的板子(补充)/最长公共子序列_2.cpp
+templates/其他人的板子(补充)/区间 LIS(排列).cpp
+templates/其他人的板子(补充)/区间 LIS(排列)_2.cpp
+templates/其他人的板子(补充)/区间 LCS.cpp
