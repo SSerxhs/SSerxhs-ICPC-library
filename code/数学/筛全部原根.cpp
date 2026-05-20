@@ -1,6 +1,6 @@
 #include "bits/stdc++.h"
 using namespace std;
-typedef long long ll;
+using ll = long long;
 const int N = 1e6 + 2;
 int ss[N], mn[N], fmn[N], phi[N];
 int t, n, gs, i, d;

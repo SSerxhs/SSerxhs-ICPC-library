@@ -1,8 +1,6 @@
 namespace pr
 {
-	typedef long long ll;
-	typedef __int128 lll;
-	typedef pair<ll, int> pa;
+	using pa = pair<ll, int>;
 	ll ksm(ll x, ll y, const ll p)
 	{
 		ll r = 1;
@@ -135,8 +133,8 @@ G gcd(G a, G b)
 }
 namespace cipolla
 {
-	typedef unsigned long long ull;
-	typedef __uint128_t ll;
+	using ull = unsigned long long;
+	using ulll = __uint128_t;
 	ull p, w;
 	struct Q
 	{

@@ -1,8 +1,6 @@
 
 namespace get_root
 {
-	typedef unsigned int ui;
-	typedef unsigned long long ull;
 	bool ied = 0;
 	const int N = 1e5 + 5;
 	vector<ui> pr;
@@ -67,8 +65,8 @@ namespace get_root
 }
 namespace BSGS
 {
-	typedef unsigned int ui;
-	typedef unsigned long long ull;
+	using ui = unsigned;
+	using ull = unsigned long long;
 	template<int N, class T, class TT> struct ht//个数，定义域，值域
 	{
 		const static int p = 1e6 + 7, M = p + 2;
@@ -104,7 +102,7 @@ namespace BSGS
 	int exgcd(int a, int b)
 	{
 		if (a == 1) return 1;
-		return (1 - (long long)b * exgcd(b % a, a)) / a;//not ll
+		return (1 - (ll)b * exgcd(b % a, a)) / a;//not ull
 	}
 	int bsgs(ui a, ui b, ui p)
 	{

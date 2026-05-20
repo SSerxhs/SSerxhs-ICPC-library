@@ -1,8 +1,8 @@
 namespace pr
 {
-    typedef long long ll;
-    typedef __int128 lll;
-    typedef pair<ll, int> pa;
+    using ll = long long;
+    using lll = __int128;
+    using pa = pair<ll, int>;
     ll ksm(ll x, ll y, const ll p)
     {
         ll r = 1;

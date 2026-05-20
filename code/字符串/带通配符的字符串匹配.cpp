@@ -1,7 +1,5 @@
 namespace NTT
 {
-	typedef unsigned ui;
-	typedef unsigned long long ull;
 	const int N = 1 << 22;
 	const ui p = 998244353, g = 3;
 	inline ui ksm(ui x, ui y)

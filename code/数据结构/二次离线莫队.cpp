@@ -1,4 +1,3 @@
-typedef long long ll;
 const int N = 1e5 + 2, M = 1 << 14;
 ll f[N], ans[N], ta[N];
 int a[N], cnt[M], bel[N], pc[M], st[N];

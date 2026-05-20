@@ -65,11 +65,11 @@ language=c++,
 \verb|rev| 宏通常用于数据结构中，正向信息是否与反向信息相同，若定义了宏则表示不同。例如矩阵乘法需要定义，而区间求和则不需要。定义后额外统计信息，会慢一点点。
 
 常见的被漏掉的初始代码：
-\lstinputlisting{templates/前言/前言.cpp}
+\lstinputlisting{code/前言/前言.cpp}
 
 常见的缺漏算法：
 
-回文自动机。
+回文自动机，最小树形图。
 
 \newpage
 
@@ -79,7 +79,7 @@ language=c++,
 
 支持单点修改、求前缀和、二分前缀和大于等于 $x$ 的第一个位置。
 
-\lstinputlisting{templates/数据结构/树状数组.cpp}
+\lstinputlisting{code/数据结构/树状数组.cpp}
 
 \subsection{线段树}
 
@@ -93,9 +93,9 @@ language=c++,
 
 例如查找前缀和大于等于 $s$ 的第一个下标，可以写成
 
-\lstinputlisting{templates/数据结构/线段树.cpp}
+\lstinputlisting{code/数据结构/线段树.cpp}
 
-\lstinputlisting{templates/数据结构/线段树_2.cpp}
+\lstinputlisting{code/数据结构/线段树_2.cpp}
 
 
 \subsection{珂朵莉树}
@@ -104,7 +104,7 @@ language=c++,
 如果希望维护所有连续段的整体信息（如长度的最大值），修改 \verb|add| 和 \verb|del| 函数即可，分别表示连续段被加入和被删去。
 
 特别注意一开始 \verb|insert| 的不会触发 \verb|add|，只有 \verb|modify| 会触发。
-\lstinputlisting{templates/数据结构/珂朵莉树.cpp}
+\lstinputlisting{code/数据结构/珂朵莉树.cpp}
 
 
 \subsection{带删堆}
@@ -115,8 +115,8 @@ language=c++,
 
 本代码的用法和 \verb|priority_queue| 一致。
 
-\lstinputlisting{templates/数据结构/带删堆.cpp}
-\subsection{前 k 大的和}
+\lstinputlisting{code/数据结构/带删堆.cpp}
+\subsection{前 $k$ 大的和}
 
 本质是用小根堆维护前 $k$ 大的数，用大根堆维护其余数。
 
@@ -128,7 +128,7 @@ language=c++,
 
 其用法与 \verb|priority_queue| 保持一致，可以用同样的方法改写成前 $k$ 小。
 
-\lstinputlisting{templates/数据结构/前 k 大的和.cpp}
+\lstinputlisting{code/数据结构/前 k 大的和.cpp}
 
 \subsection{左偏树/可并堆}
 
@@ -136,7 +136,7 @@ language=c++,
 
 $O((n+q)\log n)$，$O(n)$。
 
-\lstinputlisting{templates/数据结构/左偏树_可并堆.cpp}
+\lstinputlisting{code/数据结构/左偏树_可并堆.cpp}
 
 \subsection{树状数组区间加区间求和}
 
@@ -148,7 +148,7 @@ $\sum\limits_{i=1}^ma_i =\sum\limits_{i=1}^m\sum\limits_{j=1}^id_j=\sum\limits_{
 
 $O(n)\sim O(q\log n)$，$O(n)$。
 
-\lstinputlisting{templates/数据结构/树状数组区间加区间求和.cpp}
+\lstinputlisting{code/数据结构/树状数组区间加区间求和.cpp}
 
 \subsection{二维树状数组矩形加矩形求和}
 
@@ -156,7 +156,7 @@ $O(n)\sim O(q\log n)$，$O(n)$。
 
 $O(n^2+q\log^2n)$，$O(n^2)$
 
-\lstinputlisting{templates/数据结构/二维树状数组矩形加矩形求和.cpp}
+\lstinputlisting{code/数据结构/二维树状数组矩形加矩形求和.cpp}
 
 \subsection{带修莫队}
 
@@ -166,7 +166,7 @@ $O(n^2+q\log^2n)$，$O(n^2)$
 
 $O(n^{\frac {5}{3}})$，$O(n)$。
 
-\lstinputlisting{templates/数据结构/带修莫队.cpp}
+\lstinputlisting{code/数据结构/带修莫队.cpp}
 
 \subsection{二次离线莫队}
 
@@ -189,7 +189,7 @@ $O(n\sqrt n)$，$O(n)$。
 开一个桶 $t$，$t[i]$ 表示当前前缀中与 $i$ 异或有 $k$ 个数位为 $1$ 的数有多少个。
 则每加入一个数 $a[i]$，对于所有 $\mathrm{popcount}(x)=k$ 的 $x$，$t[a[i]\operatorname{xor}x]\gets t[a[i]\operatorname{xor}x]+1$ 即可。
 
-\lstinputlisting{templates/数据结构/二次离线莫队.cpp}
+\lstinputlisting{code/数据结构/二次离线莫队.cpp}
 
 \subsection{回滚莫队}
 
@@ -201,7 +201,7 @@ $O(n\sqrt n)$，$O(n)$。
 
 $O(n\sqrt n)$，$O(n)$。
 
-\lstinputlisting{templates/数据结构/回滚莫队.cpp}
+\lstinputlisting{code/数据结构/回滚莫队.cpp}
 
 \subsection{李超树}
 
@@ -209,17 +209,17 @@ $O(n\sqrt n)$，$O(n)$。
 
 算法核心：修改时，线段树每个点只维护在中点取值最大的线段，中点取值较小的线段只会在至多一侧有用，递归下去插入，复杂度 $O(\log^2)$。查询时询问线段树上 $\log$ 个点的线段中最大的。
 
-\lstinputlisting{templates/数据结构/李超树.cpp}
+\lstinputlisting{code/数据结构/李超树.cpp}
 
 \subsection{李超树（动态开点）}
-\lstinputlisting{templates/数据结构/李超树(动态开点).cpp}
+\lstinputlisting{code/数据结构/李超树(动态开点).cpp}
 
 
 \subsection{线性基}
 
 $O((n+q)\log a)$，$O(n\log a)$。
 
-\lstinputlisting{templates/数据结构/线性基.cpp}
+\lstinputlisting{code/数据结构/线性基.cpp}
 
 \subsection{splay}
 
@@ -227,7 +227,7 @@ $O((n+q)\log a)$，$O(n\log a)$。
 
 $O(n)$，$O((n+q)\log n)$。
 
-\lstinputlisting{templates/数据结构/splay.cpp}
+\lstinputlisting{code/数据结构/splay.cpp}
 
 \subsection{fhq-treap}
 
@@ -235,7 +235,7 @@ $O(n)$，$O((n+q)\log n)$。
 
 $O((n+q)\log n)$，$O(n)$。
 
-\lstinputlisting{templates/数据结构/fhq-treap.cpp}
+\lstinputlisting{code/数据结构/fhq-treap.cpp}
 
 \subsection{笛卡尔树的线性建树}
 
@@ -245,7 +245,7 @@ $p[1,2,\ldots,n]$ 是原序列，\verb|c| 表示子结点。
 
 $O(n)$，$O(n)$。
 
-\lstinputlisting{templates/数据结构/笛卡尔树的线性建树.cpp}
+\lstinputlisting{code/数据结构/笛卡尔树的线性建树.cpp}
 
 \subsection{扫描线}
 
@@ -253,7 +253,7 @@ $O(n)$，$O(n)$。
 
 $O((n+q)\log n)$，$O(n+q)$。
 
-\lstinputlisting{templates/数据结构/扫描线.cpp}
+\lstinputlisting{code/数据结构/扫描线.cpp}
 
 \subsection{Segmenttree Beats!}
 核心是 P（tag） 和 Q（info） 的维护。线段树部分是套的模板，并非全都有用。
@@ -265,35 +265,35 @@ $O((n+q)\log n)$，$O(n+q)$。
 	\item $l,r$：对于所有的 $i\in[l,r]$，求 $B_i$ 的最大值。
 \end{enumerate}
 其中 $B_i$ 是 $A_i$ 的历史最大值。
-\lstinputlisting{templates/数据结构/Segmenttree Beats!.cpp}
+\lstinputlisting{code/数据结构/Segmenttree Beats!.cpp}
 
 \subsection{$k$-d 树（二进制分组）}
 
 均摊 $O(\log ^2n)$ 插入，$O(\sqrt n)$ 矩形查询。
 
-\lstinputlisting{templates/数据结构/k-d 树(二进制分组).cpp}
+\lstinputlisting{code/数据结构/k-d 树(二进制分组).cpp}
 
 \subsection{双端队列全局查询}
 
 对一个支持结合律的信息 T，维护 \verb|deque| 内信息的和。总复杂度线性。
 
-\lstinputlisting{templates/数据结构/双端队列全局查询.cpp}
+\lstinputlisting{code/数据结构/双端队列全局查询.cpp}
 
 \subsection{静态矩形加矩形和}
 
-\lstinputlisting{templates/数据结构/静态矩形加矩形和.cpp}
+\lstinputlisting{code/数据结构/静态矩形加矩形和.cpp}
 
 \subsection{线段树分裂}
 
-\lstinputlisting{templates/数据结构/线段树分裂.cpp}
+\lstinputlisting{code/数据结构/线段树分裂.cpp}
 
 \subsection{手写 bitset}
 
-\lstinputlisting{templates/数据结构/手写 bitset.cpp}
+\lstinputlisting{code/数据结构/手写 bitset.cpp}
 
 \subsection{区间众数}
 
-\lstinputlisting{templates/数据结构/区间众数.cpp}
+\lstinputlisting{code/数据结构/区间众数.cpp}
 
 \subsection{表达式树}
 
@@ -311,7 +311,7 @@ $O((n+q)\log n)$，$O(n+q)$。
 
 由于存在“数码链接”，在 \verb|dfs| 树的时候最好记录一下子树大小，便于链接时计算（你不能在链接时直接看右子树的数字大小，因为有可能有前导 $0$）。
 
-\lstinputlisting{templates/数据结构/表达式树.cpp}
+\lstinputlisting{code/数据结构/表达式树.cpp}
 
 \subsection{区间排序区间复合}
 
@@ -321,7 +321,7 @@ $O((n+q)\log n)$，$O(n+q)$。
 
 与其他板子不同的是，所有区间都是左闭右开的，下标从 $0$ 开始。
 
-\lstinputlisting{templates/数据结构/区间排序区间复合.cpp}
+\lstinputlisting{code/数据结构/区间排序区间复合.cpp}
 \newpage
 
 \section{数学}
@@ -329,20 +329,20 @@ $O((n+q)\log n)$，$O(n+q)$。
 
 \subsection{矩阵类（较新）}
 
-\lstinputlisting{templates/数学/矩阵类(较新).cpp}
+\lstinputlisting{code/数学/矩阵类(较新).cpp}
 
 
 \subsection{在线 $O(1)$ 逆元}
 
 预处理复杂度为 $O(p^{\frac{2}{3}})$。
 
-\lstinputlisting{templates/数学/在线 O(1) 逆元.cpp}
+\lstinputlisting{code/数学/在线 O(1) 逆元.cpp}
 
 \subsection{Strassen 矩阵乘法}
 
 没用，不如卡常。$O(n^{\log_27})$。
 
-\lstinputlisting{templates/数学/Strassen 矩阵乘法.cpp}
+\lstinputlisting{code/数学/Strassen 矩阵乘法.cpp}
 
 \subsection{扩展欧拉定理}
 
@@ -350,7 +350,7 @@ $O((n+q)\log n)$，$O(n+q)$。
 
 特别注意，这里的 \verb|i64| 不是无符号。
 
-\lstinputlisting{templates/数学/扩展欧拉定理.cpp}
+\lstinputlisting{code/数学/扩展欧拉定理.cpp}
 
 \subsection{exgcd}
 
@@ -358,11 +358,11 @@ $O(\log p)$，$O(\log p)$。
 
 递归版：
 
-\lstinputlisting{templates/数学/exgcd.cpp}
+\lstinputlisting{code/数学/exgcd.cpp}
 
 递推版：
 
-\lstinputlisting{templates/数学/exgcd_2.cpp}
+\lstinputlisting{code/数学/exgcd_2.cpp}
 
 \subsection{exCRT}
 
@@ -370,20 +370,20 @@ CRT：设 $M=\prod\limits_{i=1}^nm_i$，$t_i\times \dfrac {M}{m_i}\equiv 1\pmod 
 
 以下为 exCRT，与 CRT 无关。实现了一个类 \verb|Q|，表示一条方程，支持合并。
 
-\lstinputlisting{templates/数学/exCRT.cpp}
+\lstinputlisting{code/数学/exCRT.cpp}
 
 
 \subsection{exBSGS}
 
 $O(\sqrt n)$。哈希表 \verb|ht| 可以用 \verb|map| 代替。
 
-\lstinputlisting{templates/数学/exBSGS.cpp}
+\lstinputlisting{code/数学/exBSGS.cpp}
 
 \subsection{exLucas}
 
 求组合数。
 
-\lstinputlisting{templates/数学/exLucas.cpp}
+\lstinputlisting{code/数学/exLucas.cpp}
 
 \subsection{杜教筛}
 
@@ -397,7 +397,7 @@ $O(\sqrt n)$。哈希表 \verb|ht| 可以用 \verb|map| 代替。
 
 则 $f$ 前缀和可以递归求解。
 
-\lstinputlisting{templates/数学/杜教筛.cpp}
+\lstinputlisting{code/数学/杜教筛.cpp}
 
 \subsection{$\mu^2(n)$ 前缀和}
 
@@ -405,24 +405,24 @@ $10^{18}$，0.46s。
 
 $\mu^2(n)=\sum\limits_{d^2|n}\mu(d)$
 
-\lstinputlisting{templates/数学/mu^2(n) 前缀和.cpp}
+\lstinputlisting{code/数学/mu^2(n) 前缀和.cpp}
 \subsection{线性规划}
 用法：构造函数指明目标函数系数，\verb|add| 函数增加限制。额外的限制是 $x_i\ge 0$。
-\lstinputlisting{templates/数学/线性规划.cpp}
+\lstinputlisting{code/数学/线性规划.cpp}
 
 \subsection{线性插值（$k$ 次幂和）}
 
 $O(m)$，$O(m)$。
 
 
-\lstinputlisting{templates/数学/线性插值(k 次幂和).cpp}
+\lstinputlisting{code/数学/线性插值(k 次幂和).cpp}
 \subsection{幂乘等比}
 
 $\sum\limits_{i=0}^{n-1}x^ii^d$ 以及 $\sum\limits_{i=0}^{\infty}x^ii^d$
 
 $O(d)$。
 
-\lstinputlisting{templates/数学/幂乘等比.cpp}
+\lstinputlisting{code/数学/幂乘等比.cpp}
 
 
 \subsection{原根}
@@ -433,17 +433,17 @@ $O(d)$。
 
 定理：只有 $2,4,p^k,2p^k$ 有原根。因此可以优化到只分解一次，但没必要。
 
-\lstinputlisting{templates/数学/原根.cpp}
+\lstinputlisting{code/数学/原根.cpp}
 
 \subsection{筛全部原根}
 
-\lstinputlisting{templates/数学/筛全部原根.cpp}
+\lstinputlisting{code/数学/筛全部原根.cpp}
 
 \subsection{高斯消元（浮点数）}
 
 $O(n^3)$，$O(n^2)$。
 
-\lstinputlisting{templates/数学/高斯消元(浮点数).cpp}
+\lstinputlisting{code/数学/高斯消元(浮点数).cpp}
 
 \subsection{行列式求值（任意模数）}
 
@@ -451,7 +451,7 @@ $O(n^3)$，$O(n^2)$。
 
 原理：辗转相除。注意这个 $\log p$ 并不在 $n^3$ 上。
 
-\lstinputlisting{templates/数学/行列式求值(任意模数).cpp}
+\lstinputlisting{code/数学/行列式求值(任意模数).cpp}
 
 \subsection{BM/稀疏矩阵系列}
 
@@ -459,7 +459,7 @@ BM：给定 $\{a\}$，求最短的 $\{r\}$ 满足 $\sum\limits_{j=0}^{m-1} a_{i-
 
 \verb|safe| 宏用于验证结果正确性，可不定义。实现了稀疏矩阵的行列式和求解方程组。
 
-\lstinputlisting{templates/数学/BM_稀疏矩阵系列.cpp}
+\lstinputlisting{code/数学/BM_稀疏矩阵系列.cpp}
 
 
 
@@ -467,41 +467,35 @@ BM：给定 $\{a\}$，求最短的 $\{r\}$ 满足 $\sum\limits_{j=0}^{m-1} a_{i-
 
 $f(p^k)=p^k(p^k-1)$，求 $\sum\limits_{i=1}^n f(i)$。这个的原理我了解的不多，因此没有更多注释。
 
-\lstinputlisting{templates/数学/Min__25筛.cpp}
+\lstinputlisting{code/数学/Min__25筛.cpp}
 
 这是一个常数较小的版本，实现的是质数个数。需要注意评测机 \verb|double| 性能。
 
-\lstinputlisting{templates/数学/Min__25筛_2.cpp}
-
-\subsection{扩展 min-max 容斥（重返现世）}
-
-$k\text{-th}\max\{S\}=\sum\limits_{T\subseteq S}(-1)^{|T|-k}\tbinom{|T|-1}{k-1}\min\{T\}$
-
-\lstinputlisting{templates/数学/扩展 min-max 容斥(重返现世).cpp}
+\lstinputlisting{code/数学/Min__25筛_2.cpp}
 
 \subsection{光速乘}
 
 $O(n2^n)$，$O(2^n)$。
 
 
-\lstinputlisting{templates/数学/光速乘.cpp}
+\lstinputlisting{code/数学/光速乘.cpp}
 
 \subsection{二次剩余}
 
-\lstinputlisting{templates/数学/二次剩余.cpp}
+\lstinputlisting{code/数学/二次剩余.cpp}
 
 \subsection{$k$ 次剩余}
-\lstinputlisting{templates/数学/k 次剩余.cpp}
+\lstinputlisting{code/数学/k 次剩余.cpp}
 
 网上的超快版本
 
-\lstinputlisting{templates/数学/k 次剩余_2.cpp}
+\lstinputlisting{code/数学/k 次剩余_2.cpp}
 
 \subsection{FWT/子集卷积}
 
 $O(n2^n)$，$O(2^n)$。注意全都是无符号的。
 
-\lstinputlisting{templates/数学/FWT_子集卷积.cpp}
+\lstinputlisting{code/数学/FWT_子集卷积.cpp}
 
 \subsection{NTT}
 
@@ -527,23 +521,23 @@ $O(n2^n)$，$O(2^n)$。注意全都是无符号的。
 划分数 \verb|Partition|，最大公因式 \verb|gcd|，求根 \verb|root|，模多项式意义的逆 \verb|inverse|，
 转牛顿级数 \verb|poly_to_newton,poly_to_facpow,newton_to_poly,facpow_to_poly|，下降幂乘法 \verb|mul_facpow|。
 
-\lstinputlisting{templates/数学/NTT.cpp}
+\lstinputlisting{code/数学/NTT.cpp}
 
 
 \subsection{MTT}
 
 如果长度较长，可以考虑将 $p_3$ 替换为 $5\times 2^{25}+1$。
 
-\lstinputlisting{templates/数学/MTT.cpp}
+\lstinputlisting{code/数学/MTT.cpp}
 \subsection{FFT}
 
-\lstinputlisting{templates/数学/FFT.cpp}
+\lstinputlisting{code/数学/FFT.cpp}
 
 \subsection{约数个数和}
 
 $O(\sqrt[3]n\log n)$。
 
-\lstinputlisting{templates/数学/约数个数和.cpp}
+\lstinputlisting{code/数学/约数个数和.cpp}
 
 
 
@@ -565,14 +559,14 @@ $O(\sqrt[3]n\log n)$。
 
 如果答案要取模，特别注意 $y$ 有可能比模数大！不卡时间请使用 \verb|int128|。
 
-\lstinputlisting{templates/数学/万能欧几里得_min of mod of linear.cpp}
+\lstinputlisting{code/数学/万能欧几里得_min of mod of linear.cpp}
 
 
 \subsection{高斯整数类}
 
 圆上整点的基础。
 
-\lstinputlisting{templates/数学/高斯整数类.cpp}
+\lstinputlisting{code/数学/高斯整数类.cpp}
 
 \subsection{Miller Rabin/Pollard Rho}
 
@@ -580,9 +574,9 @@ $O(\sqrt[3]n\log n)$。
 
 如果你只需要做 \verb|int| 以内的分解，你可以改为
 
-\lstinputlisting{templates/数学/Miller Rabin_Pollard Rho.cpp}
+\lstinputlisting{code/数学/Miller Rabin_Pollard Rho.cpp}
 
-\lstinputlisting{templates/数学/Miller Rabin_Pollard Rho_2.cpp}
+\lstinputlisting{code/数学/Miller Rabin_Pollard Rho_2.cpp}
 
 
 \newpage
@@ -591,7 +585,7 @@ $O(\sqrt[3]n\log n)$。
 
 \subsection{字典树（trie 树）}
 
-\lstinputlisting{templates/字符串/字典树(trie 树).cpp}
+\lstinputlisting{code/字符串/字典树(trie 树).cpp}
 
 \subsection{AC 自动机}
 
@@ -599,7 +593,7 @@ $O(\sqrt[3]n\log n)$。
 
 题意：给你一个文本串 $S$ 和 $n$ 个模式串 $T_{1 \sim n}$，请你分别求出每个模式串 $T_i$ 在 $S$ 中出现的次数。
 
-\lstinputlisting{templates/字符串/AC 自动机.cpp}
+\lstinputlisting{code/字符串/AC 自动机.cpp}
 
 \subsection{hash}
 
@@ -611,7 +605,7 @@ $O(n)$，$O(n)$。
 
 \verb|__int128| 版本：
 
-\lstinputlisting{templates/字符串/hash.cpp}
+\lstinputlisting{code/字符串/hash.cpp}
 
 双模数版本：
 
@@ -619,14 +613,14 @@ $O(n)$，$O(n)$。
 
 其返回值是两个 $32$ 位数拼接而成的，要改动比较麻烦。
 
-\lstinputlisting{templates/字符串/hash_2.cpp}
+\lstinputlisting{code/字符串/hash_2.cpp}
 
 
 \subsection{KMP}
 
 $O(n)$，$O(n)$。
 
-\lstinputlisting{templates/字符串/KMP.cpp}
+\lstinputlisting{code/字符串/KMP.cpp}
 
 \subsection{manacher}
 
@@ -636,7 +630,7 @@ $O(n)$，$O(n)$。
 
 如果 $t$ 可能包含 $\texttt{\$\#}$，你需要修改字符。
 
-\lstinputlisting{templates/字符串/manacher.cpp}
+\lstinputlisting{code/字符串/manacher.cpp}
 
 \subsection{SA}
 
@@ -646,23 +640,23 @@ $O((n+\sum)\log n)$，$O(n+\sum)$。
 
 下标从 $0$ 开始。
 
-\lstinputlisting{templates/字符串/SA.cpp}
+\lstinputlisting{code/字符串/SA.cpp}
 
 \subsection{SAM}
 
 $O(n\sum)$，$O(2n\sum )$。
 
-\lstinputlisting{templates/字符串/SAM.cpp}
+\lstinputlisting{code/字符串/SAM.cpp}
 
 \subsection{ukkonen 后缀树}
 
 $O(n)$，$O(2n\sum )$。
 
-\lstinputlisting{templates/字符串/ukkonen 后缀树.cpp}
+\lstinputlisting{code/字符串/ukkonen 后缀树.cpp}
 
 \subsection{ukkonen 后缀树（重构）}
 
-\lstinputlisting{templates/字符串/ukkonen 后缀树(重构).cpp}
+\lstinputlisting{code/字符串/ukkonen 后缀树(重构).cpp}
 
 
 
@@ -670,7 +664,7 @@ $O(n)$，$O(2n\sum )$。
 
 表示每个后缀和母串的 lcp。
 
-\lstinputlisting{templates/字符串/Z 函数.cpp}
+\lstinputlisting{code/字符串/Z 函数.cpp}
 
 
 
@@ -682,18 +676,18 @@ $O(n)$，$O(2n\sum )$。
 
 $O(n)$，$O(1)$。
 
-\lstinputlisting{templates/字符串/最小表示法.cpp}
+\lstinputlisting{code/字符串/最小表示法.cpp}
 \subsection{带通配符的字符串匹配}
 
 原理：匹配等价于 $\sum (f_i-g_i)^2=0$。带通配符等价于 $\sum f_ig_i(f_i-g_i)^2=0$，展开即可。
 
 这里也是较为推荐的 NTT 版本，直接实现任意长度的多项式相乘，便于一般情况的运用。不需要提前做任何 init。
 
-\lstinputlisting{templates/字符串/带通配符的字符串匹配.cpp}
+\lstinputlisting{code/字符串/带通配符的字符串匹配.cpp}
 
 快一些的版本，手动拆开了多项式乘法。
 
-\lstinputlisting{templates/字符串/带通配符的字符串匹配_2.cpp}
+\lstinputlisting{code/字符串/带通配符的字符串匹配_2.cpp}
 \newpage
 
 \section{图论}
@@ -706,7 +700,7 @@ $O(n)$，$O(1)$。
 
 $O(n\log n)$，$O(n)$。
 
-\lstinputlisting{templates/图论/最小生成树相关/切比雪夫距离最小生成树.cpp}
+\lstinputlisting{code/图论/最小生成树相关/切比雪夫距离最小生成树.cpp}
 
 \subsubsection{最小乘积生成树}
 
@@ -714,7 +708,7 @@ $O(n\log n)$，$O(n)$。
 
 你需要实现的是 \verb|sol1|，即按照 $val$ 为权值的答案。$val_i$ 是根据 $x_i,y_i$ 计算的。
 
-\lstinputlisting{templates/图论/最小生成树相关/最小乘积生成树.cpp}
+\lstinputlisting{code/图论/最小生成树相关/最小乘积生成树.cpp}
 
 \subsubsection{最小斯坦纳树}
 
@@ -724,7 +718,7 @@ $O(3^kn+2^km\log m)$。
 
 分为有方案与无方案两个版本，点标号 $[0,n)$。
 
-\lstinputlisting{templates/图论/最小生成树相关/最小斯坦纳树.cpp}
+\lstinputlisting{code/图论/最小生成树相关/最小斯坦纳树.cpp}
 
 
 \subsection{最短路相关}
@@ -733,7 +727,7 @@ $O(3^kn+2^km\log m)$。
 
 使用 floyd 实现全源最短路与判负环。注意边权较大时可能需要考虑 \verb|int128|.
 
-\lstinputlisting{templates/图论/最短路相关/全源最短路与判负环.cpp}
+\lstinputlisting{code/图论/最短路相关/全源最短路与判负环.cpp}
 
 \subsubsection{Dijkstra/SPFA/Johnson}
 
@@ -741,18 +735,18 @@ Johnson 不适用于图中存在负环的情况，因为负环不一定是可以
 
 $O(nm\log m)$，$O(n+m)$。
 
-\lstinputlisting{templates/图论/最短路相关/Dijkstra_SPFA_Johnson.cpp}
+\lstinputlisting{code/图论/最短路相关/Dijkstra_SPFA_Johnson.cpp}
 \subsubsection{无向图最小环}
 
 原理：floyd 外层循环本质是计算只经过 $\le k$ 的点的最短路。因此枚举环上标号最大的，在做这一轮转移之前正好是不经过它的最短路。
 
 $O(n^3)$，$O(n^2)$。
 
-\lstinputlisting{templates/图论/最短路相关/无向图最小环.cpp}
+\lstinputlisting{code/图论/最短路相关/无向图最小环.cpp}
 
 \subsubsection{输出负环}
 
-\lstinputlisting{templates/图论/最短路相关/输出负环.cpp}
+\lstinputlisting{code/图论/最短路相关/输出负环.cpp}
 
 
 \subsection{二分图与网络流建图}
@@ -769,7 +763,7 @@ $O(n^3)$，$O(n^2)$。
 
 $ans=\text{maxmatch}$，方案如下。
 
-\lstinputlisting{templates/图论/二分图与网络流建图/二分图最小点集覆盖.cpp}
+\lstinputlisting{code/图论/二分图与网络流建图/二分图最小点集覆盖.cpp}
 
 \subsubsection{二分图最大独立集}
 
@@ -783,7 +777,7 @@ $ans=n+m-\text{maxmatch}$，方案是最大匹配加随便一些边（用于覆�
 
 $ans=n-\text{maxmatch}$，其中二分图建图方法是拆入点和出点（实现时直接跑一次二分图就行，不用额外处理），注意\textbf{不}需要传递闭包。方案如下。
 
-\lstinputlisting{templates/图论/二分图与网络流建图/有向无环图最小不相交链覆盖.cpp}
+\lstinputlisting{code/图论/二分图与网络流建图/有向无环图最小不相交链覆盖.cpp}
 
 \subsubsection{有向无环图最大互不可达集}
 
@@ -797,17 +791,17 @@ $ans=n-\text{maxmatch}$，其中二分图建图方法是拆入点和出点（实
 
 \subsubsection{二分图最大权匹配}
 
-\lstinputlisting{templates/图论/匹配与网络流相关代码/二分图最大权匹配.cpp}
+\lstinputlisting{code/图论/匹配与网络流相关代码/二分图最大权匹配.cpp}
 
 \subsubsection{一般图最大匹配}
 
-\lstinputlisting{templates/图论/匹配与网络流相关代码/一般图最大匹配.cpp}
+\lstinputlisting{code/图论/匹配与网络流相关代码/一般图最大匹配.cpp}
 
 \subsubsection{一般图最大权匹配}
 
 $n=400$：UOJ 600ms, Luogu 135ms
 
-\lstinputlisting{templates/图论/匹配与网络流相关代码/一般图最大权匹配.cpp}
+\lstinputlisting{code/图论/匹配与网络流相关代码/一般图最大权匹配.cpp}
 
 \subsubsection{网络流}
 
@@ -815,14 +809,14 @@ $n=400$：UOJ 600ms, Luogu 135ms
 
 包含多种费用流方案，spfa，dijkstra，以及 capacity scaling 的 spfa。
 
-\lstinputlisting{templates/图论/匹配与网络流相关代码/网络流.cpp}
+\lstinputlisting{code/图论/匹配与网络流相关代码/网络流.cpp}
 
 
 \subsubsection{假带花树}
 
 一种错误的一般图最大匹配算法，但较难卡掉。推荐在时间不足时作为乱搞使用。
 
-\lstinputlisting{templates/图论/匹配与网络流相关代码/假带花树.cpp}
+\lstinputlisting{code/图论/匹配与网络流相关代码/假带花树.cpp}
 
 \subsubsection{Stoer-Wagner 全局最小割}
 
@@ -830,7 +824,7 @@ $n=400$：UOJ 600ms, Luogu 135ms
 
 $O(n^3)$。可优化到 $O(nm\log n)$。
 
-\lstinputlisting{templates/图论/匹配与网络流相关代码/Stoer-Wagner 全局最小割.cpp}
+\lstinputlisting{code/图论/匹配与网络流相关代码/Stoer-Wagner 全局最小割.cpp}
 
 \subsubsection{最小割树}
 
@@ -838,7 +832,7 @@ $O(n^3)$。可优化到 $O(nm\log n)$。
 
 直接返回任意两点最小割。
 
-\lstinputlisting{templates/图论/匹配与网络流相关代码/最小割树.cpp}
+\lstinputlisting{code/图论/匹配与网络流相关代码/最小割树.cpp}
 
 \subsection{缩点相关}
 
@@ -848,7 +842,7 @@ $O(n^3)$。可优化到 $O(nm\log n)$。
 
 含义：确定一个拓扑序，使得按这个拓扑序定向后，入度为 $0$ 的只有 $s$，出度为 $0$ 的只有 $t$。
 
-\lstinputlisting{templates/图论/缩点相关/双极分解.cpp}
+\lstinputlisting{code/图论/缩点相关/双极分解.cpp}
 
 \subsubsection{点双}
 
@@ -872,7 +866,7 @@ $O(n^3)$。可优化到 $O(nm\log n)$。
 \verb|ct|：是否割点（已验证）；
 \verb|blk|：边所属点双标号。
 
-\lstinputlisting{templates/图论/缩点相关/点双.cpp}
+\lstinputlisting{code/图论/缩点相关/点双.cpp}
 
 \subsubsection{边双}
 
@@ -889,7 +883,7 @@ $O(n^3)$。可优化到 $O(nm\log n)$。
 \verb|ct|：是否割边；
 \verb|blk|：点所属边双标号。
 
-\lstinputlisting{templates/图论/缩点相关/边双.cpp}
+\lstinputlisting{code/图论/缩点相关/边双.cpp}
 
 \subsubsection{Tarjan 强连通分量}
 
@@ -908,13 +902,13 @@ $O(n^3)$。可优化到 $O(nm\log n)$。
 \verb|cur_e|：新图边表；
 \verb|blk|：点所属 SCC 标号。
 
-\lstinputlisting{templates/图论/缩点相关/Tarjan 强连通分量.cpp}
+\lstinputlisting{code/图论/缩点相关/Tarjan 强连通分量.cpp}
 
 \subsubsection{动态强连通分量}
 
 给出一个加边序列，\verb|solve| 会返回每个时间进入强连通分量的边。点标号范围是 $[0,n)$
 
-\lstinputlisting{templates/图论/缩点相关/动态强连通分量.cpp}
+\lstinputlisting{code/图论/缩点相关/动态强连通分量.cpp}
 
 \subsubsection{圆方树}
 
@@ -922,13 +916,13 @@ $O(n^3)$。可优化到 $O(nm\log n)$。
 
 $O(n+m)$，$O(n+m)$。
 
-\lstinputlisting{templates/图论/缩点相关/圆方树.cpp}
+\lstinputlisting{code/图论/缩点相关/圆方树.cpp}
 
 \subsubsection{广义圆方树}
 
 建议使用点双来做这个。你只需要对每个点双建一个虚点，向点双内所有原点连边，就得到了广义圆方树。
 
-\lstinputlisting{templates/图论/缩点相关/广义圆方树.cpp}
+\lstinputlisting{code/图论/缩点相关/广义圆方树.cpp}
 
 \subsubsection{$2$-sat}
 
@@ -936,7 +930,7 @@ $O(n+m)$，$O(n+m)$。
 
 $O(n+m)$，$O(n+m)$。
 
-\lstinputlisting{templates/图论/缩点相关/2-sat.cpp}
+\lstinputlisting{code/图论/缩点相关/2-sat.cpp}
 
 
 \subsubsection{Kosaraju 强连通分量（bitset 优化）}
@@ -945,7 +939,7 @@ $O(n+m)$，$O(n+m)$。
 
 $O(\frac{n^2}w)$，$O(\frac {n^2}w)$。
 
-\lstinputlisting{templates/图论/缩点相关/Kosaraju 强连通分量(bitset 优化).cpp}
+\lstinputlisting{code/图论/缩点相关/Kosaraju 强连通分量(bitset 优化).cpp}
 
 
 
@@ -957,11 +951,11 @@ $[0,n)$。
 
 zero 版：
 
-\lstinputlisting{templates/图论/树上问题/换根 dp.cpp}
+\lstinputlisting{code/图论/树上问题/换根 dp.cpp}
 
 合并版：
 
-\lstinputlisting{templates/图论/树上问题/换根 dp_2.cpp}
+\lstinputlisting{code/图论/树上问题/换根 dp_2.cpp}
 
 
 \subsubsection{轻重链剖分/DFS 序 LCA}
@@ -970,7 +964,7 @@ zero 版：
 
 \verb|get_path| 会返回这条路径上的 \verb|dfn| 区间。
 
-\lstinputlisting{templates/图论/树上问题/轻重链剖分_DFS 序 LCA.cpp}
+\lstinputlisting{code/图论/树上问题/轻重链剖分_DFS 序 LCA.cpp}
 
 \subsubsection{换根树剖}
 
@@ -984,7 +978,7 @@ zero 版：
 	\item 其余情况，\verb|dfn| 区间和原来一致。
 \end{enumerate}
 
-\lstinputlisting{templates/图论/树上问题/换根树剖.cpp}
+\lstinputlisting{code/图论/树上问题/换根树剖.cpp}
 $O(n+q\log n)$，$O(n)$。
 
 
@@ -1016,7 +1010,7 @@ DFS，若现在处理到结点 u：
 
 以下是一段示例代码，展示了将一条链对应区间取出来的过程
 
-\lstinputlisting{templates/图论/树上问题/毛毛虫剖分.cpp}
+\lstinputlisting{code/图论/树上问题/毛毛虫剖分.cpp}
 
 
 \subsubsection{树上启发式合并，DSU on tree}
@@ -1031,13 +1025,13 @@ DFS，若现在处理到结点 u：
 	\item \verb|dfs| 轻子树统计全局信息。
 \end{enumerate}
 
-\lstinputlisting{templates/图论/树上问题/树上启发式合并，DSU on tree.cpp}
+\lstinputlisting{code/图论/树上问题/树上启发式合并，DSU on tree.cpp}
 
 \subsubsection{长链剖分（$k$ 级祖先）}
 
 $O(n\log n+q)$，$O(n)$。
 
-\lstinputlisting{templates/图论/树上问题/长链剖分(k 级祖先).cpp}
+\lstinputlisting{code/图论/树上问题/长链剖分(k 级祖先).cpp}
 
 \subsubsection{长链剖分（dp 合并）}
 
@@ -1045,7 +1039,7 @@ $O(n\log n+q)$，$O(n)$。
 
 $O(n)$，$O(n)$。
 
-\lstinputlisting{templates/图论/树上问题/长链剖分(dp 合并).cpp}
+\lstinputlisting{code/图论/树上问题/长链剖分(dp 合并).cpp}
 \subsubsection{LCT}
 
 $O(n\log n)$，$O(n)$。
@@ -1054,7 +1048,7 @@ $O(n\log n)$，$O(n)$。
 
 代码为动态割边割点。
 
-\lstinputlisting{templates/图论/树上问题/LCT.cpp}
+\lstinputlisting{code/图论/树上问题/LCT.cpp}
 
 
 \subsubsection{带子树的 LCT}
@@ -1094,7 +1088,7 @@ $O(n\log n)$，$O(n)$。
 	      \]
 \end{itemize}
 
-\lstinputlisting{templates/图论/树上问题/带子树的 LCT.cpp}
+\lstinputlisting{code/图论/树上问题/带子树的 LCT.cpp}
 
 \subsubsection{动态 dp（全局平衡二叉树）}
 
@@ -1102,13 +1096,13 @@ $O(n\log n)$，$O(n)$。
 
 $O((n+q)\log n)$，$O(n)$。
 
-\lstinputlisting{templates/图论/树上问题/动态 dp(全局平衡二叉树).cpp}
+\lstinputlisting{code/图论/树上问题/动态 dp(全局平衡二叉树).cpp}
 
 \subsubsection{全局平衡二叉树（修改版）}
 
 $O((n+q)\log n)$，$O(n)$。
 
-\lstinputlisting{templates/图论/树上问题/全局平衡二叉树(修改版).cpp}
+\lstinputlisting{code/图论/树上问题/全局平衡二叉树(修改版).cpp}
 
 \subsubsection{虚树}
 
@@ -1120,7 +1114,7 @@ $O((n+q)\log n)$，$O(n)$。
 
 $O(n+\sum k\log n)$，$O(n)$。
 
-\lstinputlisting{templates/图论/树上问题/虚树.cpp}
+\lstinputlisting{code/图论/树上问题/虚树.cpp}
 
 \subsubsection{点分治}
 
@@ -1128,7 +1122,7 @@ $O(n+\sum k\log n)$，$O(n)$。
 
 $O(n\log n)$，$O(n)$。
 
-\lstinputlisting{templates/图论/树上问题/点分治.cpp}
+\lstinputlisting{code/图论/树上问题/点分治.cpp}
 
 \subsubsection{点分树}
 
@@ -1136,33 +1130,33 @@ $O(n\log n)$，$O(n)$。
 
 $O(n\log^2 n)$，$O(n\log n)$。
 
-\lstinputlisting{templates/图论/树上问题/点分树.cpp}
+\lstinputlisting{code/图论/树上问题/点分树.cpp}
 
 圆环修改和单点查询：
 
-\lstinputlisting{templates/图论/树上问题/点分树_2.cpp}
+\lstinputlisting{code/图论/树上问题/点分树_2.cpp}
 
 单点修改和圆环查询：
 
-\lstinputlisting{templates/图论/树上问题/点分树_3.cpp}
+\lstinputlisting{code/图论/树上问题/点分树_3.cpp}
 
 \subsubsection{（基环）树哈希}
 
 有根树返回每个子树的哈希值，无根树返回树的哈希值（长度至多为 $2$ 的 \verb|vector|），基环树返回图的哈希值（长度等于环长的 \verb|vector|）。
 
-\lstinputlisting{templates/图论/树上问题/(基环)树哈希.cpp}
+\lstinputlisting{code/图论/树上问题/(基环)树哈希.cpp}
 
 \subsection{欧拉路相关}
 
 \subsubsection{构造：字典序最小}
 
-\lstinputlisting{templates/图论/欧拉路相关/构造：字典序最小.cpp}
+\lstinputlisting{code/图论/欧拉路相关/构造：字典序最小.cpp}
 
 \subsubsection{回路/通路构造}
 
 $O(n+m)$，$O(n+m)$。
 
-\lstinputlisting{templates/图论/欧拉路相关/回路_通路构造.cpp}
+\lstinputlisting{code/图论/欧拉路相关/回路_通路构造.cpp}
 
 \subsubsection{回路计数（BEST 定理）/生成树计数}
 
@@ -1172,7 +1166,7 @@ $O(n^3)$，$O(n^2)$。
 
 这里的部分代码是未经验证的。
 
-\lstinputlisting{templates/图论/欧拉路相关/回路计数(BEST 定理)_生成树计数.cpp}
+\lstinputlisting{code/图论/欧拉路相关/回路计数(BEST 定理)_生成树计数.cpp}
 
 \subsection{三/四元环计数}
 
@@ -1184,7 +1178,7 @@ $O(m\sqrt m)$，$O(n+m)$。
 
 三元环是可以枚举的，你可以在 \verb|ans| 改变时记录三元环 $(i,u,v)$。
 
-\lstinputlisting{templates/图论/三_四元环计数.cpp}
+\lstinputlisting{code/图论/三_四元环计数.cpp}
 
 \subsection{支配树}
 
@@ -1192,24 +1186,24 @@ $u$ 支配 $v$ 指的是从 $S$ 到 $v$ 的路径必然经过 $u$。支配树是
 
 DAG 版：$O(m\log n)$，$O(n\log n)$。
 
-\lstinputlisting{templates/图论/支配树.cpp}
+\lstinputlisting{code/图论/支配树.cpp}
 
 一般图：标号从 $1$ 开始。
 
-\lstinputlisting{templates/图论/支配树_2.cpp}
+\lstinputlisting{code/图论/支配树_2.cpp}
 
 \subsection{prufer 与树的互相转化}
 
 $O(n)$，$O(n)$。
 
-\lstinputlisting{templates/图论/prufer 与树的互相转化.cpp}
+\lstinputlisting{code/图论/prufer 与树的互相转化.cpp}
 
 
 \subsection{最小密度环}
 
 求所有环中边权和除以边数最少的，$O(nm)$。更常用的做法是二分 spfa。
 
-\lstinputlisting{templates/图论/最小密度环.cpp}
+\lstinputlisting{code/图论/最小密度环.cpp}
 
 
 \subsection{点染色}
@@ -1218,13 +1212,13 @@ $O(n)$，$O(n)$。
 
 构造方案只能爆搜。
 
-\lstinputlisting{templates/图论/点染色.cpp}
+\lstinputlisting{code/图论/点染色.cpp}
 
 \subsection{最大独立集}
 
 爆搜。
 
-\lstinputlisting{templates/图论/最大独立集.cpp}
+\lstinputlisting{code/图论/最大独立集.cpp}
 
 \subsection{弦图}
 
@@ -1262,7 +1256,7 @@ LexBFS 算法（我不会写）
 
 代码如下：
 
-\lstinputlisting{templates/图论/弦图.cpp}
+\lstinputlisting{code/图论/弦图.cpp}
 
 
 
@@ -1275,16 +1269,16 @@ LexBFS 算法（我不会写）
 
 \verb|sim(l,r)| 计算 $\int_l^r f(x)\dif x$
 
-\lstinputlisting{templates/计算几何/自适应 simpson 法.cpp}
+\lstinputlisting{code/计算几何/自适应 simpson 法.cpp}
 
 \subsection{计算几何全}
 
 功能其实比较少，因为实际遇到的几何题不多。最有用的可能是闵可夫斯基和合并凸包，和常规的线段判交之类的。其余功能最好直接使用 HDU 板。
 
-\lstinputlisting{templates/计算几何/计算几何全.cpp}
+\lstinputlisting{code/计算几何/计算几何全.cpp}
 
 另附一份支持二分斜率的代码。这里维护的是 $(x,y)$，其中 $y=C+x^2$，因此 $x$ 整体增加会影响 $y$。
-\lstinputlisting{templates/计算几何/计算几何全_2.cpp}
+\lstinputlisting{code/计算几何/计算几何全_2.cpp}
 \newpage
 
 \section{杂项}
@@ -1293,31 +1287,31 @@ LexBFS 算法（我不会写）
 
 思路：通过进位创造 $1$，再把一串 $1$ 移到最后。
 
-\lstinputlisting{templates/杂项/枚举大小为 k 的集合.cpp}
+\lstinputlisting{code/杂项/枚举大小为 k 的集合.cpp}
 \subsection{min plus 卷积}
 
 计算 $c_i=\min\limits_{j=0}^i a_j+b_{i-j}$。
 
 要求 $b$ 是凸的，即 $b_{i+1}-b_i$ 不降。
 
-\lstinputlisting{templates/杂项/min plus 卷积.cpp}
+\lstinputlisting{code/杂项/min plus 卷积.cpp}
 
 \subsection{所有区间 GCD}
 
 需要自定义 \verb|fun|，如 $\gcd$，$\operatorname{and}$，$\operatorname{or}$。
 
-\lstinputlisting{templates/杂项/所有区间 GCD.cpp}
+\lstinputlisting{code/杂项/所有区间 GCD.cpp}
 \subsection{整体二分（区间 $k$-th）}
 
 $O((n+q)\log a)$，$O(n+q)$。
 
-\lstinputlisting{templates/杂项/整体二分(区间 k-th).cpp}
+\lstinputlisting{code/杂项/整体二分(区间 k-th).cpp}
 
 \subsection{高精度}
 
 除法和取模有点问题，但 gcd 是对的。
 
-\lstinputlisting{templates/杂项/高精度.cpp}
+\lstinputlisting{code/杂项/高精度.cpp}
 
 \subsection{分散层叠算法（Fractional Cascading）}
 
@@ -1329,7 +1323,7 @@ $O(n+q(k+\log n))$，$O(n)$。
 
 若后继不存在，则定义为 $0$。你需要在线地回答这些询问。
 
-\lstinputlisting{templates/杂项/分散层叠算法(Fractional Cascading).cpp}
+\lstinputlisting{code/杂项/分散层叠算法(Fractional Cascading).cpp}
 
 \subsection{圆上整点（二平方和定理）}
 
@@ -1346,44 +1340,44 @@ $f(p^k)=\begin{cases}
 
 $f(n)$ 的量级不好分析，但不会超过约数个数 $O(d(n))\approx O(n^{\frac{1}{3}})$，且可以推测不能达到。实践上 $10^{18}$ 以内 $f(n)\le 3072$。
 
-\lstinputlisting{templates/杂项/圆上整点(二平方和定理).cpp}
+\lstinputlisting{code/杂项/圆上整点(二平方和定理).cpp}
 
 \subsection{Stern-Brocot Tree}
 
 你需要时刻保持传入的 $\dfrac{num}{den}$ 满足 $\gcd(num,den)=1$。
 
-\lstinputlisting{templates/杂项/Stern-Brocot Tree.cpp}
+\lstinputlisting{code/杂项/Stern-Brocot Tree.cpp}
 
 \subsection{快速取模}
 
-\lstinputlisting{templates/杂项/快速取模.cpp}
+\lstinputlisting{code/杂项/快速取模.cpp}
 
 \subsection{IO 优化}
 
-\lstinputlisting{templates/杂项/IO 优化.cpp}
+\lstinputlisting{code/杂项/IO 优化.cpp}
 \subsection{手动开栈}
 
 一种写法是文件开头放，但部分 OJ 会失效。
 
-\lstinputlisting{templates/杂项/手动开栈.cpp}
+\lstinputlisting{code/杂项/手动开栈.cpp}
 
 另一种写法是在 \verb|main| 开头写，但必须以 \verb|exit(0)| 结束程序。
 
 以下两个应该有一个是对的，不对会 CE。
 
-\lstinputlisting{templates/杂项/手动开栈_2.cpp}
+\lstinputlisting{code/杂项/手动开栈_2.cpp}
 
 \subsection{德扑}
 
 \verb|solve| 返回按照出现次数排序的 \verb|vector<int>|（$0$ 下标处为牌型），这样就可以字典序比较了。
 
-\lstinputlisting{templates/杂项/德扑.cpp}
+\lstinputlisting{code/杂项/德扑.cpp}
 
 \subsection{随机函数}
 
 \verb|u64| $\to$ \verb|u64|
 
-\lstinputlisting{templates/杂项/随机函数.cpp}
+\lstinputlisting{code/杂项/随机函数.cpp}
 
 
 \subsection{约数个数表}
@@ -1476,6 +1470,8 @@ $(x,y)$ 曼哈顿距离 $\to$ $(x+y,x-y)$ 切比雪夫距离
 
 $(x,y)$ 切比雪夫距离 $\to$ $(\dfrac{x+y}{2},\dfrac{x-y}{2})$ 曼哈顿距离
 
+$k\text{-th}\max\{S\}=\sum\limits_{T\subseteq S}(-1)^{|T|-k}\tbinom{|T|-1}{k-1}\min\{T\}$
+
 Kummer's Theorem: $\tbinom{n+m}{n}$ 含 $p~(p\in \text {prime})$ 的次数是 $n+m$ 在 $p$ 进制下的进位数
 
 $\ln (1-x^V)=-\sum\limits_{i\ge1}\dfrac{x^{Vi}}{i}$
@@ -1536,23 +1532,23 @@ $$\sum\limits_{a_1a_2\cdots a_c=a_{l-c+1}a_{l-c+2}\cdots a_l} n^c$$
 
 \subsection{Makefile}
 
-\lstinputlisting{templates/语言基础/Makefile.cpp}
+\lstinputlisting{code/语言基础/Makefile.cpp}
 \subsection{debug.h}
 
-\lstinputlisting{templates/语言基础/debug.h.cpp}
+\lstinputlisting{code/语言基础/debug.h.cpp}
 
 \subsection{初始代码}
 
-\lstinputlisting{templates/语言基础/初始代码.cpp}
+\lstinputlisting{code/语言基础/初始代码.cpp}
 
 抄写完 \verb|debug.h| 后，补充于 \verb|using namespace std;| 下一行：
 
-\lstinputlisting{templates/语言基础/初始代码_2.cpp}
+\lstinputlisting{code/语言基础/初始代码_2.cpp}
 
 
 \subsection{bitset}
 
-\lstinputlisting{templates/语言基础/bitset.cpp}
+\lstinputlisting{code/语言基础/bitset.cpp}
 
 输出：
 
@@ -1565,7 +1561,7 @@ $$\sum\limits_{a_1a_2\cdots a_c=a_{l-c+1}a_{l-c+2}\cdots a_l} n^c$$
 
 \subsection{pb\_ds 和一些奇怪的用法}
 
-\lstinputlisting{templates/语言基础/pb__ds 和一些奇怪的用法.cpp}
+\lstinputlisting{code/语言基础/pb__ds 和一些奇怪的用法.cpp}
 
 \subsection{python 使用方法}
 
@@ -1573,71 +1569,71 @@ $$\sum\limits_{a_1a_2\cdots a_c=a_{l-c+1}a_{l-c+2}\cdots a_l} n^c$$
 
 文件操作
 
-\lstinputlisting[language=python]{templates/语言基础/python 使用方法.py}
+\lstinputlisting[language=python]{code/语言基础/python 使用方法.py}
 
 
 类的构造，重载运算符
-\lstinputlisting[language=python]{templates/语言基础/python 使用方法_2.py}
+\lstinputlisting[language=python]{code/语言基础/python 使用方法_2.py}
 
 初始代码
 
-\lstinputlisting[language=python]{templates/语言基础/python 使用方法_3.py}
+\lstinputlisting[language=python]{code/语言基础/python 使用方法_3.py}
 
 \newpage
 
 \section{其他人的板子（补充）}
 \subsection{最小树形图}
 
-\lstinputlisting{templates/其他人的板子(补充)/最小树形图.cpp}
+\lstinputlisting{code/其他人的板子(补充)/最小树形图.cpp}
 \subsection{MTT+exp}
 
-\lstinputlisting{templates/其他人的板子(补充)/MTT+exp.cpp}
+\lstinputlisting{code/其他人的板子(补充)/MTT+exp.cpp}
 
 \subsection{半平面交}
 
-\lstinputlisting{templates/其他人的板子(补充)/半平面交.cpp}
+\lstinputlisting{code/其他人的板子(补充)/半平面交.cpp}
 
 \subsection{多项式复合 (yurzhang)}
 
 $O(n\log n\sqrt{n\log n})$，奇慢无比，慎用
 
-\lstinputlisting{templates/其他人的板子(补充)/多项式复合 (yurzhang).cpp}
+\lstinputlisting{code/其他人的板子(补充)/多项式复合 (yurzhang).cpp}
 
 \subsection{下降幂多项式乘法}
 
 $O(n\log n)$。
 
-\lstinputlisting{templates/其他人的板子(补充)/下降幂多项式乘法.cpp}
+\lstinputlisting{code/其他人的板子(补充)/下降幂多项式乘法.cpp}
 
 \subsection{弦图找错}
 
-\lstinputlisting{templates/其他人的板子(补充)/弦图找错.cpp}
+\lstinputlisting{code/其他人的板子(补充)/弦图找错.cpp}
 
 \subsection{最长公共子序列}
 
 复杂度 $O(\frac{nm}{\omega})$。
 
-\lstinputlisting{templates/其他人的板子(补充)/最长公共子序列.cpp}
+\lstinputlisting{code/其他人的板子(补充)/最长公共子序列.cpp}
 
 另一个实现
 
-\lstinputlisting{templates/其他人的板子(补充)/最长公共子序列_2.cpp}
+\lstinputlisting{code/其他人的板子(补充)/最长公共子序列_2.cpp}
 
 \subsection{区间 LIS（排列）}
 
 在线：
 
 
-\lstinputlisting{templates/其他人的板子(补充)/区间 LIS(排列).cpp}
+\lstinputlisting{code/其他人的板子(补充)/区间 LIS(排列).cpp}
 
 
 离线：
 
-\lstinputlisting{templates/其他人的板子(补充)/区间 LIS(排列)_2.cpp}
+\lstinputlisting{code/其他人的板子(补充)/区间 LIS(排列)_2.cpp}
 
 \subsection{区间 LCS}
 
 $s_{[0,a)}$ 和 $t_{[b,c)}$ 的 LCS
 
-\lstinputlisting{templates/其他人的板子(补充)/区间 LCS.cpp}
+\lstinputlisting{code/其他人的板子(补充)/区间 LCS.cpp}
 \end{document}

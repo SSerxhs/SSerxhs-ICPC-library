@@ -1,7 +1,7 @@
 namespace du_seive
 {
-	typedef unsigned int ui;
-	typedef unsigned long long ull;
+	using ui = unsigned int;
+	using ull = unsigned long long;
 	unordered_map<ull, ui> mp;
 	const int N = 1e7 + 2;
 	const ui p = 998244353;
@@ -41,7 +41,7 @@ namespace du_seive
 			sum = (sum + (ull)get_phi_sum(k) * (j - i + 1)) % p;
 		}
 		ui nn = n % p;
-		sum = (nn * (nn + 1ll) / 2 + p - sum) % p;
+		sum = (nn * (nn + 1llu) / 2 + p - sum) % p;
 		mp[n] = sum;
 		return sum;
 	}

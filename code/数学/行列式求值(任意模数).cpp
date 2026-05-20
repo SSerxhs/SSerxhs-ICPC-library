@@ -1,6 +1,6 @@
 #include "bits/stdc++.h"
 using namespace std;
-typedef long long ll;
+using ll = long long;
 const int N = 502, p = 998244353;
 int cal(int a[][N], int n)
 {

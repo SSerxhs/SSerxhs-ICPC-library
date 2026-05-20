@@ -15,7 +15,7 @@ namespace get_root
 	template<class T> ll getrt(ull m, T getw)
 	{
 		assert(m);
-		if (m <= 4) return (ll)m - 1;
+		if (m <= 4) return (int)m - 1;
 		ull phi = m;
 		auto w = getw(m);
 		if (w.size() >= 3 || m % 4 == 0 || w.size() == 2 && w[0] != 2) return -1;

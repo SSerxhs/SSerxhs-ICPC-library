@@ -1,7 +1,7 @@
 namespace online_inv
 {
-	typedef unsigned int ui;
-	typedef unsigned long long ull;
+	using ui = unsigned;
+	using ull = unsigned long long;
 	const ull p = 1e9 + 7, n = 1010, m = n * n, N = m + 2;
 	static_assert(n *n *n > p);
 	int l[N], r[N];

@@ -90,7 +90,7 @@ int main()
 	cout << fixed << setprecision(15);
 	int n, m, i, j;
 	cin >> n >> m;
-	vector<ll> x(n);
+	vector<ull> x(n);
 	cin >> x;
 	vector<edge> edges(m);
 	for (i = 0; i < m; i++)
@@ -101,7 +101,7 @@ int main()
 	}
 	auto event = solve(n, edges);
 	union_set s(n - 1);
-	ll ans = 0;
+	ull ans = 0;
 	for (auto e : event)
 	{
 		for (auto [u, v, t] : e)

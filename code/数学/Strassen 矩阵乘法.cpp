@@ -1,7 +1,7 @@
 #include "bits/stdc++.h"
 using namespace std;
-typedef unsigned int ui;
-typedef unsigned long long ull;
+using ui = unsigned;
+using ull = unsigned long long;
 const ui p = 998244353;
 const ull fh = 1ull << 31;
 struct Q

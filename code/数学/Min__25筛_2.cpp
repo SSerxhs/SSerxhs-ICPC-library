@@ -1,6 +1,6 @@
 #include "bits/stdc++.h"
 using namespace std;
-typedef long long ll;
+using ll = long long;
 const int N = 3.2e5 + 2;
 ll s[N];
 int ss[N], ys[N], gs = 0;
