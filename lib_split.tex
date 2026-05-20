@@ -46,7 +46,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver: 3.12.1}
+\centerline{ver: 3.12.2}
 
 \tableofcontents
 
@@ -116,7 +116,7 @@ language=c++,
 本代码的用法和 \verb|priority_queue| 一致。
 
 \lstinputlisting{templates/数据结构/带删堆.cpp}
-\subsection{前 $k$ 大的和}
+\subsection{前 k 大的和}
 
 本质是用小根堆维护前 $k$ 大的数，用大根堆维护其余数。
 
@@ -414,7 +414,16 @@ $\mu^2(n)=\sum\limits_{d^2|n}\mu(d)$
 
 $O(m)$，$O(m)$。
 
+
 \lstinputlisting{templates/数学/线性插值(k 次幂和).cpp}
+\subsection{幂乘等比}
+
+$\sum\limits_{i=0}^{n-1}x^ii^d$ 以及 $\sum\limits_{i=0}^{\infty}x^ii^d$
+
+$O(d)$。
+
+\lstinputlisting{templates/数学/幂乘等比.cpp}
+
 
 \subsection{原根}
 

@@ -1,3 +1,4 @@
+
 #include <optional>
 namespace NTT
 {
@@ -910,32 +911,79 @@ namespace NTT
 		assert(r.size() == mm);
 		return r;
 	}//5e5 430ms, (1 4 9 16) 3 5 -> (16 25 36 49 64)
-	vector<ull> czt(Q f, ull c, ull m)//求 f(c^[0,m))。核心 ij=C(i+j,2)-C(i,2)-C(j,2)
+	vector<ull> czt(Q f, ull c, int m)//求 f(c^[0,m))。核心 ij=C(i+j,2)-C(i,2)-C(j,2)
 	{
 		const static ull B = 1e5;
 		static ull a[B + 2], b[B + 2];
 		int i, n = f.size();
-		if (n * m < B * 5)
+		if (m == 0) return { };
+		if (c == 0)
+		{
+			vector<ull> r(m, f.fx(0));
+			r[0] = f.fx(1);
+			return r;
+		}
+		if (min(n, m) <= 16)
 		{
 			vector<ull> r(m);
 			ull j;
 			for (i = 0, j = 1; i < m; i++) r[i] = f.fx(j), j = j * c % p;
 			return r;
 		}
-		auto mic = [&](ull x) { return a[x % B] * b[x / B] % p; };
 		ull l = cal(m += n - 1);
+		ui cur = min<ui>(B, max({m, 4}));
+		auto mic = [&](ull x) { return a[x % cur] * b[x / cur] % p; };
 		Q g(l);
 		assert(B * B > p);
 		a[0] = b[0] = g[0] = g[1] = 1;
-		for (i = 1; i <= B; i++) a[i] = a[i - 1] * c % p;
-		for (i = 1; i <= B; i++) b[i] = b[i - 1] * a[B] % p;
-		for (i = 2; i < n; i++) f[i] = f[i] * mic((p * 2 - 2 - i) * (i - 1) / 2 % (p - 1)) % p;
+		for (i = 1; i <= cur; i++) a[i] = a[i - 1] * c % p;
+		for (i = 1; i <= cur; i++) b[i] = b[i - 1] * a[cur] % p;
 		for (i = 2; i < m; i++) g[i] = mic(i * (i - 1llu) / 2 % (p - 1));
+		vector<ull> ig(m, 1);
+		for (i = 2; i < m; i++) ig[i] = ig[i - 1] * g[i] % p;
+		ull iv = ksm(ig[m - 1], p - 2);
+		for (i = m - 1; i >= 2; i--)
+		{
+			ig[i] = ig[i - 1] * iv % p;
+			if (i < n)
+				(f[i] *= ig[i]) %= p;
+			(iv *= g[i]) %= p;
+		}
 		reverse(all(f)); (f %= l) &= g;
 		vector<ull> r(f.begin() + n - 1, f.begin() + m); m -= n - 1;
-		for (i = 2; i < m; i++) r[i] = r[i] * mic((p * 2 - 2 - i) * (i - 1) / 2 % (p - 1)) % p;
+		for (i = 2; i < m; i++) (r[i] *= ig[i]) %= p;
+
 		return r;
 	}//luogu 1e6 500ms
+
+	vector<ull> dft(const vector<ull> &a)
+	{
+		int n = a.size();
+		if (n <= 1) return a;
+		assert((p - 1) % n == 0);
+		if ((n & -n) == n)
+		{
+			Q q(a, 0);
+			q.dft();
+			return vector<ull>(q.begin(), q.begin() + n);
+		}
+		ull wn = ksm(g, (p - 1) / n);
+		return czt(Q(a), wn, n);
+	}
+
+	vector<ull> idft(const vector<ull> &a)
+	{
+		int n = a.size();
+		if (n <= 1) return a;
+		assert((p - 1) % n == 0);
+
+		ull inv_wn = ksm(g, p - 1 - (p - 1) / n);
+		vector<ull> res = czt(Q(a), inv_wn, n);
+
+		ull inv_n = ksm(n, p - 2);
+		for (ull &x : res) x = x * inv_n % p;
+		return res;
+	}
 	vector<ull> Bell(int n)//B(0...n)
 	{
 		++n;
@@ -1274,4 +1322,3 @@ namespace NTT
 }
 using NTT::p;
 using poly = NTT::Q;
-
