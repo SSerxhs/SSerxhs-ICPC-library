@@ -23,7 +23,12 @@ namespace seg
 	const int N = 4e4 + 2, M = N * 4;
 	Q s[M], X[N];
 	int n, z, y;
-	void init(int nn) { n = nn; for (int i = 1; i <= n * 4; i++) s[i] = Q(); }
+	void init(int nn)
+	{
+		n = nn;
+		for (int i = 1; i <= n * 4; i++) s[i] = Q();
+		for (int i = 1; i <= n; i++) X[i] = Q();
+	}
 	void insert(int x, int l, int r, Q dt)
 	{
 		int c = x * 2, m = l + r >> 1;
@@ -59,7 +64,7 @@ namespace seg
 			if (p <= m) x = c, r = m; else x = c + 1, l = m + 1;
 			if (s[x].contains(p) && cmp(ans, s[x], p)) ans = s[x];
 		}
-		Q o(X[p].x0, X[p].y0 + X[p].dy, 1, 0, 0);
+		Q o(X[p].x0, X[p].y0 + X[p].dy, 1, 0, X[p].id);
 		return cmp(ans, o, p) ? X[p] : ans;
 	}
 }

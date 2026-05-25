@@ -388,7 +388,8 @@ namespace net
 			if (r == -1) return {-1, { }};
 			flow::s = t; flow::t = s;
 			flow::e[s].pop_back(); flow::e[t].pop_back();
-			while (flow::bfs()) r -= flow::dfs(t, flow::inf);
+			ll d;
+			while (r && flow::bfs() && (d = flow::dfs(t, r))) r -= d;
 			int m = edges.size(), i;
 			vector<ll> ans(m), id(n + 1);
 			for (i = 0; i <= n; i++) id[i] = flow::e[i].size();
@@ -398,7 +399,7 @@ namespace net
 				--id[u]; ans[i] = flow::e[v][--id[v]].w + l;
 			}
 			return {r, ans};
-		}//not check
+		}
 	}
 	using bounded_flow::valid_flow, bounded_flow::valid_flow_st, bounded_flow::valid_max_flow, bounded_flow::valid_min_flow;
 	namespace bounded_cost_flow
@@ -431,7 +432,7 @@ namespace net
 			return {tw, tc, ans};
 		}
 		tuple<ll, lll, vector<ll>> valid_mcmf(int n, const vector<tuple<int, int, ll, ll, ll>> &edges, int s, int t)
-		{//[u,v,l,r,c],mincost max_flow, not checked dijk
+		{//[u,v,l,r,c], mincost max_flow
 			auto [tw, tc, _] = valid_mcf(n, edges, s, t);
 			if (tw == -1) return {-1, -1, { }};
 			cost_flow::e[s].pop_back();
@@ -454,7 +455,7 @@ namespace net
 			return {tw, tc, ans};
 		}
 		tuple<ll, lll, vector<ll>> valid_mcmf_scaling(int n, const vector<tuple<int, int, ll, ll, ll>> &edges, int s, int t)
-		{//[u,v,l,r,c],mincost max_flow, not checked dijk
+		{//[u,v,l,r,c], mincost max_flow
 			using cost_flow::e, cost_flow::spfa_loop;
 			auto [tw, tc, _] = valid_mcf(n, edges, s, t);
 			if (tw == -1) return {-1, -1, { }};
@@ -487,7 +488,7 @@ namespace net
 					w += dw, c += dc;
 				} while (dw || dc < 0);
 			}
-			vector<ll> ans(m), id(n + 1);//方案很可能完全不对
+			vector<ll> ans(m), id(n + 1);
 			for (i = 0; i < m; i++)
 			{
 				auto [u, v, l, r, c] = edges[i];

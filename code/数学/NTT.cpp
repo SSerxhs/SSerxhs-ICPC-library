@@ -506,6 +506,12 @@ namespace NTT
 		if (b.size() <= 16)
 		{
 			int n = a.deg(), m = b.deg(), i, j;
+			if (m == 0)
+			{
+				assert(b[0]);
+				a *= ksm(b[0], p - 2);
+				return {a, Q()};
+			}
 			assert(m > 0);
 			Q q(n - m + 1);
 			ull k = b[m], ik = ksm(k, p - 2);
@@ -608,7 +614,7 @@ namespace NTT
 			return shrink(dfs(l, m) * dfs(m, r));
 		};
 		return dfs(0, a.size());
-	}//not check
+	}
 	Q prod_new(const vector<Q> &a)
 	{
 		if (!a.size()) return {1};
@@ -624,7 +630,7 @@ namespace NTT
 			q.push(f);
 		}
 		return q.top();
-	}//not check
+	}
 	vector<ull> evaluation(const Q &f, const vector<ull> &X)
 	{
 		int m = X.size(), n = f.size() - 1, i, j;
@@ -993,7 +999,7 @@ namespace NTT
 		f = exp_new(f);
 		for (i = 2; i < n; i++) f[i] = f[i] * fac[i] % p;
 		return vector<ull>(f.begin(), f.begin() + n);
-	}//not check
+	}
 	vector<ull> S1_row(int n, int m)//S1(n,0...m),O(nlogn),unsigned
 	{
 		int cm = cal(++m);
@@ -1044,6 +1050,7 @@ namespace NTT
 	}
 	vector<ull> S2_row(int n, int m)//S2(n,0...m),O(mlogm)
 	{
+		if (m == 0) return {n == 0};  // by codex
 		int tm = ++m, i, j, cnt = 0;
 		if (n == 0)
 		{
@@ -1140,6 +1147,7 @@ namespace NTT
 	reg hgcd(Q a, Q b)
 	{
 		int m = a.deg() + 1 >> 1;
+		if (m == 0) return E; // by codex
 		if (b.deg() < m) return E;
 		reg r = hgcd(a >> m, b >> m);
 		auto [c, d] = r * pair{a, b};

@@ -1,37 +1,42 @@
 const int N = 3e5 + 2, M = N << 2;
 struct P
 {
-	int u, v, w;
-	P(int a = 0, int b = 0, int c = 0) :u(a), v(b), w(c) { }
+	int u, v;
+	ll w;
+	P(int a = 0, int b = 0, ll c = 0) :u(a), v(b), w(c) { }
 	bool operator<(const P &o) const { return w < o.w; }
 };
 struct Q
 {
-	int x, y, id;
-	Q(int a = 0, int b = 0, int c = 0) :x(a), y(b), id(c) { }
+	ll x, y;
+	int id;
+	Q(ll a = 0, ll b = 0, int c = 0) :x(a), y(b), id(c) { }
 	bool operator<(const Q &o) const { return x != o.x ? x > o.x : y > o.y; }
 };
 ll ans;
 P lb[M];
 Q a[N], b[N];
-int f[N], c[N];
+int f[N];
+ll c[N];
 int n, m, i, x, y;
 struct bit
 {
-	int a[N], pos[N], n;
+	ll a[N];
+	int pos[N], n;
 	void init(int &nn)
 	{
 		memset(a + 1, 0x7f, (n = nn) * sizeof a[0]);
 		memset(pos + 1, 0, n * sizeof pos[0]);
 	}
-	void mdf(int x, const int y, const int z)
+	void mdf(int x, const ll y, const int z)
 	{
 		if (a[x] > y) a[x] = y, pos[x] = z;
 		while (x -= x & -x) if (a[x] > y) a[x] = y, pos[x] = z;
 	}
 	int sum(int x)
 	{
-		int r = a[x], rr = pos[x];
+		ll r = a[x];
+		int rr = pos[x];
 		while ((x += x & -x) <= n) if (a[x] < r) r = a[x], rr = pos[x];
 		return rr;
 	}

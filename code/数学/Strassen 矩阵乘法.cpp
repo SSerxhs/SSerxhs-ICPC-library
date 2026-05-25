@@ -11,8 +11,8 @@ struct Q
 	Q() { n = 0; }
 	void clear()
 	{
-		for (int i = 0; i < n; i++) delete a[i];
-		if (n) delete a; n = 0;
+		for (int i = 0; i < n; i++) delete[] a[i];
+		if (n) delete[] a; n = 0;
 	}
 	Q(int nn)//不能传入不是 2 的幂的数！
 	{
@@ -23,6 +23,7 @@ struct Q
 	}
 	const Q &operator=(const Q &b)
 	{
+		if (this == &b) return *this;
 		clear(); n = b.n;
 		a = new ui * [n];
 		for (int i = 0; i < n; i++) a[i] = new ui[n], memcpy(a[i], b.a[i], n * sizeof a[0][0]);
@@ -88,11 +89,14 @@ int main()
 	int i, j, n, m, k;
 	ios::sync_with_stdio(0); cin.tie(0);
 	cin >> n >> m >> k;
-	int N = 1 << 32 - min({__builtin_clz(n - 1), __builtin_clz(m - 1), __builtin_clz(k - 1)});
+	auto f = [](int x) {
+		if (x <= 1) return 1;
+		return 1 << (32 - __builtin_clz(x - 1));
+	};
+	int N = max({f(n), f(m), f(k)});
 	Q a(N), b(N);
 	for (i = 0; i < n; i++) for (j = 0; j < m; j++) cin >> a.a[i][j];
 	for (i = 0; i < m; i++) for (j = 0; j < k; j++) cin >> b.a[i][j];
 	a = a * b;
 	for (i = 0; i < n; i++) for (j = 0; j < k; j++) cout << a.a[i][j] << " \n"[j + 1 == k];
 }
-

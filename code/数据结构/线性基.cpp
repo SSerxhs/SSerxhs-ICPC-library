@@ -33,6 +33,13 @@ template<class T, int M = sizeof(T) * 8> struct base//线性基
 			assert(M != sizeof(T) * 8);
 			return -1;
 		}
+		if (!zero)
+		{
+			ull z = 0;
+			int d = dim;
+			for (int i = M - 1; i >= 0; i--) if (a[i]) z |= (1ull ^ (x >> i & 1)) << --d;
+			if (k >= z) ++k;
+		}
 		int d = dim;
 		for (int i = M - 1; i >= 0; i--)
 			if (a[i] && (1 ^ (k >> --d ^ x >> i) & 1))
@@ -48,7 +55,13 @@ template<class T, int M = sizeof(T) * 8> struct base//线性基
 			assert(M != sizeof(T) * 8);
 			return -1;
 		}
-		k += !zero;
+		if (!zero)
+		{
+			ull z = 0;
+			int d = dim;
+			for (int i = M - 1; i >= 0; i--) if (a[i]) z |= (0ull + (x >> i & 1)) << --d;
+			if (k >= z) ++k;
+		}
 		int d = dim;
 		for (int i = M - 1; i >= 0; i--)
 			if (a[i] && ((k >> --d ^ x >> i) & 1))
@@ -57,8 +70,9 @@ template<class T, int M = sizeof(T) * 8> struct base//线性基
 	}
 	base &operator|=(const base &o)//合并线性基
 	{
+		int t = num;
 		for (T x : o.a) if (x) insert(x);
-		num += o.num;
+		num = t + o.num;
 		return *this;
 	}
 	base operator|(base o) const { return o += *this; }//合并线性基
@@ -108,7 +122,7 @@ template<class T = ll, int M = sizeof(T) * 8> struct rangebase//[0,...)
 {
 	vector<array<pair<T, int>, M>> a;
 	rangebase() :a{{ }} { }
-	rangebase(const vector<T> &b) :a{{ }} { for (T x : b) insert(x); }//直接用一个 vector 构造
+	rangebase(const vector<T> &b) :a{{ }} { for (T x : b) push_back(x); }//直接用一个 vector 构造
 	void push_back(T x)//在最后插入 x
 	{
 		int n = a.size() - 1;

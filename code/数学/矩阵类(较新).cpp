@@ -40,8 +40,9 @@ struct matrix :vector<vector<ull>>
 		for (k = 0; k < m; k++)
 		{
 			for (i = 0; i < n; i++) for (j = 0; j < q; j++) c[i][j] += (*this)[i][k] * b[k][j];
-			if (!((k ^ q - 1) & 15)) for (auto &v : c) for (ull &x : v) x %= p;
+			if ((k & 15) == 15) for (auto &v : c) for (ull &x : v) x %= p;
 		}
+		for (auto &v : c) for (ull &x : v) x %= p;
 		static_assert(-1llu / p / p > 17);
 		return c;
 	}

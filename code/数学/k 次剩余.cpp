@@ -178,8 +178,10 @@ int nth_root(ui k, ui y, ui p)//x^k=y(mod p)
 {
 	if (k == 0) return y == 1 ? 0 : -1;
 	if (y == 0) return 0;
-	ui g = getrt(p);
-	ui z = bsgs(g, y, p);
+	int g = getrt(p);
+	if (g == -1) return -1;
+	ll z = bsgs(g, y, p);
+	if (z == -1) return -1;
 	ll x = fun(k, z, p - 1);
 	if (x == -1) return -1;
 	return get_root::ksm(g, x, p);

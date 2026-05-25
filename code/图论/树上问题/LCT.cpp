@@ -13,7 +13,7 @@ template<class info, class tag> struct lct
 #ifdef Rev
 		, rs(n + 1)
 #endif
-	{}
+	{ }
 
 	bool nroot(int x) const
 	{
@@ -49,6 +49,14 @@ template<class info, class tag> struct lct
 #endif
 		rev[x] ^= 1;
 	}
+	void add(int x, const tag &o)
+	{
+		s[x] += o; v[x] += o;
+#ifdef Rev
+		rs[x] += o;
+#endif
+		if (lz[x]) tg[x] += o; else tg[x] = o, lz[x] = 1;
+	}
 	void pushdown(int x)
 	{
 		if (rev[x])
@@ -58,11 +66,7 @@ template<class info, class tag> struct lct
 		}
 		if (lz[x])
 		{
-			for (int y : c[x]) if (y)
-			{
-				if (lz[y]) tg[y] += tg[x]; else tg[y] = tg[x], lz[y] = 1;
-				s[y] += tg[x];
-			}
+			for (int y : c[x]) if (y) add(y, tg[x]);
 			lz[x] = 0;
 		}
 	}
@@ -110,8 +114,7 @@ template<class info, class tag> struct lct
 	}
 	void modify(int x, int y, const tag &o)
 	{
-		split(x, y); s[y] += o;
-		if (lz[y]) tg[y] += o; else tg[y] = o, lz[y] = 1;
+		split(x, y); add(y, o);
 	}
 	info ask(int x, int y) { split(x, y); return s[y]; }
 	bool connected(int x, int y)//注意会改变形态

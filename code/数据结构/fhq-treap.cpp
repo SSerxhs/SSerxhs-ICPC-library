@@ -27,7 +27,7 @@ int merge(int x, int y)//小根ver.
 }
 int main()
 {
-	cin>>n>>m; srand(998244353);
+	cin >> n >> m; srand(998244353);
 	for (i = 1; i <= n; i++)
 	{
 		cin >> x;
@@ -57,7 +57,18 @@ int main()
 		}
 		if (y == 2)//删除一个 x
 		{
-			split_val(rt, p, q); kth = 1; split_kth(q, i, z);
+			split_val(rt, p, q);
+			z = q;
+			if (q)
+			{
+				i = q;
+				while (c[i][0]) i = c[i][0];
+				if (v[i] == x)
+				{
+					kth = 1;
+					split_kth(q, i, z);
+				}
+			}
 			rt = merge(p, z); continue;
 		}
 		if (y == 3)//询问 x 的排名（比 x 小的数字个数 +1）
@@ -75,6 +86,6 @@ int main()
 		while (c[x][0]) x = c[x][0];
 		ans ^= (la = v[x]); rt = merge(p, q);
 	}
-	cout<<ans<<endl;
+	cout << ans << endl;
 }
 

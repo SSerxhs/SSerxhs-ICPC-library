@@ -66,12 +66,12 @@ namespace sgt
 		int mid = l + r >> 1;
 		if (pos <= mid)
 		{
-			insert(lc(x), l, mid);
+			modify(lc(x), l, mid);
 			if (rc(x)) s(x) = s(lc(x)) + s(rc(x)); else s(x) = s(lc(x));
 		}
 		else
 		{
-			insert(rc(x), mid + 1, r);
+			modify(rc(x), mid + 1, r);
 			if (lc(x)) s(x) = s(lc(x)) + s(rc(x)); else s(x) = s(rc(x));
 		}
 	}
@@ -124,7 +124,7 @@ namespace sgt
 		set(info *a) :rt(0) { b = a; build(rt, L, R); }
 		void modify(int p, const info &o) { pos = p; tmp = o; sgt::modify(rt, L, R); }
 		void insert(int p, const info &o) { pos = p; tmp = o; sgt::insert(rt, L, R); }
-		void join(const set &o) { rt = merge(rt, o.rt, L, R); }
+		void join(set &o) { rt = merge(rt, o.rt, L, R); o.rt = 0; }
 		info ask(int l, int r)
 		{
 			z = l; y = r; fir = 1;

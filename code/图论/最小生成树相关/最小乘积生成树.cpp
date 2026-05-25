@@ -49,5 +49,5 @@ int main()
 	for (i = 1; i <= m; i++) a[i].val = a[i].x; l = sol1();
 	for (i = 1; i <= m; i++) a[i].val = a[i].y; r = sol1();
 	ans = min(ans, min(l, r)); sol2(l, r);
-	cout<<ans.x<<' '<<ans.y<<endl;
+	cout << ans.x << ' ' << ans.y << endl;
 }

@@ -111,7 +111,8 @@ namespace DFS
 		for (int i = 1; i <= n; i++)
 		{
 			e[i].clear();
-			a[i] = f[i] = ed[i] = 0;
+			c[i].clear(); rg[i].clear();
+			a[i] = f[i] = siz[i] = ed[i] = 0;
 		}
 	}
 	void new_dfs(int u)
@@ -149,4 +150,3 @@ namespace DFS
 	}
 }
 using DFS::init, DFS::fun, DFS::e, DFS::dis, DFS::rg, DFS::get;
-

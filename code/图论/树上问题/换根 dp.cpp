@@ -35,7 +35,7 @@ struct solver
 				for (auto [v, w] : e[u]) g[v] = s, merge(s, f[v], w);
 				s = zero;
 				reverse(all(e[u]));
-				for (auto [v, w] : e[u]) merge(g[v], s, w), dfs(dfs, v), merge(s, f[v], w);
+				for (auto [v, w] : e[u]) merge(g[v], s, W{ }), dfs(dfs, v), merge(s, f[v], w);
 			};
 			dfs(dfs, rt);
 		}

@@ -11,11 +11,9 @@ ll powmod(ll a, ll k, ll mod) {
 	ll ap = a, ans = 1;
 	while (k) {
 		if (k & 1) {
-			ans *= ap;
-			ans %= mod;
+			ans = (__int128)ans * ap % mod;
 		}
-		ap = ap * ap;
-		ap %= mod;
+		ap = (__int128)ap * ap % mod;
 		k >>= 1;
 	}
 	return ans;
@@ -56,14 +54,14 @@ ll solve1(ll p, ll q, int e, ll a) {
 	}
 	for (int i = 0; i < e; i++) qp *= q;
 	ll d = qp - inv(r % qp, qp);
-	ll t = (d * r + 1) / qp;
+	ll t = ((__int128)d * r + 1) / qp;
 	ll at = powmod(a, t, p), inva = inv(a, p);
 	if (e >= s) {
 		if (powmod(at, qp, p) != a) return -1;
 		else return at;
 	}
 	//uniform_int_distribution<long long> rnd(1, p-1);
-	uniform_int_distribution<> rnd(1, p - 1);
+	uniform_int_distribution<long long> rnd(1, p - 1);
 	ll rv;
 	while (1) {
 		rv = powmod(rnd(mt), r, p);
@@ -72,27 +70,28 @@ ll solve1(ll p, ll q, int e, ll a) {
 	int i = 0;
 	ll qi = 1, sq = 1;
 	while (sq * sq < q) sq++;
+	auto ml = [&](ll x, ll y) { return (ll)((__int128)x * y % (p - 1)); };
 	while (i < s - e) {
 		ll qq = qs / qp / qi / q;
 		vector<P> v(sq);
-		ll rvi = powmod(rv, qp * qq * (p - 2) % (p - 1), p), rvp = powmod(rv, sq * qp * qq, p);
-		ll x = powmod(powmod(at, qp, p) * inva % p, qq * (p - 2) % (p - 1), p), y = 1;
+		ll rvi = powmod(rv, ml(ml(qp, qq), p - 2), p), rvp = powmod(rv, ml(ml(sq, qp), qq), p);
+		ll x = powmod((__int128)powmod(at, qp, p) * inva % p, ml(qq, p - 2), p), y = 1;
 		for (int j = 0; j < sq; j++) {
 			v[j] = P(x, j);
-			(x *= rvi) %= p;
+			x = (__int128)x * rvi % p;
 		}
 		sort(v.begin(), v.end());
 		ll z = -1;
 		for (int j = 0; j < sq; j++) {
 			int l = lower_bound(v.begin(), v.end(), P(y, 0)) - v.begin();
-			if (v[l].first == y) {
+			if (l < v.size() && v[l].first == y) {
 				z = v[l].second + j * sq;
 				break;
 			}
-			(y *= rvp) %= p;
+			y = (__int128)y * rvp % p;
 		}
 		if (z == -1) return -1;
-		(at *= powmod(rv, z, p)) %= p;
+		at = (__int128)at * powmod(rv, z, p) % p;
 		i++;
 		qi *= q;
 		rv = powmod(rv, q, p);
@@ -101,7 +100,7 @@ ll solve1(ll p, ll q, int e, ll a) {
 }
 ll solve0(ll p, ll q, ll r, ll a) {
 	ll d = q - inv(r % q, q);
-	ll t = (d * r + 1) / q;
+	ll t = ((__int128)d * r + 1) / q;
 	ll at = powmod(a, t, p), inva = inv(a, p);
 	if (powmod(at, q, p) != a) return -1;
 	else return at;
@@ -149,12 +148,12 @@ ll solve(ll p, ll k, ll a)//p k y
 			ret = x, gp *= qp;
 			continue;
 		}
-		ll s = inv(gp % qp, qp), t = (1 - gp * s) / qp;
+		ll s = inv(gp % qp, qp), t = (1 - (__int128)gp * s) / qp;
 		if (t >= 0) ret = powmod(ret, t, p);
 		else ret = powmod(ret, p - 1 + t % (p - 1), p);
 		if (s >= 0) x = powmod(x, s, p);
 		else x = powmod(x, p - 1 + s % (p - 1), p);
-		(ret *= x) %= p;
+		ret = (__int128)ret * x % p;
 		gp *= qp;
 	}
 	if (powmod(ret, k, p) != a1) return -1;

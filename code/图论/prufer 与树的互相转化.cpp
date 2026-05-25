@@ -32,7 +32,7 @@ vector<pair<int, int>> prufer_to_edges(const vector<int> &p)//[1,n]，定根为 
 	while (cs[++i]);
 	int u = i, v;
 	vector<pair<int, int>> r;
-	r.reserve(n - 2);
+	r.reserve(n + 1);
 	for (j = 0; j < n; j++)
 	{
 		cs[u] = 1e9;

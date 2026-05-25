@@ -25,4 +25,4 @@ template<class T> struct str//[0,n)
     }
 };
 
-	
+

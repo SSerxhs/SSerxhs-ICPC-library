@@ -6,3 +6,6 @@
 *.fdb_latexmk
 *.xdv
 *.gz
+error.txt
+ignore.txt
+running.txt

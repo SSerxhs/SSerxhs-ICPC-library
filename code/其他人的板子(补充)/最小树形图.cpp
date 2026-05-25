@@ -73,6 +73,7 @@ pair<ll, vector<int>> directed_minimum_spanning_tree(int n, const vector<tuple<i
         if (i == s) continue;
         for (int u = i;;)
         {
+            while (h[u] && r.find(h[u]->u) == r.find(u)) h[u] = h[u]->pop(); // fix by codex
             if (!h[u]) return { };
             ans += (in[u] = h[u])->w;
             in[u]->add(-in[u]->w);

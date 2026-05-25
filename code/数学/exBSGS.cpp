@@ -123,7 +123,7 @@ namespace BSGS
             (y *= a / x) %= p;
         }
         a %= p;
-        (b *= (int)p + exgcd(y, p)) % p;
+        b = (ull)b * ((int)p + exgcd(y, p)) % p;
         int r = bsgs(a, b, p);
         return r == -1 ? -1 : r + cnt;
     }

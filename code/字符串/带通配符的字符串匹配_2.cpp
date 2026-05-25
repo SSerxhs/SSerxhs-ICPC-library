@@ -26,7 +26,7 @@ void ntt(vector <ui> &a)
 		}
 	}
 }
-vector<int> match(string s, string t, char ch = '*')
+vector<int> match(string s, string t, char ch = '*')// 单次程序运行中中通配符不可修改
 {
 	static mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
 	static array<ui, 256> c;

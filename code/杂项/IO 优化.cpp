@@ -17,9 +17,8 @@ private:
 public:
 	fast_iostream(FILE *_inf = stdin, FILE *_ouf = stdout)
 		:inbuf(new char[MAXBF]), inf(_inf), inst(inbuf), ined(inbuf),
-		oubuf(new char[MAXBF]), ouf(_ouf), oust(oubuf), oued(oubuf) {
-	}
-	~fast_iostream() { _flush(); delete inbuf; delete oubuf; }
+		oubuf(new char[MAXBF]), ouf(_ouf), oust(oubuf), oued(oubuf) { }
+	~fast_iostream() { _flush(); delete[] inbuf; delete[] oubuf; }
 	fast_iostream &operator >> (char &c) {
 		while (isspace(c = _getchar()));
 		return *this;
@@ -49,8 +48,11 @@ public:
 	}
 	template <class Int>
 	fast_iostream &operator << (Int   n) {
-		if (n < 0) _putchar('-'), n = -n; static char S[20]; int t = 0;
-		do { S[t++] = '0' + n % 10, n /= 10; } while (n);
+		using U = make_unsigned_t<Int>;
+		U x;
+		if (n < 0) _putchar('-'), x = U(0) - U(n); else x = n;
+		static char S[20]; int t = 0;
+		do { S[t++] = '0' + x % 10, x /= 10; } while (x);
 		for (int i = 0; i < t; ++i) _putchar(S[t - i - 1]);
 		return *this;
 	}

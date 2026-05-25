@@ -15,7 +15,7 @@ private:
 	}
 	void cg(int x, int y, T t)
 	{
-		if (x > n || y > n) return;
+		if (x > n || y > m) return;
 		modify(a, x, y, t);
 		modify(b, x, y, x * t);
 		modify(c, x, y, y * t);

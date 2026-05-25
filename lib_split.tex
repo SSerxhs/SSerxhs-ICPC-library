@@ -1,4 +1,4 @@
-% !TEX program = xelatex
+﻿% !TEX program = xelatex
 \documentclass[12pt]{ctexart}
 \usepackage{amsfonts,amssymb}
 \usepackage{booktabs}
@@ -46,7 +46,7 @@ language=c++,
 
 \maketitle
 
-\centerline{ver: 3.12.2}
+\centerline{ver: 3.13.1}
 
 \tableofcontents
 
@@ -57,8 +57,6 @@ language=c++,
 此模板的初衷是个人使用，因此已有的模板可能未列出。建议结合 Heltion 模板和 HDU 模板使用。
 
 模板需要的版本为 cpp17 或 cpp20。
-
-大部分情况下，涉及取模的都需要使用 \verb|unsigned long long|，即使类型名是 \verb|ll|。这是因为值域较大有利于合理减少取模次数。目前，大部分都已经修改为 \verb|ull|。
 
 \verb|optional| 的用法：一个 \verb|optional| 变量 \verb|r| 可以用 \verb|if (r)| 判断其是否有值。取出值的方法是 \verb|*r|。常见于包含无解又包含空集解的代码中，便于区分无解和空集解。
 
@@ -79,6 +77,7 @@ language=c++,
 
 支持单点修改、求前缀和、二分前缀和大于等于 $x$ 的第一个位置。
 
+\verb|lower_bound| 要求前缀和单调，常见用法是所有单点值非负。
 \lstinputlisting{code/数据结构/树状数组.cpp}
 
 \subsection{线段树}
@@ -482,9 +481,11 @@ $O(n2^n)$，$O(2^n)$。
 
 \subsection{二次剩余}
 
+当前实现是 Cipolla，要求模数为素数（$P=2$ 已特判）。
 \lstinputlisting{code/数学/二次剩余.cpp}
 
 \subsection{$k$ 次剩余}
+两个版本都按素数模数的乘法群使用；合数模数需要分解后 CRT。
 \lstinputlisting{code/数学/k 次剩余.cpp}
 
 网上的超快版本
@@ -543,7 +544,7 @@ $O(\sqrt[3]n\log n)$。
 
 \subsection{万能欧几里得/min of mod of linear}
 
-题意：$\sum\limits_{x=0}^{n-1}\lfloor \dfrac {ax+b}m\rfloor$ （$0\le a,b<m$）
+题意/接口：$\sum\limits_{x=0}^{n}\lfloor \dfrac {ax+b}m\rfloor$ （$0\le a,b<m$）。
 
 \includegraphics[scale=0.8]{1.png}
 
@@ -763,6 +764,8 @@ $O(n^3)$，$O(n^2)$。
 
 $ans=\text{maxmatch}$，方案如下。
 
+输入为左侧点数、右侧点数、边数。
+
 \lstinputlisting{code/图论/二分图与网络流建图/二分图最小点集覆盖.cpp}
 
 \subsubsection{二分图最大独立集}
@@ -805,7 +808,6 @@ $n=400$：UOJ 600ms, Luogu 135ms
 
 \subsubsection{网络流}
 
-输出方案部分几乎没有验证过。
 
 包含多种费用流方案，spfa，dijkstra，以及 capacity scaling 的 spfa。
 
@@ -887,7 +889,6 @@ $O(n^3)$。可优化到 $O(nm\log n)$。
 
 \subsubsection{Tarjan 强连通分量}
 
-未经验证。
 
 所有标号从 $0$ 开始。
 
@@ -948,6 +949,8 @@ $O(\frac{n^2}w)$，$O(\frac {n^2}w)$。
 \subsubsection{换根 dp}
 
 $[0,n)$。
+
+第一版要求 \verb|merge(x,y,W{})| 表示同一父结点坐标系下合并；若合并语义更复杂，使用合并版。
 
 zero 版：
 
@@ -1164,7 +1167,6 @@ $O(n^3)$，$O(n^2)$。
 
 以 $u$ 为起点的欧拉回路个数 $sum=T(u)\times \prod\limits_{v=1}^n(out(v)-1)!$，其中 $T(u)$ 是以 $u$ 为根的内向树个数（出度矩阵-邻接矩阵），$out(v)$ 是 $v$ 的出度。若允许循环同构（如 $1\to 2\to 1\to 3\to 1$ 与 $1\to 3\to 1\to 2\to 1$），还需多乘 $out(u)$。
 
-这里的部分代码是未经验证的。
 
 \lstinputlisting{code/图论/欧拉路相关/回路计数(BEST 定理)_生成树计数.cpp}
 
@@ -1235,6 +1237,8 @@ $N(v_i)=\{v_j|j>i\land (v_i,v_j)\in E\}$，$next(v_i)$ 为 $N(v_i)$ 最靠前的
 弦图判定：等价于是否存在完美消除序列。首先求出一个完美消除序列，然后判定是否合法。
 
 判定方法：设 $v_{i+1},\cdots,v_n$ 中与 $v_i$ 相邻的依次为 $v'_1,\cdots,v'_m$。只需判断是否 $v_1'$ 与 $v'_2,\cdots,v'_m$ 相邻。
+
+\verb|find_cycle| 若不是弦图，返回一个无弦环（首尾相连但不重复首点）；若是弦图返回空。
 
 LexBFS 算法（我不会写）
 

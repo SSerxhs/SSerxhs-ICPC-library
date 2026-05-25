@@ -76,6 +76,7 @@ template<class info, class tag> struct splay
 	}
 	splay()
 	{
+		shift = 0;
 		rt = new node;
 		rt->c[1] = new node;
 		rt->c[1]->f = rt;
@@ -169,7 +170,7 @@ template<class info, class tag> struct splay
 		rt->c[1]->pushup();
 		rt->pushup();
 	}
-	void modify(int pos, info x)//not checked
+	void modify(int pos, info x)
 	{
 		pos -= shift;
 		assert(1 <= pos && pos <= rt->siz - 2);

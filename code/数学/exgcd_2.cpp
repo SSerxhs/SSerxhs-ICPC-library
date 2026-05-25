@@ -15,7 +15,7 @@ pair<ll, ll> exgcd(ll a, ll b, ll c)//ax+by=c，{-1,-1} 无解，b=0 返回 {c/a
 		swap(a, b);
 	}
 	b = abs(q / d);
-	x = (c / d) % b * (x % b) % b;
+	x = (lll)((c / d) % b) * (x % b) % b;
 	if (x < 0) x += b;
 	return {x, (ll)((c - (lll)p * x) / q)};
 }
@@ -23,4 +23,3 @@ ll fun(ll a, ll b, ll p)//ax=b(mod p)
 {
 	return exgcd(a, -p, b).first % p;
 }
-

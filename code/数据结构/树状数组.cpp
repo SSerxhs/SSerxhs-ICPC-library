@@ -29,7 +29,7 @@ template<class T> struct bit
 	{
 		return sum(y) - sum(x - 1);
 	}
-	int lower_bound(T x)
+	int lower_bound(T x)//要求所有单点值非负，从而前缀和单调
 	{
 		if (n == 0 || x <= 0) return 0;
 		int i = __lg(n), j = 0;

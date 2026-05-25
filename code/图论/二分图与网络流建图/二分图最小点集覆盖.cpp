@@ -18,19 +18,19 @@ void dfs2(int u)
 }
 int main()
 {
-	int n, m, i, r = 0;
-	cin >> n >> m;
-	while (m--)
+	int n, m, k, i, r = 0;
+	cin >> n >> m >> k;
+	while (k--)
 	{
 		int u, v;
 		cin >> u >> v;
 		e[u].push_back(v);
 	}
 	for (i = 1; i <= n; i++) dfs(now = i);
-	for (i = 1; i <= n; i++) kl[lk[i]] = i;
+	for (i = 1; i <= m; i++) if (lk[i]) kl[lk[i]] = i;
 	for (i = 1; i <= n; i++) if (!kl[i]) dfs2(i);
 	vector<int> A[2];
-	for (i = 1; i <= n; i++) if (lk[i])
+	for (i = 1; i <= m; i++) if (lk[i])
 	{
 		if (flg[i]) A[1].push_back(i); else A[0].push_back(lk[i]);
 	}

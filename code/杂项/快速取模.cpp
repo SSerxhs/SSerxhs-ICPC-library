@@ -15,7 +15,8 @@ struct barret
 	}
 	friend inline ll operator % (ll n, const barret &d)
 	{ // get n % d
-		return n - ((ulll(n) * d.m) >> d.c) * d.p;
+		ll r = n - ((ulll(n) * d.m) >> d.c) * d.p;
+		while (r >= d.p) r -= d.p;
+		return r;
 	}
 } modp;
-

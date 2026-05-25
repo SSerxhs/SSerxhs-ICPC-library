@@ -28,7 +28,7 @@ namespace cipolla
 		}
 		return r;
 	}
-	ui mosqrt(ui x, ui P)//0<=x<P
+	ui mosqrt(ui x, ui P)//P 为素数，0<=x<P
 	{
 		if (x == 0 || P == 2) return x;
 		p = P;

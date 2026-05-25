@@ -179,7 +179,7 @@ vector<pair<ll, ll>> two_sqr_sum(ll n)//只会返回非负解，按照字典序�
 {
 	if (n < 0) return { };
 	if (n == 0) return {{0, 0}};
-	ll m = __lg(n & -n), d = 1 << m / 2, i;
+	ll m = __lg(n & -n), d = 1ll << (m / 2), i;
 	n >>= m;
 	auto w = getw(n);
 	vector<G> r((m & 1) ? vector{G{1, 1}} : vector{G{0, 1}, G{1, 0}});
@@ -211,4 +211,3 @@ vector<pair<ll, ll>> two_sqr_sum(ll n)//只会返回非负解，按照字典序�
 	ans.resize(unique(all(ans)) - ans.begin());
 	return ans;
 }
-

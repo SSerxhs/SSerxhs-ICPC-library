@@ -46,24 +46,63 @@ namespace chordal_graph//下标从 1 开始
 	bool check_perfect_seq(vector<int> a)
 	{
 		static bool ee[N];
+		static int pos[N];
 		memset(ed+1,0,n*sizeof ed[0]);
 		memset(ee+1,0,n*sizeof ee[0]);
-		reverse(all(a));
+		for (int i=0;i<n;i++) pos[a[i]]=i;
 		for (int u:a)
 		{
-			ed[u]=1;
 			int w=0;
-			for (int v:e[u]) if (ed[v]) {w=v;break;}
+			for (int v:e[u]) if (pos[v]>pos[u]&&(!w||pos[v]<pos[w])) w=v;
 			if (!w) continue;
 			ee[w]=1;
 			for (int v:e[w]) ee[v]=1;
-			for (int v:e[u]) if (ed[v]&&!ee[v]) return 0;
+			for (int v:e[u]) if (pos[v]>pos[u]&&!ee[v]) return 0;
 			ee[w]=0;
 			for (int v:e[w]) ee[v]=0;
 		}
 		return 1;
 	}
 	bool check_chordal(const vector<pair<int,int>> &edges) {return check_perfect_seq(perfect_seq(edges));}
+	vector<int> find_cycle(const vector<pair<int,int>> &edges)//若不是弦图，返回一个无弦环。首尾相连，不重复首点
+	{
+		auto a=perfect_seq(edges);
+		static bool ee[N];
+		static int pos[N],pre[N];
+		memset(ee+1,0,n*sizeof ee[0]);
+		for (int i=0;i<n;i++) pos[a[i]]=i;
+		for (int u:a)
+		{
+			int w=0,vv=0;
+			for (int v:e[u]) if (pos[v]>pos[u]&&(!w||pos[v]<pos[w])) w=v;
+			if (!w) continue;
+			ee[w]=1;
+			for (int v:e[w]) ee[v]=1;
+			for (int v:e[u]) if (pos[v]>pos[u]&&!ee[v]) {vv=v;break;}
+			ee[w]=0;
+			for (int v:e[w]) ee[v]=0;
+			if (!vv) continue;
+			memset(ed+1,0,n*sizeof ed[0]);
+			memset(pre+1,0,n*sizeof pre[0]);
+			ed[u]=1;
+			for (int v:e[u]) if (v!=w&&v!=vv) ed[v]=1;
+			queue<int> q;
+			q.push(w);pre[w]=-1;
+			while (q.size())
+			{
+				int x=q.front();q.pop();
+				if (x==vv) break;
+				for (int y:e[x]) if (!ed[y]&&!pre[y]) pre[y]=x,q.push(y);
+			}
+			if (!pre[vv]) continue;
+			vector<int> r;
+			for (int x=vv;x!=-1;x=pre[x]) r.push_back(x);
+			reverse(all(r));
+			r.insert(r.begin(),u);
+			return r;
+		}
+		return { };
+	}
 	vector<int> color(int _n,const vector<pair<int,int>> &edges)//返回长度为 _n+1。其中 0 无意义
 	{
 		auto a=perfect_seq(edges);
@@ -95,4 +134,4 @@ namespace chordal_graph//下标从 1 开始
 		return r;
 	}
 }
-using chordal_graph::check_chordal,chordal_graph::color,chordal_graph::max_independent;
+using chordal_graph::check_chordal,chordal_graph::find_cycle,chordal_graph::color,chordal_graph::max_independent;

@@ -4,6 +4,7 @@ namespace geo
 	using ll = long long;
 	using lll = __int128;
 	using db = long double;
+	mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
 	tmpl using up = conditional_t<std::is_same_v<T, ll>, lll,
 		conditional_t<std::is_same_v<T, db>, db, void>>;
 	const db eps = 1e-7, pi = 3.1415926535897932384626434;
@@ -100,7 +101,7 @@ namespace geo
 		assert(sgn(d.x) || sgn(d.y));
 	}
 	template<> line<db>::line(db a, db b, db c) : o(abs(a) > abs(b) ? vec<db>(-c / a, 0) : vec<db>(0, -c / b)), d(-b, a) { }//ax+by+c=0
-	tmpl db get_angle(const vec<T> &m, const vec<T> &n) { return asin(clamp<db>((m * n) / (m.len() * n.len()), -1, 1)); }
+	tmpl db get_angle(const vec<T> &m, const vec<T> &n) { return atan2(m * n, m.dot(n)); }
 	tmpl bool operator<(const line<T> &m, const line<T> &n)
 	{
 		int s = sgn(m.d * n.d);
@@ -115,6 +116,16 @@ namespace geo
 	}
 	tmpl db dis(const line<T> &m, const vec<T> &o) { return abs(m.d * (o - m.o) / m.d.len()); }
 	tmpl db dis(const vec<T> &o, const line<T> &m) { return abs(m.d * (o - m.o) / m.d.len()); }
+	tuple<vec<ll>, vec<ll>, lll, lll> proj(const line<ll> &l, const vec<ll> &p)
+	{
+		lll x = (lll)(p.x - l.o.x) * l.d.x + (lll)(p.y - l.o.y) * l.d.y;
+		lll y = (lll)l.d.x * l.d.x + (lll)l.d.y * l.d.y;
+		return {l.o, l.d, x, y};
+	}
+	vec<db> proj(const line<db> &l, const vec<db> &p)
+	{
+		return l.o + l.d * ((p - l.o).dot(l.d) / l.d.len2());
+	}
 	tmpl struct circle;
 	template<> struct circle<db>
 	{
@@ -132,7 +143,6 @@ namespace geo
 		circle(vector<vec<db>> a)
 		{
 			int n = a.size(), i, j, k;
-			mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
 			shuffle(all(a), rnd);
 			*this = circle(a[0]);
 			for (i = 1; i < n; i++) if (cover(a[i]) < 0)
@@ -170,7 +180,6 @@ namespace geo
 		circle(vector<vec<ll>> a)
 		{
 			int n = a.size(), i, j, k;
-			mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
 			shuffle(all(a), rnd);
 			*this = circle(a[0]);
 			for (i = 1; i < n; i++) if (cover(a[i]) < 0)
@@ -190,9 +199,80 @@ namespace geo
 			if (t == 2) return -sgn((a - p).dot(b - p));
 			assert(t == 3);
 			vec<ll> u = a - p, v = b - p, w = c - p;
-			return sgn((lll)u.len2() * (v * w) + (lll)v.len2() * (w * u) + w.len2() * (u * v));
+			lll u2 = (lll)u.x * u.x + (lll)u.y * u.y;
+			lll v2 = (lll)v.x * v.x + (lll)v.y * v.y;
+			lll w2 = (lll)w.x * w.x + (lll)w.y * w.y;
+			lll vw = (lll)v.x * w.y - (lll)v.y * w.x;
+			lll wu = (lll)w.x * u.y - (lll)w.y * u.x;
+			lll uv = (lll)u.x * v.y - (lll)u.y * v.x;
+			return sgn(u2 * vw + v2 * wu + w2 * uv);
 		}
 	};
+	tmpl vector<vec<db>> intersect(const circle<db> &c, const line<T> &l)
+	{
+		vec<db> o = (vec<db>)l.o, d = (vec<db>)l.d;
+		vec<db> p = o + d * ((c.o - o).dot(d) / d.len2());
+		db h = c.r * c.r - (p - c.o).len2();
+		if (sgn(h) < 0) return { };
+		if (!sgn(h)) return {p};
+		d *= sqrt(h / d.len2());
+		return {p - d, p + d};
+	}
+	tmpl vector<vec<db>> intersect(const line<T> &l, const circle<db> &c) { return intersect(c, l); }
+	vector<vec<db>> intersect(const circle<db> &a, const circle<db> &b)
+	{
+		vec<db> d = b.o - a.o;
+		db l = d.len();
+		if (!sgn(l)) return { };
+		db x = (a.r * a.r - b.r * b.r + l * l) / (2 * l);
+		db h = a.r * a.r - x * x;
+		if (sgn(h) < 0) return { };
+		vec<db> p = a.o + d * (x / l);
+		if (!sgn(h)) return {p};
+		d = d.rotate_90() * (sqrt(h) / l);
+		return {p - d, p + d};
+	}
+	vector<pair<line<db>, vec<db>>> tangent(const circle<db> &c, const vec<db> &p)
+	{
+		vector<pair<line<db>, vec<db>>> ans;
+		vec<db> d = p - c.o;
+		db z = d.len2(), h = z - c.r * c.r;
+		if (sgn(h) < 0 || !sgn(z)) return ans;
+		if (!sgn(h))
+		{
+			vec<db> t = c.o + d * (c.r / sqrt(z));
+			ans.push_back({line<db>(t, t + d.rotate_90()), t});
+			return ans;
+		}
+		vec<db> r = d.rotate_90();
+		for (int s : {-1, 1})
+		{
+			vec<db> t = c.o + (d * (c.r * c.r) + r * (s * c.r * sqrt(h))) / z;
+			ans.push_back({line<db>(p, t), t});
+		}
+		return ans;
+	}
+	vector<tuple<line<db>, vec<db>, vec<db>>> tangent(const circle<db> &a, const circle<db> &b)
+	{
+		vector<tuple<line<db>, vec<db>, vec<db>>> ans;
+		vec<db> d = b.o - a.o;
+		db z = d.len2();
+		if (!sgn(z)) return ans;
+		for (int o : {-1, 1})
+		{
+			db r = a.r - o * b.r, h = z - r * r;
+			if (sgn(h) < 0) continue;
+			h = sqrt(max<db>(0, h));
+			for (int s : {-1, 1})
+			{
+				vec<db> v = (d * r + d.rotate_90() * (s * h)) / z;
+				vec<db> x = a.o + v * a.r, y = b.o + v * (o * b.r);
+				ans.push_back({sgn((x - y).len2()) == 0 ? line<db>(x, x + v.rotate_90()) : line<db>(x, y), x, y});
+				if (!sgn(h)) break;
+			}
+		}
+		return ans;
+	}
 	tmpl struct segment
 	{
 		vec<T> a, b;
@@ -214,12 +294,44 @@ namespace geo
 	}
 	tmpl bool intersect(const segment<T> &m, const line<T> &n) { return sgn(n.d * (m.a - n.o)) * sgn(n.d * (m.b - n.o)) <= 0; }
 	tmpl bool intersect(const line<T> &n, const segment<T> &m) { return intersect(m, n); }
+	tmpl vector<vec<db>> intersect(const circle<db> &c, const segment<T> &s)
+	{
+		vector<vec<db>> ans;
+		if (s.a == s.b) return c.cover((vec<db>)s.a) == 0 ? vector<vec<db>>{(vec<db>)s.a} : ans;
+		segment<db> t((vec<db>)s.a, (vec<db>)s.b);
+		for (auto p : intersect(c, line<db>(t.a, t.b))) if (t.cover(p)) ans.push_back(p);
+		return ans;
+	}
+	tmpl vector<vec<db>> intersect(const segment<T> &s, const circle<db> &c) { return intersect(c, s); }
 	tmpl db dis(const vec<T> &o, const segment<T> &l)
 	{
+		if (l.a == l.b) return dis(o, l.a);
 		if (sgn((l.b - l.a).dot(o - l.a)) < 0 || sgn((l.a - l.b).dot(o - l.b)) < 0) return min(dis(o, l.a), dis(o, l.b));
 		return dis(o, line(l.a, l.b));
 	}
 	tmpl db dis(const segment<T> &l, const vec<T> &o) { return dis(o, l); }
+	tuple<vec<ll>, vec<ll>, lll, lll> nearest(const segment<ll> &s, const vec<ll> &p)
+	{
+		vec<ll> d = s.b - s.a;
+		lll x = (lll)(p.x - s.a.x) * d.x + (lll)(p.y - s.a.y) * d.y;
+		lll y = (lll)d.x * d.x + (lll)d.y * d.y;
+		if (!y || x <= 0) return {s.a, d, 0, 1};
+		if (x >= y) return {s.a, d, 1, 1};
+		return {s.a, d, x, y};
+	}
+	vec<db> nearest(const segment<db> &s, const vec<db> &p)
+	{
+		vec<db> d = s.b - s.a;
+		db y = d.len2(), x = (p - s.a).dot(d);
+		if (!sgn(y) || x <= 0) return s.a;
+		if (x >= y) return s.b;
+		return s.a + d * (x / y);
+	}
+	tmpl db dis(const segment<T> &a, const segment<T> &b)
+	{
+		if (intersect(a, b)) return 0;
+		return min({dis(a.a, b), dis(a.b, b), dis(b.a, a), dis(b.b, a)});
+	}
 	tmpl struct polygon
 	{
 		vector<vec<T>> p;
@@ -243,7 +355,6 @@ namespace geo
 		}
 		int cover(const vec<T> &o) const//点是否在多边形内，-1 外 0 上 1 内
 		{
-			static mt19937 rnd(75643);
 			static uniform_int_distribution<ll> gen(1.2e9, 2e9);
 			vec<T> t;
 			t.x = gen(rnd); t.y = gen(rnd);
@@ -285,7 +396,9 @@ namespace geo
 			if (sgn(o.x - p[0].x) < 0 || sgn(o.x - p[0].x) == 0 && sgn(o.y - p[0].y) < 0) return -1;
 			if (o == p[0]) return 0;
 			if (p.size() == 1) return -1;
-			int tmp = sgn((o - p[0]) * (p.back() - p[0]));
+			int tmp = sgn((o - p[0]) * (p[1] - p[0]));
+			if (tmp == 0) return sgn(dis2(o, p[0]) - dis2(p[1], p[0])) <= 0 ? 0 : -1;
+			tmp = sgn((o - p[0]) * (p.back() - p[0]));
 			if (tmp == 0) return sgn(dis2(o, p[0]) - dis2(p.back(), p[0])) <= 0 ? 0 : -1;
 			if (tmp < 0 || p.size() == 2) return -1;
 			int x = upper_bound(1 + all(p), o, [&](const vec<T> &a, const vec<T> &b) { return sgn((a - p[0]) * (b - p[0])) > 0; }) - p.begin() - 1;
@@ -318,6 +431,143 @@ namespace geo
 			return t;
 		}
 	};
+	tmpl pair<int, int> sector(const convex<T> &c, const vec<T> &o)//返回射线 p[0]->o 所在扇形的两个凸包下标
+	{
+		const auto &p = c.p;
+		int n = p.size();
+		if (!n) return {-1, -1};
+		if (n == 1 || o == p[0]) return {0, 0};
+		if (n == 2) return {0, 1};
+		auto det = [&](int i) -> up<T> {
+			return (up<T>)(p[i].x - p[0].x) * (o.y - p[0].y) - (up<T>)(p[i].y - p[0].y) * (o.x - p[0].x);
+		};
+		auto dot = [&](int i) -> up<T> {
+			return (up<T>)(p[i].x - p[0].x) * (o.x - p[0].x) + (up<T>)(p[i].y - p[0].y) * (o.y - p[0].y);
+		};
+		int s = sgn(det(1));
+		if (s < 0) return {0, 1};
+		if (!s && sgn(dot(1)) >= 0) return {1, 1};
+		s = sgn(det(n - 1));
+		if (s > 0) return {n - 1, 0};
+		if (!s && sgn(dot(n - 1)) >= 0) return {n - 1, n - 1};
+		int l = 1, r = n - 1;
+		while (l + 1 < r)
+		{
+			int mid = (l + r) >> 1;
+			if (sgn(det(mid)) >= 0) l = mid;
+			else r = mid;
+		}
+		if (!sgn(det(l)) && sgn(dot(l)) >= 0) return {l, l};
+		if (!sgn(det(r)) && sgn(dot(r)) >= 0) return {r, r};
+		return {l, r};
+	}
+	tmpl pair<pair<int, vec<T>>, pair<int, vec<T>>> tangent(const convex<T> &c, const vec<T> &o)
+	{
+		const auto &p = c.p;
+		int n = p.size();
+		if (!n) return {{-1, { }}, {-1, { }}};
+		if (n == 1) return o == p[0] ? pair{pair{-1, vec<T>()}, pair{-1, vec<T>()}} : pair{pair{0, p[0]}, pair{0, p[0]}};
+		if (n == 2)
+		{
+			if (segment<T>(p[0], p[1]).cover(o)) return {{-1, { }}, {-1, { }}};
+			return {{0, p[0]}, {1, p[1]}};
+		}
+		auto id = [&](long long x) -> int {
+			x %= n;
+			if (x < 0) x += n;
+			return x;
+		};
+		auto det = [&](const vec<T> &a, const vec<T> &b, const vec<T> &d) -> up<T> {
+			return (up<T>)(b.x - a.x) * (d.y - a.y) - (up<T>)(b.y - a.y) * (d.x - a.x);
+		};
+		auto side = [&](int i) { return sgn(det(p[i], p[(i + 1) % n], o)); };
+		auto visible = [&](long long i) { return side(id(i)) < 0; };
+		vector<int> cand;
+		auto add = [&](int x) {
+			x = id(x);
+			if (find(all(cand), x) == cand.end()) cand.push_back(x);
+		};
+		auto [x, y] = sector(c, o);
+		for (int i = -4; i <= 4; i++) add(x + i), add(y + i);
+		int e = -1;
+		for (int x : cand) if (side(x) < 0) { e = x; break; }
+		if (e == -1) return {{-1, { }}, {-1, { }}};
+		long long L, R;
+		if (!visible(0) && !visible(n - 1))
+		{
+			long long l = 0, r = e;
+			while (l < r)
+			{
+				long long mid = (l + r) >> 1;
+				if (visible(mid)) r = mid;
+				else l = mid + 1;
+			}
+			L = l;
+			l = e; r = n - 1;
+			while (l < r)
+			{
+				long long mid = (l + r + 1) >> 1;
+				if (visible(mid)) l = mid;
+				else r = mid - 1;
+			}
+			R = l;
+		}
+		else if (visible(0) && !visible(n - 1))
+		{
+			L = 0;
+			long long l = 0, r = n - 1;
+			while (l < r)
+			{
+				long long mid = (l + r + 1) >> 1;
+				if (visible(mid)) l = mid;
+				else r = mid - 1;
+			}
+			R = l;
+		}
+		else if (!visible(0) && visible(n - 1))
+		{
+			R = n - 1;
+			long long l = 0, r = n - 1;
+			while (l < r)
+			{
+				long long mid = (l + r) >> 1;
+				if (visible(mid)) r = mid;
+				else l = mid + 1;
+			}
+			L = l;
+		}
+		else
+		{
+			int f = -1;
+			for (int x : cand) if (!visible(x)) { f = id(x); break; }
+			for (int i = 1; f == -1 && i < n; i <<= 1)
+			{
+				if (!visible(i)) f = i;
+				else if (!visible(n - 1 - i)) f = n - 1 - i;
+			}
+			if (f == -1 && !visible(n / 2)) f = n / 2;
+			if (f == -1) return {{-1, { }}, {-1, { }}};
+			long long l = 0, r = f;
+			while (l < r)
+			{
+				long long mid = (l + r) >> 1;
+				if (!visible(mid)) r = mid;
+				else l = mid + 1;
+			}
+			R = l - 1;
+			l = f; r = n - 1;
+			while (l < r)
+			{
+				long long mid = (l + r + 1) >> 1;
+				if (!visible(mid)) l = mid;
+				else r = mid - 1;
+			}
+			L = l + 1;
+		}
+		int R0 = id(R + 1);
+		int L0 = id(L);
+		return {{R0, p[R0]}, {L0, p[L0]}};
+	}
 	tmpl struct half_plane//默认左侧
 	{
 		vec<T> o, d;
@@ -483,9 +733,9 @@ namespace geo
 	}
 	tmpl vector<vec<T>> convex_up(vector<vec<T>> a)
 	{
-		for (auto &t : a) t.d.y = -t.d.y;
+		for (auto &t : a) t.y = -t.y;
 		a = convex_down(a);
-		for (auto &t : a) t.d.y = -t.d.y;
+		for (auto &t : a) t.y = -t.y;
 		return a;
 	}
 	tmpl vector<vec<db>> to_vec(const vector<line<T>> &a)
@@ -584,6 +834,272 @@ namespace geo
 			return sgn((*it - l) * (p - l));
 		}
 	};
+	template<class T> vector<array<int, 3>> delaunay(const vector<vec<T>> &a)
+	{
+		int n0 = a.size();
+		if (n0 < 3) return { };
+
+		vector<int> id(n0);
+		iota(all(id), 0);
+		sort(all(id), [&](int i, int j) {
+			auto [x1, y1] = a[i];
+			auto [x2, y2] = a[j];
+			if (x1 != x2) return x1 < x2;
+			return y1 < y2;
+		});
+		id.erase(unique(all(id), [&](int i, int j) {
+			auto [x1, y1] = a[i];
+			auto [x2, y2] = a[j];
+			return x1 == x2 && y1 == y2;
+		}), id.end());
+
+		int n = id.size();
+		if (n < 3) return { };
+
+		struct Q { int rot, o, p = -1; };
+
+		vector<Q> e; vector<int> del;
+		e.reserve(n * 16); del.reserve(n * 4);
+
+		auto mk = [&](int u, int v) {
+			int xy;
+			if (del.size()) xy = del.back(), del.pop_back();
+			else xy = e.size(), e.resize(xy + 4);
+			e[xy].rot = xy + 1; e[xy + 1].rot = xy + 2; e[xy + 2].rot = xy + 3; e[xy + 3].rot = xy;
+			e[xy].p = u; e[xy + 2].p = v; e[xy + 1].p = e[xy + 3].p = -1;
+			e[xy].o = xy; e[xy + 1].o = xy + 3; e[xy + 2].o = xy + 2; e[xy + 3].o = xy + 1;
+			return xy;
+		};
+		auto splice = [&](int x, int y) {
+			swap(e[e[e[x].o].rot].o, e[e[e[y].o].rot].o);
+			swap(e[x].o, e[y].o);
+		};
+		auto connect = [&](int x, int y) {
+			int xy = mk(e[x ^ 2].p, e[y].p);
+			splice(xy, e[e[e[x].rot ^ 2].o].rot);
+			splice(xy ^ 2, y);
+			return xy;
+		};
+		auto erase = [&](int xy) {
+			splice(xy, e[e[e[xy].rot].o].rot);
+			splice(xy ^ 2, e[e[e[xy ^ 2].rot].o].rot);
+			xy = xy >> 2 << 2;
+			e[xy].p = -1;
+			del.push_back(xy);
+		};
+		auto solve = [&](auto &&self, int l, int r) -> pair<int, int> {
+			if (r - l == 2)
+			{
+				int xy = mk(id[l], id[l + 1]);
+				return {xy, xy ^ 2};
+			}
+			if (r - l == 3)
+			{
+				int xy = mk(id[l], id[l + 1]), yz = mk(id[l + 1], id[l + 2]);
+				splice(xy ^ 2, yz);
+				int s = sgn((a[id[l + 1]] - a[id[l]]) * (a[id[l + 2]] - a[id[l]]));
+				if (s > 0)
+				{
+					connect(yz, xy);
+					return {xy, yz ^ 2};
+				}
+				else if (s < 0)
+				{
+					int zx = connect(yz, xy);
+					return {zx ^ 2, zx};
+				}
+				else return {xy, yz ^ 2};
+			}
+
+			int m = l + r >> 1;
+			auto [lo, li] = self(self, l, m); auto [ri, ro] = self(self, m, r);
+
+			while (1)
+			{
+				if (sgn((a[e[li].p] - a[e[ri].p]) * (a[e[li ^ 2].p] - a[e[ri].p])) > 0)
+					li = e[e[e[li].rot ^ 2].o].rot;
+				else if (sgn((a[e[ri ^ 2].p] - a[e[li].p]) * (a[e[ri].p] - a[e[li].p])) > 0)
+					ri = e[ri ^ 2].o;
+				else break;
+			}
+
+			int bs = connect(ri ^ 2, li);
+			if (e[li].p == e[lo].p) lo = bs ^ 2;
+			if (e[ri].p == e[ro].p) ro = bs;
+
+			while (1)
+			{
+				int u = e[bs ^ 2].p, v = e[bs].p, lc = e[bs ^ 2].o;
+				bool vl = sgn((a[v] - a[u]) * (a[e[lc ^ 2].p] - a[u])) > 0;
+				if (vl)
+				{
+					while (1)
+					{
+						int t = e[lc].o, x = e[t ^ 2].p;
+						if (sgn((a[v] - a[u]) * (a[x] - a[u])) <= 0 ||
+							circle<T>(a[u], a[v], a[e[lc ^ 2].p]).cover(a[x]) <= 0) break;
+						erase(lc);
+						lc = t;
+					}
+				}
+
+				int rc = e[e[e[bs].rot].o].rot;
+				bool vr = sgn((a[v] - a[u]) * (a[e[rc ^ 2].p] - a[u])) > 0;
+				if (vr)
+				{
+					while (1)
+					{
+						int t = e[e[e[rc].rot].o].rot, x = e[t ^ 2].p;
+						if (sgn((a[v] - a[u]) * (a[x] - a[u])) <= 0 ||
+							circle<T>(a[u], a[v], a[e[rc ^ 2].p]).cover(a[x]) <= 0) break;
+						erase(rc);
+						rc = t;
+					}
+				}
+
+				if (!vl && !vr) break;
+
+				bool cr = !vl || vr && circle<T>(a[e[lc ^ 2].p], a[e[lc].p], a[e[rc].p]).cover(a[e[rc ^ 2].p]) > 0;
+
+				if (cr) bs = connect(rc, bs ^ 2);
+				else bs = connect(bs ^ 2, lc ^ 2);
+			}
+			return {lo, ro};
+		};
+
+		solve(solve, 0, n);
+
+		vector<pair<int, int>> eg; int sz = e.size();
+		eg.reserve(sz / 4);
+		for (int i = 0; i < sz; i += 4) if (e[i].p != -1)
+		{
+			int u = e[i].p, v = e[i ^ 2].p;
+			if (u == -1 || v == -1 || u == v) continue;
+			if (u > v) swap(u, v);
+			eg.push_back({u, v});
+		}
+		sort(all(eg)); eg.erase(unique(all(eg)), eg.end());
+
+		int m = eg.size();
+		vector<vector<pair<int, int>>> g(n0); vector<int> deg(n0);
+		for (auto [u, v] : eg) deg[u]++, deg[v]++;
+		for (int i = 0; i < n0; i++) g[i].reserve(deg[i]);
+		vector<int> from(m * 2), to(m * 2), nxt(m * 2), pos(m * 2);
+		for (int i = 0; i < m; i++)
+		{
+			auto [u, v] = eg[i];
+			from[i * 2] = u; to[i * 2] = v;
+			from[i * 2 + 1] = v; to[i * 2 + 1] = u;
+			g[u].push_back({v, i * 2});
+			g[v].push_back({u, i * 2 + 1});
+		}
+		for (int u = 0; u < n0; u++)
+		{
+			sort(all(g[u]), [&](auto x, auto y) {
+				vec<T> a1 = a[x.first] - a[u], a2 = a[y.first] - a[u];
+				int h1 = sgn(a1.y) > 0 || !sgn(a1.y) && sgn(a1.x) > 0;
+				int h2 = sgn(a2.y) > 0 || !sgn(a2.y) && sgn(a2.x) > 0;
+				if (h1 != h2) return h1 > h2;
+				int s = sgn(a1 * a2);
+				if (s) return s > 0;
+				return a1.len2() < a2.len2();
+			});
+			for (int j = 0; j < (int)g[u].size(); j++) pos[g[u][j].second] = j;
+		}
+		for (int i = 0; i < m * 2; i++)
+		{
+			auto &cur = g[to[i]];
+			int sz = cur.size();
+			nxt[i] = cur[(pos[i ^ 1] + sz - 1) % sz].second;
+		}
+
+		vector<char> vis(m * 2);
+		vector<array<int, 3>> trs;
+		vector<int> f;
+		trs.reserve(m); f.reserve(16);
+		for (int t = 0; t < m * 2; t++)
+		{
+			if (vis[t]) continue;
+
+			f.clear();
+			int cur = t; bool flg = false;
+			while (1)
+			{
+				vis[cur] = true;
+				f.push_back(from[cur]);
+				cur = nxt[cur];
+				if (cur == t) { flg = true; break; }
+				if ((int)f.size() > m * 2) break;
+			}
+			int sz = f.size();
+			if (!flg || sz < 3) continue;
+
+			up<T> ss = 0;
+			for (int i = 0; i < sz; i++)
+			{
+				const auto &p = a[f[i]];
+				const auto &o = a[f[(i + 1) % sz]];
+				ss += (up<T>)p.x * o.y - (up<T>)p.y * o.x;
+			}
+			if (sgn(ss) <= 0) continue;
+			for (int i = 1; i + 1 < sz; i++)
+				if (sgn((a[f[i]] - a[f[0]]) * (a[f[i + 1]] - a[f[0]])) > 0)
+					trs.push_back({f[0], f[i], f[i + 1]});
+		}
+
+		return trs;
+	}
+	struct union_set
+	{
+		int n;
+		vector<int> f;
+		union_set() { }
+		union_set(int n) :n(n), f(n)
+		{
+			iota(all(f), 0);
+		}
+		int getf(int u) { return f[u] == u ? u : f[u] = getf(f[u]); }
+		bool merge(int u, int v)
+		{
+			u = getf(u); v = getf(v);
+			if (u == v) return 0;
+			f[u] = v;
+			return 1;
+		}
+		bool connected(int u, int v) { return getf(u) == getf(v); }
+	};
+	template<class T> vector<pair<int, int>> euclidean_mst(const vector<vec<T>> &a)
+	{
+		int n = a.size(), i;
+		if (n <= 1) return { };
+		vector<pair<int, int>> ans;
+		ans.reserve(n - 1);
+		auto tr = geo::delaunay(a);
+		if (!tr.size())
+		{
+			vector<int> id(n);
+			iota(all(id), 0);
+			sort(all(id), [&](int x, int y) { return pair{a[x].x, a[x].y} < pair{a[y].x, a[y].y}; });
+			for (i = 1; i < n; i++) ans.push_back({id[i - 1], id[i]});
+			return ans;
+		}
+		vector<tuple<T, int, int>> eg;
+		eg.reserve(tr.size() * 3 + n);
+		vector<int> id(n);
+		iota(all(id), 0);
+		sort(all(id), [&](int x, int y) { return pair{a[x].x, a[x].y} < pair{a[y].x, a[y].y}; });
+		for (i = 1; i < n; i++) if (a[id[i]] == a[id[i - 1]]) eg.push_back({0, id[i - 1], id[i]});
+		for (auto [x, y, z] : tr)
+		{
+			eg.push_back({dis2(a[x], a[y]), x, y});
+			eg.push_back({dis2(a[y], a[z]), y, z});
+			eg.push_back({dis2(a[z], a[x]), z, x});
+		}
+		sort(all(eg));
+		union_set s(n);
+		for (auto [z, x, y] : eg) if (s.merge(x, y)) ans.push_back({x, y});
+		return ans;
+	}
 #undef tmpl
 }
 using geo::vec, geo::line, geo::circle, geo::convex, geo::polygon, geo::half_plane;

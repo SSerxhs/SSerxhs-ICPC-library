@@ -48,7 +48,7 @@ ll quadruple(const vector<pair<int, int>> &edges)
 	return ans;
 }
 
-map<pair<int, int>, ll> quadruple(vector<pair<int, int>> edges)
+map<pair<int, int>, ll> quadruple_of_edge(vector<pair<int, int>> edges)
 {
 	int n = 0, i;
 	for (auto [u, v] : edges) n = max({n, u, v});
@@ -104,7 +104,7 @@ int main()
 	cin >> n >> m;
 	vector<pair<int, int>> eg(m);
 	cin >> eg;
-	auto mp = quadruple(eg);
+	auto mp = quadruple_of_edge(eg);
 	for (i = 0; i < m; i++)
 	{
 		auto [u, v] = eg[i];

@@ -4,7 +4,7 @@ vector<ull> cal_ik(int n, int k)
     int i, j, x, c = 0;
     vector<ull> f(n + 1);
     f[0] = k == 0;
-    f[1] = 1;
+    if (n >= 1) f[1] = 1;
     if (n <= 1) return f;
     vector<int> pr((n / log(n)) * (1 + 1.2762 / log(n)) + 2);
     vector<char> ed(n + 1);
@@ -53,6 +53,7 @@ ull sum_inf(ull x, int d)
 {
     if (x == 0) return d == 0;
     assert(x != 1 && x < p);
+    if (d == 0) return ksm((1 + p - x) % p, p - 2);
     ull f, xm1 = ksm(x - 1, p - 2), y = x * xm1 % p;
     f = ksm(y - 1, p - 2) * (ksm(y, d + 1) - 1) % p;
     vector<ull> g = cal_ik(d, d);
