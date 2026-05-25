@@ -1,21 +1,21 @@
 vector<int> manacher(const string &t)
 {
-	string S = "$#";
-	int n = t.size(), i, r = 1, m = 0;
-	for (i = 0; i < n; i++) S += t[i], S += '#';
-	S += '#';
-	char *s = S.data() + 2;
-	n = n * 2 - 1;
-	vector<int> ex(n);
-	ex[0] = 2;
-	for (i = 1; i < n; i++)
-	{
-		ex[i] = i < r ? min(ex[m * 2 - i], r - i + 1) : 1;
-		while (s[i + ex[i]] == s[i - ex[i]]) ++ex[i];
-		if (i + ex[i] - 1 > r) r = i + ex[m = i] - 1;
-	}
-	for (int &x : ex) --x;
-	return ex;
+    string S = "$#";
+    int n = t.size(), i, r = 1, m = 0;
+    for (i = 0; i < n; i++) S += t[i], S += '#';
+    S += '#';
+    char *s = S.data() + 2;
+    n = n * 2 - 1;
+    vector<int> ex(n);
+    ex[0] = 2;
+    for (i = 1; i < n; i++)
+    {
+        ex[i] = i < r ? min(ex[m * 2 - i], r - i + 1) : 1;
+        while (s[i + ex[i]] == s[i - ex[i]]) ++ex[i];
+        if (i + ex[i] - 1 > r) r = i + ex[m = i] - 1;
+    }
+    for (int &x : ex) --x;
+    return ex;
 }
 pair<vector<int>, vector<pair<int, int>>> distinct_palindrome(const string &t)
 // [l,r)

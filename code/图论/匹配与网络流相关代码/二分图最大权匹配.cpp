@@ -48,11 +48,11 @@ namespace KM
 		for (i = 1; i <= n; i++) lx[i] = *max_element(e[i] + 1, e[i] + n + 1);
 		for (i = 1; i <= n; i++) bfs(i);
 		ll r = 0;
-        for (i = 1; i <= n; i++)
-            if (!e[i][lk[i]]) // 若不需保证匹配边最多，需要去掉这些辅助边
-                kl[lk[i]] = 0, lk[i] = 0;
-            else
-                r += e[i][lk[i]];
+		for (i = 1; i <= n; i++)
+			if (!e[i][lk[i]]) // 若不需保证匹配边最多，需要去掉这些辅助边
+				kl[lk[i]] = 0, lk[i] = 0;
+			else
+				r += e[i][lk[i]];
 		return r;
 	}
 }

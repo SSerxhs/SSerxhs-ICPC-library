@@ -14,8 +14,6 @@ int n, m, ans, tp;
 bool ed[N];
 int main()
 {
-	freopen("arbitrage.in", "r", stdin);
-	freopen("arbitrage.out", "w", stdout);
 	ios::sync_with_stdio(0); cin.tie(0);
 	cin >> n >> m;
 	while (m--)

@@ -38,19 +38,19 @@ struct scc
 			for (auto [v, w] : e[u])
 				if (blk[u] != blk[v])
 					cur_e[blk[u]].push_back({blk[v], w});
-        cur_e.resize(cc_n);
+		cur_e.resize(cc_n);
 	}
 };
 vector<vector<int>> unique(vector<vector<pair<int, int>>> &e)
 {
-    int n = e.size(), i;
-    vector<vector<int>> g(n);
-    for (i = 0; i < n; i++)
-    {
-        for (auto [v, w] : e[i]) g[i].push_back(v);
-        sort(all(g[i]));
-        g[i].resize(unique(all(g[i])) - g[i].begin());
-    }
-    return g;
+	int n = e.size(), i;
+	vector<vector<int>> g(n);
+	for (i = 0; i < n; i++)
+	{
+		for (auto [v, w] : e[i]) g[i].push_back(v);
+		sort(all(g[i]));
+		g[i].resize(unique(all(g[i])) - g[i].begin());
+	}
+	return g;
 }
 

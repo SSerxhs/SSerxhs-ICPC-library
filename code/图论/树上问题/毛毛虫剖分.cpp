@@ -30,7 +30,7 @@ void dfs2(int u)
     if (top[u] == u)
     {
         vector<int> stk;
-        for (int v = u;v;v = hc[v])
+        for (int v = u; v; v = hc[v])
         {
             for (int w : e[v]) if (w != hc[v])
             {
@@ -42,12 +42,12 @@ void dfs2(int u)
             }
             stk.push_back(v);
         }
-        for (int i = (int)stk.size() - 2;i >= 0;i--)
+        for (int i = (int)stk.size() - 2; i >= 0; i--)
         {
             cmin(fir[stk[i]], fir[stk[i + 1]]);
             cmax(lst2[stk[i]], lst2[stk[i + 1]]);
         }
-        for (int i = 1;i < stk.size();i++)
+        for (int i = 1; i < stk.size(); i++)
         {
             cmax(pre[stk[i]], pre[stk[i - 1]]);
         }
@@ -65,7 +65,7 @@ int main()
     cout << fixed << setprecision(15);
     int n, m, q, i, j;
     cin >> n >> m >> q;
-    for (i = 1;i < n;i++)
+    for (i = 1; i < n; i++)
     {
         int u, v;
         //cin >> u >> v;
@@ -81,7 +81,7 @@ int main()
     //dbg("??");
     dfs2(top[1] = 1);
     //for (i = 1;i <= n;i++) cerr << i << ": " << dfn[i] << endl;
-    for (i = 1;i <= m;i++)
+    for (i = 1; i <= m; i++)
     {
         int u, v;
         //cin >> u >> v;
@@ -89,7 +89,7 @@ int main()
         v = rnd() % n + 1;
         int uu = u, vv = v;
         //dbg(uu, vv);
-        auto& w = seg[i];
+        auto &w = seg[i];
         while (top[u] != top[v])
         {
             if (dep[top[u]] < dep[top[v]]) swap(u, v);
@@ -110,7 +110,7 @@ int main()
         //dbg(w);
         w.push_back({dfn[v], dfn[v]});
         if (f[v]) w.push_back({dfn[f[v]], dfn[f[v]]});
-        erase_if(w, [&](const auto& x) {return x.first > x.second;});
+        erase_if(w, [&](const auto &x) {return x.first > x.second; });
         //int len = 0;
         //for (auto [l, r] : w) len += r - l + 1;
         //for (auto [l, r] : w)
@@ -130,17 +130,17 @@ int main()
         ////dbg(s);
         //assert(len == s.size());
     }
-    for (i = 1;i <= q;i++)
+    for (i = 1; i <= q; i++)
     {
         int l, r;
         cin >> l >> r;
         qu[l].push_back({r, i});
     }
-    for (i = m;i;i--)
+    for (i = m; i; i--)
     {
 
     }
-    for (i = 1;i <= q;i++) cout << ans[i] << '\n';
+    for (i = 1; i <= q; i++) cout << ans[i] << '\n';
     //cerr << "??\n";
 }
 
