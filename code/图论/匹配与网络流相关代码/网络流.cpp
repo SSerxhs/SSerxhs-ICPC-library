@@ -6,19 +6,18 @@ namespace net
 		const ll inf = 4e18;
 		struct Q
 		{
-			int v;
 			ll w;
-			int id;
+			int v, id;
 		};
 		vector<Q> e[N];
-		vector<Q>::iterator fir[N];
+		int fir[N];
 		int fc[N], q[N];
 		int n, s, t;
 		int bfs()
 		{
 			for (int i = 0; i < n; i++)
 			{
-				fir[i] = e[i].begin();
+				fir[i] = 0;
 				fc[i] = 0;
 			}
 			int p1 = 0, p2 = 0, u;
@@ -26,7 +25,7 @@ namespace net
 			while (p1 <= p2)
 			{
 				int u = q[p1++];
-				for (auto [v, w, id] : e[u]) if (w && !fc[v])
+				for (auto [w, v, id] : e[u]) if (w && !fc[v])
 				{
 					q[++p2] = v;
 					fc[v] = fc[u] + 1;
@@ -38,9 +37,9 @@ namespace net
 		{
 			if (u == t) return maxf;
 			ll j = 0, k;
-			for (auto &it = fir[u]; it != e[u].end(); ++it)
+			for (int &it = fir[u]; it < e[u].size(); ++it)
 			{
-				auto &[v, w, id] = *it;
+				auto &[w, v, id] = e[u][it];
 				if (w && fc[v] == fc[u] + 1 && (k = dfs(v, min(maxf - j, w))))
 				{
 					j += k;
@@ -58,8 +57,8 @@ namespace net
 			for (int i = 0; i < n; i++) e[i].clear();
 			for (auto [u, v, w] : edges)
 			{
-				e[u].push_back({v, w, (int)e[v].size()});
-				e[v].push_back({u, 0, (int)e[u].size() - 1});
+				e[u].push_back({w, v, (int)e[v].size()});
+				e[v].push_back({0, u, (int)e[u].size() - 1});
 			}
 			ll r = 0;
 			while (bfs()) r += dfs(s, inf);
@@ -88,7 +87,7 @@ namespace net
 			for (auto [u, v] : edges) eg.push_back({u, v + n, 1});
 			int r = max_flow(t, eg, s, t).first;
 			fill_n(lk, n, -1); fill_n(kl, m, -1);
-			for (i = 0; i < n; i++) for (auto [v, w, id] : flow::e[i]) if (v < s && !w)
+			for (i = 0; i < n; i++) for (auto [w, v, id] : flow::e[i]) if (v < s && !w)
 			{
 				lk[i] = v - n;
 				kl[v - n] = i;
@@ -123,15 +122,46 @@ namespace net
 		const ll inf = 3e18;
 		struct Q
 		{
-			int v;
 			ll w, c;
-			int id;
+			int v, id;
 		};
 		vector<Q> e[N];
 		ll dis[N];
 		int pre[N], pid[N], ipd[N];
 		bool ed[N];
 		int n, s, t;
+		// 可替换为 priority_queue<pair<ll, int>, vector<pair<ll, int>>, greater<pair<ll, int>>>。
+		struct radix_heap
+		{
+			using pa = pair<unsigned long long, int>;
+			vector<pa> q[65];
+			unsigned long long last;
+			int sz;
+			int id(unsigned long long x) { return x == last ? 0 : 64 - __builtin_clzll(x ^ last); }
+			void clear()
+			{
+				for (auto &v : q) v.clear();
+				last = sz = 0;
+			}
+			void push(unsigned long long w, int v)
+			{
+				assert(w >= last);
+				q[id(w)].push_back({w, v}); ++sz;
+			}
+			pa pop()
+			{
+				if (q[0].empty())
+				{
+					int i = 1;
+					while (q[i].empty()) ++i;
+					last = min_element(all(q[i]))->first;
+					for (auto x : q[i]) q[id(x.first)].push_back(x);
+					q[i].clear();
+				}
+				auto r = q[0].back(); q[0].pop_back(); --sz;
+				return r;
+			}
+		} rh;
 		pair<ll, lll> spfa()
 		{
 			queue<int> q;
@@ -141,7 +171,7 @@ namespace net
 			while (q.size())
 			{
 				int u = q.front(); q.pop(); ed[u] = 0;
-				for (auto [v, w, c, id] : e[u]) if (w && cmin(dis[v], dis[u] + c))
+				for (auto [w, c, v, id] : e[u]) if (w && cmin(dis[v], dis[u] + c))
 				{
 					pre[v] = u;
 					pid[v] = e[v][id].id;
@@ -161,8 +191,8 @@ namespace net
 			for (int i = 0; i < n; i++) e[i].clear();
 			for (auto [u, v, w, c] : edges)
 			{
-				e[u].push_back({v, w, c, (int)e[v].size()});
-				e[v].push_back({u, 0, -c, (int)e[u].size() - 1});
+				e[u].push_back({w, c, v, (int)e[v].size()});
+				e[v].push_back({0, -c, u, (int)e[u].size() - 1});
 			}
 			ll w = 0, dw;
 			lll c = 0, dc;
@@ -189,7 +219,7 @@ namespace net
 			while (q.size())
 			{
 				int u = q.front(); q.pop(); ed[u] = 0;
-				for (auto [v, w, c, id] : e[u]) if (w && cmin(d[v], d[u] + c))
+				for (auto [w, c, v, id] : e[u]) if (w && cmin(d[v], d[u] + c))
 				{
 					pre[v] = u;
 					pid[v] = id;
@@ -222,8 +252,8 @@ namespace net
 			edges.push_back({t, s, tot, -inf});//最后一项 mcmf:-inf, mcf:0
 			for (auto [u, v, w, c] : edges)
 			{
-				e[u].push_back({v, 0, c, (int)e[v].size()});
-				e[v].push_back({u, 0, -c, (int)e[u].size() - 1});
+				e[u].push_back({0, c, v, (int)e[v].size()});
+				e[v].push_back({0, -c, u, (int)e[u].size() - 1});
 			}
 			ll w = 0, dw;
 			lll c = 0, dc;
@@ -258,8 +288,8 @@ namespace net
 			for (int i = 0; i < n; i++) e[i].clear();
 			for (auto [u, v, w, c] : edges)
 			{
-				e[u].push_back({v, w, c, (int)e[v].size()});
-				e[v].push_back({u, 0, -c, (int)e[u].size() - 1});
+				e[u].push_back({w, c, v, (int)e[v].size()});
+				e[v].push_back({0, -c, u, (int)e[u].size() - 1});
 			}
 			static ll h[N];
 			auto get_h = [&]() {
@@ -270,9 +300,8 @@ namespace net
 				while (q.size())
 				{
 					int u = q.front(); q.pop(); ed[u] = 0;
-					for (auto [v, w, c, id] : e[u]) if (w && h[v] > h[u] + c)
+					for (auto [w, c, v, id] : e[u]) if (w && h[v] > h[u] + c)
 					{
-						assert(c >= 0);
 						h[v] = h[u] + c;
 						if (!ed[v]) q.push(v), ed[v] = 1;
 					}
@@ -284,35 +313,33 @@ namespace net
 				int i;
 				memset(ed, 0, n * sizeof ed[0]);
 				fill_n(dis, n, inf);
-				using pa = pair<ll, int>;
-				priority_queue<pa, vector<pa>, greater<pa>> q;
-				dis[s] = 0; q.push({0, s});
-				while (q.size())
+				rh.clear();
+				dis[s] = 0; rh.push(0, s);
+				while (rh.sz)
 				{
-					int u = q.top().second;
-					q.pop(); ed[u] = 1;
+					auto [du, u] = rh.pop();
+					if (du != dis[u]) continue;
 					i = 0;
-					for (auto [v, w, c, id] : e[u])
+					for (auto [w, c, v, id] : e[u])
 					{
-						if (w && cmin(dis[v], dis[u] + c))
+						if (w && cmin(dis[v], (ll)du + c))
 						{
 							assert(c >= 0);
 							fl[v] = id, zl[v] = i, pre[v] = u;
-							q.push({dis[v], v});
+							rh.push(dis[v], v);
 						}
 						++i;
 					}
-					while (q.size() && ed[q.top().second]) q.pop();
 				}
 				if (dis[t] == inf) return {0, 0};
 				ll tf = numeric_limits<ll>::max();
 				for (i = t; i != s; i = pre[i]) tf = min(tf, e[pre[i]][zl[i]].w);
 				for (i = t; i != s; i = pre[i]) e[pre[i]][zl[i]].w -= tf, e[i][fl[i]].w += tf;
-				for (int u = 0; u < n; u++) for (auto &[v, w, c, id] : e[u]) c += dis[u] - dis[v];
+				for (int u = 0; u < n; u++) for (auto &[w, c, v, id] : e[u]) c += dis[u] - dis[v];
 				return {tf, (lll)tf * (h[t] += dis[t])};
 			};
 			get_h();
-			for (int u = 0; u < n; u++) for (auto &[v, w, c, id] : e[u]) c += h[u] - h[v];
+			for (int u = 0; u < n; u++) for (auto &[w, c, v, id] : e[u]) c += h[u] - h[v];
 			ll w = 0, dw;
 			lll c = 0, dc;
 			do
@@ -466,21 +493,21 @@ namespace net
 			int m = edges.size(), i, j;
 			vector<ll> cur;
 			ll tot = 1;
-			for (i = 0; i < n; i++) for (auto [v, w, c, id] : cost_flow::e[i]) tot += w;
+			for (i = 0; i < n; i++) for (auto [w, c, v, id] : cost_flow::e[i]) tot += w;
 			for (i = 0; i < n; i++)
 			{
-				for (auto &[v, w, c, id] : cost_flow::e[i])
+				for (auto &[w, c, v, id] : cost_flow::e[i])
 					cur.push_back(w), w = 0;
 				if (i == t) cur.push_back(tot);
 				if (i == s) cur.push_back(0);
 			}
-			e[t].push_back({s, 0, -cost_flow::inf, (int)e[s].size()});
-			e[s].push_back({t, 0, cost_flow::inf, (int)e[t].size() - 1});
+			e[t].push_back({0, -cost_flow::inf, s, (int)e[s].size()});
+			e[s].push_back({0, cost_flow::inf, t, (int)e[t].size() - 1});
 			ll w = 0, dw;
 			lll c = 0, dc;
 			for (int g = __lg(*max_element(all(cur))); g >= 0; g--)
 			{
-				for (i = j = 0; i < n; i++) for (auto &[v, w, c, id] : e[i]) w = w * 2 + (cur[j++] >> g & 1);
+				for (i = j = 0; i < n; i++) for (auto &[w, c, v, id] : e[i]) w = w * 2 + (cur[j++] >> g & 1);
 				w *= 2, c *= 2;
 				do
 				{

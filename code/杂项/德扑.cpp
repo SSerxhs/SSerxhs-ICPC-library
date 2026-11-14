@@ -30,7 +30,11 @@ auto solve = [&](vector<Q> a) {
 	return b;
 };
 auto turn = [&](string s) {
-	Q res = Q{"SHDC"s.find(s[0]), "23456789TJQKA"s.find(s[1])};
+	Q res = Q{(int)("SHDC"s.find(s[0])), (int)("23456789TJQKA"s.find(s[1]))};
 	return res;
 };
-
+auto read = [&]() {
+	string s;
+	cin >> s;
+	return turn(s);
+};

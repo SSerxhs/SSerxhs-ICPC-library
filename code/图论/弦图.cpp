@@ -1,6 +1,6 @@
 namespace chordal_graph//下标从 1 开始
 {
-	const int N = 1e5 + 2;//点数
+	const int N = 2e5 + 2;//点数
 	bool ed[N];
 	vector<int> e[N];
 	int n;
@@ -134,4 +134,4 @@ namespace chordal_graph//下标从 1 开始
 		return r;
 	}
 }
-using chordal_graph::check_chordal, chordal_graph::find_cycle, chordal_graph::color, chordal_graph::max_independent;
+using chordal_graph::perfect_seq, chordal_graph::check_chordal, chordal_graph::find_cycle, chordal_graph::color, chordal_graph::max_independent;

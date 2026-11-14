@@ -15,6 +15,6 @@ template<class T> void min_order(vector<T> &a)
 		}
 	}
 	a.resize(n);
-	//[min(i,j),n)+[0,min(i,j))
+	//[min(i, j), n) + [0, min(i, j))
 	rotate(a.begin(), min(i, j) + all(a));
 }

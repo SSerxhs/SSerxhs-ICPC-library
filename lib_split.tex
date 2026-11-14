@@ -472,6 +472,10 @@ $f(p^k)=p^k(p^k-1)$，求 $\sum\limits_{i=1}^n f(i)$。这个的原理我了解�
 
 \lstinputlisting{code/数学/Min__25筛_2.cpp}
 
+通用版本。用户提供常数系数、完全积性基函数前缀和、素数幂处函数值。
+
+\lstinputlisting{code/数学/Min__25筛_通用.cpp}
+
 \subsection{光速乘}
 
 $O(n2^n)$，$O(2^n)$。
@@ -756,9 +760,13 @@ $O(n^3)$，$O(n^2)$。
 
 \subsubsection{二分图边染色}
 
-留坑待填。
-
 结论：$\Delta(G)\le \chi'(G) \le \Delta(G)+1$，二分图时 $\chi'(G)=\Delta(G)$。$\Delta(G)$ 为图的最大度。
+
+点标号范围为 $[0,n)-[0,m)$。返回每条输入边的颜色，颜色范围为 $[0,\Delta)$。
+
+需要 \verb|net::max_flow|。可以处理重边。
+
+\lstinputlisting{code/图论/匹配与网络流相关代码/二分图边染色.cpp}
 
 \subsubsection{二分图最小点集覆盖}
 
@@ -1283,6 +1291,12 @@ LexBFS 算法（我不会写）
 
 另附一份支持二分斜率的代码。这里维护的是 $(x,y)$，其中 $y=C+x^2$，因此 $x$ 整体增加会影响 $y$。
 \lstinputlisting{code/计算几何/计算几何全_2.cpp}
+
+\subsection{计算几何独立版}
+
+支持整数坐标和浮点坐标的二维、三维几何实现。整数空圆判定含四次量，建议坐标绝对值不超过 $10^9$，避免 \verb|__int128| 溢出。
+
+\lstinputlisting{code/计算几何/计算几何_独立.cpp}
 \newpage
 
 \section{杂项}

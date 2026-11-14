@@ -255,49 +255,91 @@ matrix pow(matrix a, long long k)
 	}
 	return r;
 }
-matrix pow2(matrix a, long long k)
+
+vector<ull> poly_modmul(const vector<ull> &a, const vector<ull> &b, const vector<ull> &f)
 {
-	vector<ull> f = a.poly();
-	int n = f.size() - 1, i, j;
-	if (!n) return matrix();
-	if (n == 1) return E(1) * ksm(a[0][0], k);
-	assert(f[n] == 1);
-	vector<ull> r(n), x(n), t(n * 2);
-	r[0] = x[1] = 1;
-	for (ull &x : f) x = (p - x) % p;
-	reverse(all(f));
-	fill(all(t), 0);
-	if (k & 1)
-	{
-		for (i = 0; i < n; i++) for (j = 0; j < n; j++) t[i + j] = (t[i + j] + r[i] * x[j]) % p;
-		for (i = n * 2 - 2; i >= n; i--) for (j = 1; j <= n; j++) t[i - j] = (t[i - j] + f[j] * t[i]) % p;
-		for (i = 0; i < n; i++) r[i] = t[i];
-	}
-	k >>= 1;
+	int n = f.size() - 1;
+	assert(n > 0 && (int)a.size() == n && (int)b.size() == n && f[n] == 1);
+	vector<ull> t(n * 2);
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < n; j++)
+			(t[i + j] += a[i] * b[j]) %= p;
+	for (int i = n * 2 - 2; i >= n; i--)
+		for (int j = 0; j < n; j++)
+			(t[i - n + j] += (p - f[j]) * t[i]) %= p;
+	return vector<ull>(t.begin(), t.begin() + n);
+}
+vector<ull> xpow_mod(const vector<ull> &f, long long k)
+{
+	int n = f.size() - 1;
+	assert(n > 0 && f[n] == 1 && k >= 0);
+	vector<ull> r(n), x(n);
+	r[0] = 1;
+	if (n == 1) x[0] = (p - f[0]) % p; else x[1] = 1;
 	while (k)
 	{
-		fill(all(t), 0);
-		for (i = 0; i < n; i++) for (j = 0; j < n; j++) t[i + j] = (t[i + j] + x[i] * x[j]) % p;
-		for (i = n * 2 - 2; i >= n; i--) for (j = 1; j <= n; j++) t[i - j] = (t[i - j] + f[j] * t[i]) % p;
-		for (i = 0; i < n; i++) x[i] = t[i];
-		if (k & 1)
-		{
-			fill(all(t), 0);
-			for (i = 0; i < n; i++) for (j = 0; j < n; j++) t[i + j] = (t[i + j] + r[i] * x[j]) % p;
-			for (i = n * 2 - 2; i >= n; i--) for (j = 1; j <= n; j++) t[i - j] = (t[i - j] + f[j] * t[i]) % p;
-			for (i = 0; i < n; i++) r[i] = t[i];
-		}
+		if (k & 1) r = poly_modmul(r, x, f);
 		k >>= 1;
+		if (k) x = poly_modmul(x, x, f);
 	}
+	return r;
+}
+vector<ull> xpow_mod(const vector<ull> &f, string k)
+{
+	int n = f.size() - 1;
+	assert(n > 0 && f[n] == 1 && !k.empty());
+	vector<ull> r(n), x(n);
+	r[0] = 1;
+	if (n == 1) x[0] = (p - f[0]) % p; else x[1] = 1;
+	vector pw(10, vector<ull>(n));
+	pw[0][0] = 1;
+	for (int i = 1; i < 10; i++) pw[i] = poly_modmul(pw[i - 1], x, f);
+	for (char c : k)
+	{
+		assert('0' <= c && c <= '9');
+		auto r2 = poly_modmul(r, r, f);
+		auto r4 = poly_modmul(r2, r2, f);
+		auto r8 = poly_modmul(r4, r4, f);
+		r = poly_modmul(r8, r2, f);
+		if (c != '0') r = poly_modmul(r, pw[c - '0'], f);
+	}
+	return r;
+}
+template<class K>
+matrix pow2(matrix a, const K &k)
+{
+	auto [n, m] = a.sz();
+	assert(n == m);
+	if (!n) return matrix();
+	vector<ull> r = xpow_mod(a.poly(), k);
 	matrix res(n, n);
 	int b = ceil(sqrt(n));
 	vector<matrix> s(b + 1);
-	s[0] = E(n); s[1] = a;
-	for (i = 2; i <= b; i++) s[i] = s[i - 1] * a;
-	for (i = b - 1; i >= 0; i--)
+	s[0] = E(n);
+	s[1] = a;
+	for (int i = 2; i <= b; i++) s[i] = s[i - 1] * a;
+	for (int i = b - 1; i >= 0; i--)
 	{
 		res *= s[b];
-		for (j = min(n, (i + 1) * b) - 1; j >= i * b; j--) res += s[j - i * b] * r[j];
+		for (int j = min(n, (i + 1) * b) - 1; j >= i * b; j--) res += s[j - i * b] * r[j];
+	}
+	return res;
+}
+template<class K>
+matrix pow2(const matrix &a, const K &k, matrix v)
+{
+	auto [n, m] = a.sz();
+	assert(n == m);
+	if (!n) return matrix();
+	auto [u, w] = v.sz();
+	assert((u == n && w == 1) || (u == 1 && w == n));
+	bool col = (u == n && w == 1);
+	vector<ull> r = xpow_mod(a.poly(), k);
+	matrix res(u, w);
+	for (int i = 0; i < n; i++)
+	{
+		res += v * r[i];
+		if (i + 1 < n) v = col ? a * v : v * a;
 	}
 	return res;
 }

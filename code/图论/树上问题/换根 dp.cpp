@@ -16,7 +16,7 @@ struct solver
 			e[v].push_back({u, w});
 		}
 		{
-			auto dfs = [&](auto &&dfs, int u)->void {
+			auto dfs = [&](auto &&dfs, int u) -> void {
 				for (auto [v, w] : e[u])
 				{
 					erase(e[v], pair{u, w});
@@ -29,7 +29,7 @@ struct solver
 			dfs(dfs, rt);
 		}
 		{
-			auto dfs = [&](auto &&dfs, int u)->void {
+			auto dfs = [&](auto &&dfs, int u) -> void {
 				T s = a[u];
 				if (u != rt) merge(s, g[u], lf[u]);
 				for (auto [v, w] : e[u]) g[v] = s, merge(s, f[v], w);

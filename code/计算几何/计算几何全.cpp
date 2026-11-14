@@ -745,7 +745,7 @@ namespace geo
 		for (i = 0; i < n - 1; i++) b[i] = intersect(a[i], a[i + 1]);
 		return b;
 	}
-	tmpl T find_max(const vector<vec<T>> &a, T kx, T ky)//要求函数凸
+	tmpl T find_max(const vector<vec<T>> &a, T kx, T ky)//要求上凸且 ky>0
 	{
 		vec<T> p = {kx, ky};
 		int l = 0, r = a.size() - 1, mid;
@@ -757,7 +757,7 @@ namespace geo
 		}
 		return max({a[l].dot(p), a[0].dot(p), a.back().dot(p)});
 	}
-	tmpl T find_min(const vector<vec<T>> &a, T kx, T ky)//要求函数凸
+	tmpl T find_min(const vector<vec<T>> &a, T kx, T ky)//要求下凸且 ky<0
 	{
 		vec<T> p = {kx, ky};
 		int l = 0, r = a.size() - 1, mid;
@@ -1099,6 +1099,107 @@ namespace geo
 		union_set s(n);
 		for (auto [z, x, y] : eg) if (s.merge(x, y)) ans.push_back({x, y});
 		return ans;
+	}
+	vector<int> furthest_vertices(const convex<ll> &c)//每个凸包顶点的最远顶点下标，O(n)
+	{
+		const auto &p = c.p;
+		int n = p.size();
+		if (!n) return { };
+		if (n == 1) return {0};
+		if (n == 2) return {1, 0};
+
+		auto d2 = [&](const vec<ll> &a, const vec<ll> &b) -> lll {
+			lll x = (lll)a.x - b.x, y = (lll)a.y - b.y;
+			return x * x + y * y;
+		};
+		auto area = [&](int i, int j, int k) -> lll {
+			lll x = (lll)p[j].x - p[i].x, y = (lll)p[j].y - p[i].y;
+			lll u = (lll)p[k].x - p[i].x, v = (lll)p[k].y - p[i].y;
+			lll t = x * v - y * u;
+			return t < 0 ? -t : t;
+		};
+
+		// 旋转卡壳找一条直径
+		int A = 0, B = 1, j = 1;
+		lll best = d2(p[A], p[B]);
+		auto upd = [&](int x, int y) {
+			lll d = d2(p[x], p[y]);
+			if (d > best) best = d, A = x, B = y;
+		};
+		for (int i = 0; i < n; i++)
+		{
+			int ni = (i + 1) % n;
+			while (area(i, ni, (j + 1) % n) > area(i, ni, j))
+				j = (j + 1) % n;
+			upd(i, j); upd(ni, j);
+			int nj = (j + 1) % n;
+			if (area(i, ni, nj) == area(i, ni, j))
+				upd(i, nj), upd(ni, nj);
+		}
+
+		// 将 A 旋转到 0，两条凸链是 [0,m] 和 [m,n]
+		int m = (B - A + n) % n;
+		vector<vec<ll>> q(n + 1);
+		for (int i = 0; i < n; i++) q[i] = p[(A + i) % n];
+		q[n] = q[0];
+
+		vector<int> opt(n, -1), ans(n, -1);
+		ans[0] = m; ans[m] = 0;
+
+		function<void(const vector<int> &, const vector<int> &)> smawk =
+			[&](const vector<int> &rows, const vector<int> &cols) {
+			if (rows.empty()) return;
+			vector<int> keep;
+			for (int col : cols)
+			{
+				while (!keep.empty() &&
+					d2(q[rows[keep.size() - 1]], q[col]) >=
+					d2(q[rows[keep.size() - 1]], q[keep.back()]))
+					keep.pop_back();
+				if (keep.size() < rows.size())
+					keep.push_back(col);
+			}
+
+			vector<int> odd;
+			for (int i = 1; i < (int)rows.size(); i += 2)
+				odd.push_back(rows[i]);
+			smawk(odd, keep);
+
+			int lo = 0, up = 0;
+			for (int i = 0; i < (int)rows.size(); i += 2)
+			{
+				int hi = (int)keep.size() - 1;
+				if (i + 1 < (int)rows.size())
+				{
+					while (keep[up] != opt[rows[i + 1]]) ++up;
+					hi = up;
+				}
+				int pos = lo;
+				for (int k = lo + 1; k <= hi; k++)
+					if (d2(q[rows[i]], q[keep[k]]) >=
+						d2(q[rows[i]], q[keep[pos]]))
+						pos = k;
+				opt[rows[i]] = keep[pos];
+				lo = pos;
+			}
+		};
+
+		auto solve = [&](int rl, int rr, int cl, int cr) {
+			if (rl > rr) return;
+			vector<int> rows(rr - rl + 1), cols(cr - cl + 1);
+			iota(all(rows), rl);
+			iota(all(cols), cl);
+			smawk(rows, cols);
+			for (int i : rows) ans[i] = opt[i] % n;
+		};
+
+		solve(1, m - 1, m, n);
+		solve(m + 1, n - 1, 0, m);
+
+		vector<int> res(n);
+		for (int i = 0; i < n; i++)
+			res[(A + i) % n] = (A + ans[i]) % n;
+		return res;
 	}
 #undef tmpl
 }

@@ -1,4 +1,99 @@
 
+template<class T> struct dynamic_convex // 下凸壳
+{
+	using W = conditional_t<is_integral_v<T>, __int128_t, long double>;
+	struct Q {
+		T x;
+		mutable T y;
+		mutable const Q *r = nullptr;
+		Q operator-(const Q &o) const { return {x - o.x, y - o.y}; }
+		W operator*(const Q &o) const {
+			return (W)x * o.y - (W)y * o.x;
+		}
+	};
+	struct Ask { T a, b; };
+	struct Cmp
+	{
+		using is_transparent = void;
+		bool operator()(const Q &a, const Q &b) const {
+			return a.x < b.x;
+		}
+		bool operator()(const Q &p, const Ask &q) const {
+			return p.r && (W)q.a * ((W)p.r->x - p.x)
+				+ (W)q.b * ((W)p.r->y - p.y) < 0;
+		}
+	};
+	set<Q, Cmp> s;
+	void check(auto it)
+	{
+		decltype(it) jt, kt;
+		if (it != s.begin())
+		{
+			jt = prev(it);
+			if (jt != s.begin())
+			{
+				kt = prev(jt);
+				while ((*it - *kt) * (*jt - *kt) >= 0)
+				{
+					s.erase(jt);
+					if (kt == s.begin()) break;
+					jt = kt--;
+				}
+			}
+		}
+		jt = next(it);
+		if (jt != s.end())
+		{
+			kt = next(jt);
+			while (kt != s.end() && (*kt - *it) * (*jt - *it) >= 0)
+				s.erase(jt), jt = kt++;
+		}
+	}
+	void insert(Q p)
+	{
+		auto it = s.lower_bound(p);
+		if (it == s.end() || s.begin()->x > p.x)
+			it = s.insert(it, p);
+		else if (it->x == p.x)
+		{
+			if (it->y <= p.y) return;
+			it->y = p.y;
+		}
+		else
+		{
+			auto l = *prev(it);
+			if ((p - l) * (*it - l) > 0)
+				it = s.insert(it, p);
+			else return;
+		}
+		check(it);
+		auto r = next(it);
+		it->r = r == s.end() ? nullptr : &*r;
+		if (it != s.begin()) prev(it)->r = &*it;
+	}
+	// b >= 0，返回 min(ax + by)
+	W query(T a, T b) const
+	{
+		assert(b >= 0 && !s.empty());
+		auto it = s.lower_bound(Ask{a, b});
+		return (W)a * it->x + (W)b * it->y;
+	}
+	int cover(Q p) const
+	{
+		if (s.empty() || p.x < s.begin()->x || p.x > s.rbegin()->x)
+			return -1;
+		auto it = s.lower_bound(p);
+		if (it->x == p.x)
+			return (p.y > it->y) - (p.y < it->y);
+		auto l = *prev(it);
+		auto d = (*it - l) * (p - l);
+		return (d > 0) - (d < 0);
+	}
+};
+
+
+
+
 bool FLAG = 0;
 ll K;
 struct Q

@@ -1,19 +1,21 @@
-template <class T, size_t size = tuple_size<T>::value> string to_dbg(T, string s = "") requires(not ranges::range<T>);
-string to_dbg(auto x) requires requires(ostream &os) { os << x; }
+template<class T>string to_dbg(T x)
 {
-	ostringstream os;
-	os << x;
-	return os.str();
+	enum { r = ranges::range<T>, p = requires{tuple_size<T>(); } };
+	if constexpr (requires{cout << x; } && (!r || requires{string(x); }))
+	{
+		ostringstream o;
+		o << x;
+		return o.str();
+	}
+	else
+	{
+		string s;
+		if constexpr (r)
+			for (auto y : x) s += ", " + to_dbg(y);
+		else
+			if constexpr (p)
+				apply([&](auto...y) {((s += ", " + to_dbg(y)), ...); }, x);
+		return (r ? "[" : "(") + s.substr(s[0] ? 2 : 0) + (r ? "]" : ")");
+	}
 }
-string to_dbg(ranges::range auto x, string s = "") requires(not is_same_v<decltype(x), string>)
-{
-	for (auto xi : x) s += ", " + to_dbg(xi);
-	return "[" + s.substr(2 * !!s.size()) + "]";
-}
-template <class T, size_t size> string to_dbg(T x, string s) requires(not ranges::range<T>)
-{
-	[&] <size_t... I>(index_sequence<I...>) { ((s += ", " + to_dbg(get<I>(x))), ...); } (make_index_sequence<size>());
-	return "(" + s.substr(2 * !!s.size()) + ")";
-}
-#define dbg(...) cerr << __LINE__ << ": (" #__VA_ARGS__ ") = " << to_dbg(tuple(__VA_ARGS__)) << "\n"
-
+#define dbg(...) cerr << __LINE__ << ": ("#__VA_ARGS__") = " << to_dbg(tuple(__VA_ARGS__)) << "\n"
